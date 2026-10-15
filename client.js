@@ -3656,6 +3656,61 @@ navStaff();
 if(location.hash==='#rankings')setTimeout(showRank,50);
 })();
 
+/* ===== Server client: the live world (phase 1 of the online plan). Only in the server build.
+   - While you play a character you are connected to one channel of the world (Channel 1-3, chosen on the Play screen,
+     remembered in this browser). The server checks the character belongs to your account.
+   - "Players here" on the Play screen lists the real players on your map in your channel, updated live; changing
+     maps updates it for everyone.
+   - Map chat: messages go to everyone on your map in your channel (120 letters, at most 5 per 5 seconds).
+   - Reconnects by itself (after 3 s, then slower) if the connection drops. ===== */
+(function(){
+ const API=(window.MAPLE_API||'').replace(/\/$/,'');
+ const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:''};
+ window.liveState=L;
+ const wsUrl=()=>{const base=API||location.origin;let t='';try{t=localStorage.getItem('ml_token')||''}catch(e){}
+  return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')};
+ const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+ function want(){return typeof P!=='undefined'&&P&&typeof scr!=='undefined'&&scr==='game'&&typeof SLOT!=='undefined'&&window.__KV&&window.__KV.me}
+ function close(){clearTimeout(L.timer);if(L.ws){const w=L.ws;L.ws=null;try{w.onclose=null;w.close()}catch(e){}}L.state='off';L.here=[];}
+ function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
+  ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
+  ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
+   if(m.t==='welcome'){L.here=m.here||[];L.counts=m.counts;L.me=m.me;if(P&&P.map!==m.me.map)sendMap()}
+   else if(m.t==='here')L.here=m.players||[];
+   else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
+   else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
+   else if(m.t==='chat'){L.chat.push(m);if(L.chat.length>30)L.chat.shift()}
+   else if(m.t==='err'){L.err=m.error}
+   paint()};
+  ws.onclose=()=>{if(L.ws===ws){L.ws=null;L.state='off';L.here=[];paint();retry()}}}
+ function retry(){clearTimeout(L.timer);if(!want())return;L.tries++;L.timer=setTimeout(connect,Math.min(30000,3000*L.tries))}
+ function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=[]}}
+ window.liveSay=function(text){text=String(text||'').trim();if(!text||!L.ws||L.ws.readyState!==1)return false;L.ws.send(JSON.stringify({t:'chat',text}));return true};
+ window.liveChannel=function(n){n=+n;if(!(n>=1&&n<=3)||n===L.ch)return;L.ch=n;try{localStorage.setItem('ml_ch',String(n))}catch(e){}L.chat=[];connect();paint()};
+ /* keep the connection matched to the character and map */
+ setInterval(()=>{if(!want()){if(L.ws||L.state!=='off')close();return}
+  if(!L.ws&&L.state==='off'&&!L.timer)connect();else if(L.slot!==SLOT)connect();else if(P.map!==L.map)sendMap();
+  if(Date.now()-(L.lastCount||0)>30000){L.lastCount=Date.now();fetch('/api/live/counts').then(r=>r.json()).then(j=>{if(j&&j.counts){L.counts=j.counts;paint()}}).catch(()=>{})}
+  if(L.ws&&L.ws.readyState===1&&Date.now()-(L.lastPing||0)>25000){L.lastPing=Date.now();try{L.ws.send('{"t":"ping"}')}catch(e){}}},1000);
+ /* the Players here panel, drawn after the Play screen */
+ function panelHtml(){const st=L.state==='on'?'🟢 Channel '+L.ch:L.state==='connecting'?'🟡 Connecting…':'⚪ Offline';
+  const others=L.here.filter(x=>!L.me||x.id!==L.me.id);
+  return '<div class="pad"><div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div>'
+   +'<div style="display:flex;gap:6px;margin:6px 0">'+[1,2,3].map(n=>'<button data-live-ch="'+n+'" class="'+(n===L.ch?'main':'')+'" style="flex:1;min-height:30px">Ch '+n+(L.counts&&L.counts[n-1]!=null?' ('+L.counts[n-1]+')':'')+'</button>').join('')+'</div>'
+   +(others.length?others.map(x=>'<div class="mrow"><span class="av">🧑</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
+   +'<div class="cbox" id="live-chat" style="max-height:140px;overflow:auto;margin-top:8px">'+(L.chat.length?L.chat.map(m=>'<div><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>').join(''):'<div class="mute">Map chat: say hi to players on this map.</div>')+'</div>'
+   +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')
+   +'<div style="display:flex;gap:6px;margin-top:6px"><input id="live-in" maxlength="120" placeholder="Say something on this map" style="flex:1;min-width:0"><button id="live-say">Send</button></div></div>'}
+ function paint(){const el=document.getElementById('livebox');if(!el)return;const inp=document.getElementById('live-in'),val=inp?inp.value:'',foc=document.activeElement===inp;
+  el.innerHTML=panelHtml();const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
+ {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(want()&&tab==='play'&&!(MAPS[P.map]||{}).jobtest){const app=document.getElementById('app');
+    const people=[...app.querySelectorAll(':scope > .panel')].find(p=>p.querySelector('.npc'))||[...app.querySelectorAll(':scope > .panel')].find(p=>/PEOPLE/i.test((p.querySelector('h2')||{}).textContent||''));
+    if(!document.getElementById('livebox')){const d=document.createElement('div');d.id='livebox';d.className='panel';if(people)people.insertAdjacentElement('afterend',d);else{const log=document.getElementById('log');if(log)log.insertAdjacentElement('beforebegin',d);else app.appendChild(d)}paint()}}}catch(e){}return out}}
+ document.addEventListener('click',e=>{const t=e.target;if(t.closest&&t.closest('[data-live-ch]')){liveChannel(t.closest('[data-live-ch]').dataset.liveCh);return}
+  if(t.id==='live-say'){const i=document.getElementById('live-in');if(i&&liveSay(i.value)){i.value=''}}});
+ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='live-in'){if(liveSay(e.target.value))e.target.value=''}});
+})();
+
 /* ===== v1.1: auto-hunt button, no tips, lines message ===== */
 rollTips=function(){return ''};
 function autoBox(){return '<button id="ab" class="abtn'+(autoSeek?' on':'')+'" data-act="auto" aria-pressed="'+(!!autoSeek)+'"><span class="kn"></span><span>Auto-hunt</span><b>'+(autoSeek?'ON':'OFF')+'</b></button>'}
