@@ -3185,7 +3185,7 @@ stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc
 
 /* ===== v3.2: the Maple Island shops from the data, with their own stock and prices (as Victoria's since v2.2):
    - Sid, Amherst Weapon Store: Razor, Wooden Club, Hand Axe, Sword.
-   - Lucy, Amherst Department Store: Egg, Apple, White/Orange/Red Potion, and Green Apple (30 MP). Green Apple is not
+   - Lucy, Amherst Department Store: Egg, Apple, White/Orange/Red Potion, plus Green Apple (30 MP) and Blue Potion (100 MP, 200 mesos as in Victoria's shops). Green Apple is not
      in any Maple Island shop in the data; it was added on request so magician hopefuls can keep MP up before Victoria.
      The data has no shop price for it, so it costs 60 mesos (about 2 mesos per MP, like Blue Potions).
    - Pan, Southperry Armor Store: the 13 beginner clothes for 50 mesos each.
@@ -3195,7 +3195,7 @@ stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc
   for(const [id,pr] of extra||[])if(ITEMS[id]&&!N.shopList.includes(id)){N.shopList.push(id);N.shopPrice[id]=pr;if(!ITEMS[id].buy)ITEMS[id].buy=pr}
   return N};
  mi('sid','n11000','Weapon seller','Amherst Weapon Store');
- if(mi('lucy','n11100','Grocer','Amherst Department Store',[['i2010009',60]])){NPCS.lucy.i='🧺';if(!MAPS.amherst.npcs.includes('lucy'))MAPS.amherst.npcs.splice(MAPS.amherst.npcs.indexOf('sid')+1,0,'lucy')}
+ if(mi('lucy','n11100','Grocer','Amherst Department Store',[['i2010009',60],['i2000003',200]])){NPCS.lucy.i='🧺';if(!MAPS.amherst.npcs.includes('lucy'))MAPS.amherst.npcs.splice(MAPS.amherst.npcs.indexOf('sid')+1,0,'lucy')}
  if(mi('pan','n21000','Armor seller','Southperry Armor Store')){NPCS.pan.i='👕';if(!MAPS.southperry.npcs.includes('pan'))MAPS.southperry.npcs.push('pan')}
  for(const k of ['n11000','n11100','n21000'])delete NPCS[k];
  delete MAPS.amherst.shop;delete MAPS.amherst.shopList;
