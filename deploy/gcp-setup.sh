@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Maplelite game server setup for a Google Cloud e2-micro VM (Debian 12 or Ubuntu 22.04+).
-# Run on the VM:   curl -fsSLO https://raw.githubusercontent.com/xwesleyxchasex-tech/Maplelite/main/deploy/gcp-setup.sh && sudo bash gcp-setup.sh
+# Run on the VM:   curl -fsSLO https://raw.githubusercontent.com/Maplelite/Maplelite/main/deploy/gcp-setup.sh && sudo bash gcp-setup.sh
 # It installs Node 22 and Caddy, downloads the game server from the private repo with a read-only deploy key, runs it
 # as a service that restarts on its own, puts free HTTPS in front (Caddy + a <your-ip>.sslip.io address), keeps the
 # database on the VM's disk with a daily backup, and adds `sudo maplelite-update` to pull new versions.
 # Safe to run again: it keeps the database and the admin password.
 set -euo pipefail
-REPO="git@github.com:xwesleyxchasex-tech/MapleLite-Alpha.git"
-CORS_ORIGIN="${CORS_ORIGIN:-https://xwesleyxchasex-tech.github.io}"
+REPO="git@github.com:Maplelite/MapleLite-Alpha.git"
+CORS_ORIGIN="${CORS_ORIGIN:-https://maplelite.github.io}"
 APP=/opt/maplelite; DATA=/var/lib/maplelite; USR=maplelite; ENVF=/etc/maplelite.env
 say(){ printf '\n\033[1;32m==> %s\033[0m\n' "$*"; }
 [ "$(id -u)" = 0 ] || { echo "Run with sudo: sudo bash $0"; exit 1; }
@@ -41,7 +41,7 @@ ssh-keyscan -t ed25519 github.com 2>/dev/null > $H/.ssh/known_hosts; chown $USR:
 
 if ! sudo -u $USR git ls-remote "$REPO" >/dev/null 2>&1; then
   say "Give this server read access to the private repo"
-  echo "1. Open https://github.com/xwesleyxchasex-tech/MapleLite-Alpha/settings/keys/new"
+  echo "1. Open https://github.com/Maplelite/MapleLite-Alpha/settings/keys/new"
   echo "2. Title: maplelite-server   Key: paste the line below   Leave 'Allow write access' OFF   Add key"
   echo; cat $H/.ssh/id_ed25519.pub; echo
   until sudo -u $USR git ls-remote "$REPO" >/dev/null 2>&1; do read -rp "Press Enter after adding the key (Ctrl+C to stop)... " _ </dev/tty; done
