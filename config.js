@@ -1,2 +1,2 @@
-/* The Maplelite game server this page talks to (not set yet). */
-window.MAPLE_API='';
+/* The Maplelite game server this page talks to. */
+window.MAPLE_API='https://maplelite.xwesleyxchasex.workers.dev';
