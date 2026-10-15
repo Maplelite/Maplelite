@@ -8,10 +8,11 @@
    Reads are synchronous from a cache filled before the game starts (window.__KV from /api/kv). Writes update the cache
    at once and reach the server shortly after; a save the server rejects is replaced by the server's last good copy. */
 const LS=(()=>{const real=window.localStorage;let kv=window.__KV||{user:{},shared:{},accts:{}};
- const USER=/^mapleish_(c\d{1,2}|last)$/,SHARED=/^mapleish_(chat|mod|audit|site|inbox_.+)$/;
+ const USER=/^mapleish_(c\d{1,2}|last)$/,SHARED=/^mapleish_(chat|mod|audit|site|rates|inbox_.+)$/;
  const timers={},pending={};
  const put=(scope,k)=>{const v=pending[scope+k];delete pending[scope+k];
-  return fetch('/api/kv/'+scope+'/'+encodeURIComponent(k),{method:'PUT',credentials:'same-origin',keepalive:true,headers:{'Content-Type':'application/json'},body:JSON.stringify({value:v})})
+  const body=JSON.stringify({value:v});/* keepalive (survives closing the page) only works up to 64 KB: a big save sent with it failed as "Cannot reach the server" */
+  return fetch('/api/kv/'+scope+'/'+encodeURIComponent(k),{method:'PUT',credentials:'same-origin',keepalive:body.length<60000,headers:{'Content-Type':'application/json'},body})
    .then(async r=>{if(r.status===409){const j=await r.json();if(scope==='user'){if(j.kept==null)delete kv.user[k];else kv.user[k]=j.kept}
      window.__serverNote&&window.__serverNote('The server refused a save: '+j.error+' Your last good save was kept.')}
     else if(r.status===401)window.__serverNote&&window.__serverNote('You are logged out. Log in again to keep saving.')})
@@ -143,14 +144,14 @@ function lootPanel(){const d=dropsHere(),now=Date.now();if(!d.length)return'';co
  const tg='<button id="lootTg" style="width:100%;display:flex;justify-content:space-between;align-items:center"><span>🎒 Loot ('+d.length+')</span><span>'+(lootOpen?'▾':'▸')+'</span></button>';
  if(!lootOpen)return'<div class="panel" id="loot" data-ln="'+d.length+'" style="padding:6px;margin-top:-4px">'+tg+'</div>';
  return'<div class="panel" id="loot" data-ln="'+d.length+'" style="padding:6px;margin-top:-4px">'+tg+'<div class="lgb" style="height:auto;max-height:180px;margin-top:6px;padding:0 4px">'+d.map(g=>'<div class="row" style="padding:3px 0;align-items:center"><span>'+ITEMS[g.id].i+' '+ITEMS[g.id].n+(g.q>1?' x'+g.q:'')+' <span class="mute" data-lx="'+g.u+'">'+t(g)+'</span></span><button data-lp="'+g.u+'" style="min-height:32px;padding:2px 12px">Loot</button></div>').join('')+'</div><div class="ex"><button class="main" id="lootall">Loot all</button></div></div>'}
-function dropLoot(k,d){const t=DROPS[k];if(!USE_DATA_DROPS||!t){if(Math.random()<.55){addDrop(d.e,1)}if(Math.random()<.08){addDrop('red_potion',1)}return}
- for(const e of t.i){if(Math.random()<e[1]){const q=R(e[2],e[3]);addDrop(e[0],q)}}}
+function dropLoot(k,d){const t=DROPS[k];if(!USE_DATA_DROPS||!t){if(Math.random()<.55*dropRate()){addDrop(d.e,1)}if(Math.random()<.08*dropRate()){addDrop('red_potion',1)}return}
+ for(const e of t.i){if(Math.random()<e[1]*dropRate()){const q=R(e[2],e[3]);addDrop(e[0],q)}}}
 const slotOf=id=>ITEMS[id].w?'Weapon':ITEMS[id].s;
 const eqOf=x=>x==='Weapon'?P.weapon:(P.eq||{})[x];
 const gearSpd=()=>[P.weapon].concat(Object.values(P.eq||{})).filter(eqOk).reduce((a,id)=>a+((id&&ITEMS[id]&&ITEMS[id].x&&ITEMS[id].x.speed)||0),0);/* equipment Speed (v2.6) */
 const gearBon=k=>[P.weapon].concat(Object.values(P.eq||{})).filter(eqOk).reduce((a,id)=>a+((ITEMS[id]&&ITEMS[id].bon&&ITEMS[id].bon[k])||0),0);
 const eS=k=>P[k]+gearBon(k);
-const defTotal=()=>Object.values(P.eq||{}).filter(eqOk).reduce((a,id)=>a+((ITEMS[id]&&ITEMS[id].def)||0),0)+((P.b&&P.b.iron>Date.now())?(P.b.ironv|0):0)+((P.b&&P.b.marm>Date.now())?(P.b.marmv|0):0);
+const defTotal=()=>Object.values(P.eq||{}).filter(eqOk).reduce((a,id)=>a+((ITEMS[id]&&ITEMS[id].def)||0),0)+((P.b&&P.b.iron>Date.now())?(P.b.ironv|0):0)+((P.b&&P.b.marm>Date.now())?(P.b.marmv|0):0)+(typeof seDef==='function'?seDef():0);/* seDef: 2nd job buffs (v3.2) */
 const defRed=()=>{const d=defTotal();return Math.min(.7,d/(d+80))};
 let shopConfirm=false,introOpen=false;
 function equipItem(id){const it=ITEMS[id];if(!it||!(it.w||it.s)||!(P.inv[id]>0))return;if(P.lvl<it.req)return log('You need to be level '+it.req+' to use this.','bad','items');
@@ -167,7 +168,24 @@ function popHtml(){if(!pop)return '';const it=ITEMS[pop.id];if(!it){pop=null;ret
 const acc=()=>(eS('dex')*1.2+P.lvl*2+eS('luk')*.6+accBonus())/2.5+5;
 const avoid=()=>Math.floor(eS('luk')/3)+Math.floor(eS('dex')/6)+5+avBonus();
 function dmgRange(){const mx=wMax();return[Math.max(1,Math.floor(mx*.6)),Math.max(1,mx)]}
-function gain(x){if(P.lvl>=MAXL)return;P.exp+=x;
+/* v3.2: EXP rate set by an admin (Admin menu -> EXP rate, 1-1000). Stored in the shared record mapleish_rates with the admin's scrolling notice. */
+/* {exp: 1-1000, msg: the admin's scrolling notice} */
+function worldCfg(){try{const o=JSON.parse(LS.getItem('mapleish_rates'));return o&&typeof o==='object'?o:{}}catch(e){return{}}}
+/* Hot-time (admin scheduled EXP/drop boosts, up to 24): {name, exp, drop, date 'YYYY-MM-DD', time 'HH:MM' (California time),
+   hours, repeat 'none'|'daily'|'weekly', on}. Times are compared as California wall-clock time. */
+const pacWall=t=>{try{const o={};new Intl.DateTimeFormat('en-US',{timeZone:'America/Los_Angeles',hourCycle:'h23',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}).formatToParts(new Date(t)).forEach(x=>o[x.type]=x.value);return Date.UTC(+o.year,+o.month-1,+o.day,+o.hour%24,+o.minute)}catch(e){return t-7*3600e3}};
+function hotState(h,now){/* -> {on:bool, ends:wall ms} */const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(h&&h.date||''),tm=/^(\d\d?):(\d\d)$/.exec(h&&h.time||'');if(!h||!h.on||!m||!tm)return{on:false};
+ const s=Date.UTC(+m[1],+m[2]-1,+m[3],+tm[1],+tm[2]),len=Math.max(0,+h.hours||0)*3600e3,w=pacWall(now||Date.now()),per=h.repeat==='daily'?864e5:h.repeat==='weekly'?6048e5:0;
+ let st=s;if(per&&w>=s)st=s+Math.floor((w-s)/per)*per;return w>=st&&w<st+len?{on:true,ends:st+len,wall:w}:{on:false}}
+const hotList=()=>(Array.isArray(worldCfg().hot)?worldCfg().hot:[]).slice(0,24);
+const hotNow=()=>hotList().filter(h=>hotState(h).on);
+const clampR=v=>{v=Math.floor(+v);return v>=1&&v<=1000?v:1};
+function expBase(){return clampR(worldCfg().exp)}function dropBase(){return clampR(worldCfg().drop)}
+/* effective rates: the base rate times the biggest active hot-time boost */
+function expRate(){return Math.min(100000,expBase()*hotNow().reduce((a,h)=>Math.max(a,clampR(h.exp)),1))}
+function dropRate(){return Math.min(100000,dropBase()*hotNow().reduce((a,h)=>Math.max(a,clampR(h.drop)),1))}
+const XR=x=>Math.round((x||0)*expRate());
+function gain(x){if(P.lvl>=MAXL)return;x=XR(x);P.exp+=x;
  while(P.lvl<MAXL&&P.exp>=EXP[P.lvl-1]){P.exp-=EXP[P.lvl-1];P.lvl++;P.ap+=5;if(P.job)P.sp+=3;else if(P.lvl<=7)P.sp++;P.maxHp+=R(12,16)+(P.job==='swordsman'?4*((P.sk&&P.sk.mhp)|0):0);P.maxMp+=R(10,12)+(P.job==='magician'?2*((P.sk&&P.sk.mmp)|0):0);P.hp=P.maxHp;P.mp=P.maxMp;
   log('LEVEL UP! You are now level '+P.lvl+'. +5 AP'+(P.lvl<=10?', +1 SP':'')+'.','good');if(P.lvl==10)log('A new path opens at level 10. Job classes are coming soon.','good')}
  if(P.lvl>=MAXL)P.exp=0}
@@ -179,8 +197,8 @@ function attack(){if(!enc)return;const now=Date.now();if(now<atkReady()||now-las
  if(enc.hp<=0)win();render()}
 /* Standing: lane gap 0-3 between you and the monster. Weapon reach defaults to 0 (melee). */
 /* v2.6: monsters step by their own Speed from the data (v62: walk speed = 100 + speed %). A Speed 0 monster crosses one
-   column every 1.4 s (about half your pace at 100 Speed); a Snail (-65) every 4 s. Old monsters without data keep the old pace. */
-const MOB_STEP=1400;const mvT=d=>d.spd!=null?Math.round(MOB_STEP*100/Math.max(25,100+d.spd)):Math.max(500,Math.floor(d.iv/3));
+   column every 2.4 s (v3.2; it was 1.4 s); a Snail (-65) about every 7 s. Old monsters without data keep the old pace. */
+const MOB_STEP=2400;const mvT=d=>Math.round(MOB_STEP*100/Math.max(25,100+((d&&d.spd)|0)));/* v3.2: slower (2.4 s per column at Speed 0) and the same rule for monsters without data */
 function hitVerb(){const n=W().n||'';if(/sword|blade/i.test(n))return Math.random()<.5?'stab':'swing at';if(/axe|club|mace|hammer/i.test(n))return 'swing at';return 'hit'}
 let lastMv=0,lastDur=810;const atkReady=()=>lastAtk+lastDur;/* each action sets lastDur to its own time (52-v2.6-timing.js) */const moveCd=()=>Math.round(720*100/speed());/* steps are paced by Speed only (v2.6); attacks by the weapon/skill animation time */
 function stand(dir){if(!enc)return;const now=Date.now(),mc=moveCd();if(now-lastAtk<mc||now-lastMv<mc)return;const d=MON[enc.k];
@@ -190,7 +208,7 @@ function stand(dir){if(!enc)return;const now=Date.now(),mc=moveCd();if(now-lastA
 function laneHtml(){const d=MON[enc.k];let c='';for(let i=0;i<5;i++){const me=i===0,mo=i===enc.gap+1;c+='<div style="flex:1;text-align:center;font-size:22px;padding:4px 0;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'🧍':mo?d.i:'')+'</div>'}
  return '<div style="margin-top:8px"><div style="display:flex;background:rgba(120,140,180,.12);border-radius:8px">'+c+'</div><div class="mute" style="margin-top:4px">'+(enc.gap<=0?'Face to face':'Distance '+enc.gap)+' · reach '+wReach()+'</div></div>'}
 function win(){const d=MON[enc.k],m=MAPS[P.map];for(const id in QD){const d=QD[id];if(P.q[id]==='active'&&d.type==='kill'&&d.mon===enc.k&&(P.qp[id]||0)<d.cnt)P.qp[id]=(P.qp[id]||0)+1;if(P.q[id]==='active'&&d.type==='kill'&&d.mk){const t=d.mk.find(x=>x[0]===enc.k);if(t){const kk=id+'|'+enc.k;if((P.qp[kk]||0)<t[1])P.qp[kk]=(P.qp[kk]||0)+1}}}const dm=USE_DATA_DROPS&&DROPS[enc.k]&&DROPS[enc.k].m,me=dm?(Math.random()<dm[0]?R(dm[1],dm[2]):0):R(d.m[0],d.m[1]);P.mesos+=me;
- log('The '+d.n+' falls. +'+d.exp+' EXP'+(me?', +'+me+' mesos.':'.'),'good','combat');gain(d.exp);
+ log('The '+d.n+' falls. +'+XR(d.exp)+' EXP'+(me?', +'+me+' mesos.':'.'),'good','combat');gain(d.exp);
  dropLoot(enc.k,d);
  if(!isOpen(P.map)){P.kills++;if(P.kills>=needFor(m)){P.cleared[P.map]=1;P.kills=0;log(m.n+' cleared. The exits are open until you leave.','good','combat')}}
  window._dead=enc;enc=null;onKill();save()}
@@ -254,7 +272,7 @@ function qObj(id){const d=QD[id],p=P.qp[id]||0,st=P.q[id],live=st==='active',dn=
  else if(d.type==='quiz')o.push({t:'Answer the questions correctly',c:cv(p,7),n:7});
  else if(d.via)o.push({t:'Talk to '+NPCS[d.via].n+(qLoc(d.via)?' ('+qLoc(d.via)+')':''),c:cv(p>=1?1:0,1),n:1});
  return o}
-function qRew(id){const w=QD[id].rw||{},r=[];if(w.exp)r.push(['⭐',w.exp+' EXP']);if(w.mesos)r.push(['🪙',w.mesos+' mesos']);for(const k in w.items||{})r.push([ITEMS[k].i,w.items[k]+' '+ITEMS[k].n]);if(w.rand)r.push(['\uD83C\uDF81','One of: '+w.rand.map(k=>ITEMS[k].n).join(', ')]);return r}
+function qRew(id){const w=QD[id].rw||{},r=[];if(w.exp)r.push(['⭐',XR(w.exp)+' EXP']);if(w.mesos)r.push(['🪙',w.mesos+' mesos']);for(const k in w.items||{})r.push([ITEMS[k].i,w.items[k]+' '+ITEMS[k].n]);if(w.rand)r.push(['\uD83C\uDF81','One of: '+w.rand.map(k=>ITEMS[k].n).join(', ')]);return r}
 function qTrack(id){const t=qTrk(),i=t.indexOf(id);if(i>=0)t.splice(i,1);else if(P.q[id]==='active'){if(t.length>=QMAX)log('You can only track '+QMAX+' quests at a time.','bad','quest');else t.push(id)}save();render()}
 function qGiveUp(id){if(P.q[id]!=='active')return;const d=QD[id];delete P.q[id];if(d.type!=='quiz'&&d.type!=='use')P.qp[id]=0;qTrk();qgive=null;qtab='avail';qsel=id;log('Quest given up: '+d.n+'.','bad','quest');save();render()}
 function qNpc(n){return '<span>'+NPCS[n].i+' <b>'+NPCS[n].n+'</b>'+(qLoc(n)?' <span class="mute">in '+qLoc(n)+'</span>':'')+'</span>'}
@@ -286,7 +304,7 @@ function questsPanel(){const ids=Object.keys(QD),L={avail:ids.filter(qAvail),pro
 function qAccept(id){const d=QD[id];P.q[id]='active';if(d.type==='quiz'||d.type==='use')P.qp[id]=P.qp[id]||0;else P.qp[id]=0;if(d.mk)d.mk.forEach(x=>P.qp[id+'|'+x[0]]=0);P.gv=P.gv||{};if(!P.gv[id]){for(const k in d.give||{})P.inv[k]=(P.inv[k]||0)+d.give[k];P.gv[id]=1}const t=qTrk();if(t.length<QMAX&&!t.includes(id))t.push(id);log('Quest accepted: '+d.n+'.','','quest');save();render()}
 function qTurn(id){const d=QD[id];if(!qReady(id))return;if(d.type==='collect')d.col.forEach(c=>{P.inv[c[0]]-=c[1];if(P.inv[c[0]]<=0)delete P.inv[c[0]]});
  P.q[id]='done';const w=d.rw||{};if(w.mesos)P.mesos+=w.mesos;for(const k in w.items||{})P.inv[k]=(P.inv[k]||0)+w.items[k];if(w.rand){const rk=w.rand[R(0,w.rand.length-1)];P.inv[rk]=(P.inv[rk]||0)+1;log('You receive a '+ITEMS[rk].n+'.','good','quest')}
- log('Quest complete: '+d.n+(w.exp?'. +'+w.exp+' EXP':'')+(w.items?', '+Object.keys(w.items).map(k=>w.items[k]+' '+ITEMS[k].n).join(', '):'')+'.','good','quest');if(w.exp)gain(w.exp);save();render()}
+ log('Quest complete: '+d.n+(w.exp?'. +'+XR(w.exp)+' EXP':'')+(w.items?', '+Object.keys(w.items).map(k=>w.items[k]+' '+ITEMS[k].n).join(', '):'')+'.','good','quest');if(w.exp)gain(w.exp);save();render()}
 function dlg(){const n=talk.npc,N=NPCS[n],pg=talk.page;
  if(pg==='tip')return{t:N.tip[1],ch:[['Back','main']]};
  if(pg==='qq'){const p=P.qp.rain||0,Q=QUIZ[p];return{t:'Question '+(p+1)+' of 7: '+Q[0],ch:Q[1].map((c,i)=>[c,'ans:'+i]).concat([['Not now','main']])}}
@@ -303,7 +321,7 @@ function dlgDo(k){if(k==='close'){talk=null;return render()}
  if(k.startsWith('qa:')){talk.page='main';return qAccept(k.slice(3))}
  if(k.startsWith('qt:')){talk.page='main';return qTurn(k.slice(3))}
  if(k.startsWith('qv:')){const id=k.slice(3);P.qp[id]=1;log(QD[id].viaLog,'good','quest');talk.page='main';save();return render()}
- if(k.startsWith('ans:')){const p=P.qp.rain||0,Q=QUIZ[p];if(+k.slice(4)===Q[2]){P.qp.rain=p+1;log('Correct! +'+QX[p]+' EXP.','good','quest');gain(QX[p]);if(P.qp.rain>=7)talk.page='main'}else log('Not quite, give it another try.','bad','quest');save();return render()}
+ if(k.startsWith('ans:')){const p=P.qp.rain||0,Q=QUIZ[p];if(+k.slice(4)===Q[2]){P.qp.rain=p+1;log('Correct! +'+XR(QX[p])+' EXP.','good','quest');gain(QX[p]);if(P.qp.rain>=7)talk.page='main'}else log('Not quite, give it another try.','bad','quest');save();return render()}
  talk.page=k;render()}
 function dlgPanel(){const d=dlg(),N=NPCS[talk.npc];return '<div class="panel win"><div class="title">'+N.n.toUpperCase()+'</div><div class="pad"><div style="font-size:30px">'+N.i+'</div><div style="margin-top:6px">'+d.t+'</div></div><div class="pad" style="display:flex;flex-direction:column;gap:6px">'+d.ch.map(c=>'<button data-d="'+c[1]+'"'+(/^(qa|qt):/.test(c[1])?' class="main"':'')+'>'+c[0]+'</button>').join('')+'</div></div>'}
 function npcBadge(id){let a=0,r=0;for(const q in QD){const d=QD[q];if(qAvail(q)&&d.giver===id)a=1;if(P.q[q]==='active'&&(((d.turn||d.giver)===id&&qReady(q))||(d.via===id&&!((P.qp[q]||0)>=1))))r=1}return r?'<span class="pill g">?</span>':a?'<span class="pill">!</span>':''}
@@ -330,7 +348,7 @@ function pqBtn(i){const id=P.pq[i],it=id&&ITEMS[id],n=it?(P.inv[id]||0):0;const 
 function pqSet(i,id){if(id&&P.pq[1-i]===id)P.pq[1-i]=null;P.pq[i]=id||null;save()}
 function pqClick(i){if(qEdit){qPick=(qPick&&qPick.t==='p'&&qPick.i===i)?null:{t:'p',i};return render()}usePot(i)}
 let lastSk=0,cd={rec:0,feet:0},recNext=0,recFrac=0,lastBuffR=0,hadBuff=false;
-const speed=()=>Math.min(140,100+gearSpd()+(P.b.feet>Date.now()?[10,15,20][P.sk.feet-1]:0)+(P.b.dash>Date.now()?(P.b.dashv|0):0)-darkPen());
+const speed=()=>Math.min(140,100+gearSpd()+(typeof seSpeed==='function'?seSpeed():0)+(P.b.feet>Date.now()?[10,15,20][P.sk.feet-1]:0)+(P.b.dash>Date.now()?(P.b.dashv|0):0)-darkPen());
 const needFor=m=>Math.max(1,Math.round(m.need*100/speed()));
 const sk3cost=()=>[3,5,7][P.sk.three-1],sk3shell=()=>['snail_shell','blue_snail_shell','red_snail_shell'][P.sk.three-1];
 const SK3R=2;/* Three Snails reach: usable from distance 0-2 */
@@ -490,12 +508,14 @@ function worldMap(){syncView();const m=MAPS[P.map],ok=m.town||P.cleared[P.map];l
   cap=mapView==='world'?'':'Just a rough sketch of this region. You can\'t travel here yet.'}
  return '<div class="panel"><div class="row"><h2>'+(mapView==='world'?'World Map':(ZONES.find(z=>z[0]===mapView)||[0,'World Map'])[1])+'</h2></div><div class="seg ltb">'+ZONES.map(z=>'<button class="'+(z[0]===mapView?'on':'')+'" data-z="'+z[0]+'">'+z[1]+'</button>').join('')+'</div><div class="wm"><svg viewBox="0 0 100 100" preserveAspectRatio="none">'+ln+'</svg>'+nd+'</div><div class="mute" id="navcap" style="min-height:34px">'+cap+'</div></div>'}
 const SHOPLIST=['red_potion','sword','hand_axe','wooden_club','long_sword'];
+/* v3.2: each shop has its own prices from the data (as in v62); items without one use the item's price */
+const buyPrice=k=>{const sp=P&&MAPS[P.map]&&MAPS[P.map].shopPrice;return(sp&&sp[k])||ITEMS[k].buy};
 const sellVal=k=>ITEMS[k].sell||(ITEMS[k].buy?Math.floor(ITEMS[k].buy/2):0);
 function itemRows(id,st){const it=ITEMS[id];if(it.w){const A=st?st[0]:eS('str'),B=st?st[1]:eS('dex'),Lk=st?st[3]:eS('luk'),mx=Math.floor((it.rng==='claw'?(Lk*it.mult+B)*(it.watk+15):it.rng?(B*it.mult+A)*it.watk:(it.dag&&!st&&P.job==='rogue')?(Lk*it.mult+A+B)*it.watk:(A*it.mult+B)*it.watk)/100);return [['Type',it.rng==='bow'?'Bow':it.rng==='xbow'?'Crossbow':it.rng==='claw'?'Claw':it.mw==='wand'?'Wand':it.mw==='staff'?'Staff':it.dag?'Dagger':'One-handed weapon'],['Weapon ATT','+'+it.watk],...(it.matk?[['Magic ATT','+'+it.matk]]:[]),['Attack cycle',it.spd+' ms'],[st?'Their damage':'Your damage',Math.max(1,Math.floor(mx*.6))+' ~ '+Math.max(1,mx)],['Required level',it.req||'None']]}
  if(it.s)return [['Type',it.s]].concat(it.def?[['Defense','+'+it.def]]:[],it.bon?Object.keys(it.bon).map(k=>[k.toUpperCase(),'+'+it.bon[k]]):[],[['Required level',it.req||'None']]);
  if(it.heal)return [['Type','Consumable'],['Restores',it.heal+' HP']];return [['Type','Etc']]}
-function shopMax(){const it=ITEMS[shopSel];return shopTab==='buy'?Math.floor(P.mesos/it.buy):(P.inv[shopSel]||0)}
-function shopCard(){const id=shopSel,it=ITEMS[id],bm=shopTab==='buy',pr=bm?it.buy:sellVal(id),mx=shopMax();shopQty=Math.max(1,Math.min(shopQty,Math.max(1,mx)));
+function shopMax(){const it=ITEMS[shopSel];return shopTab==='buy'?Math.floor(P.mesos/buyPrice(shopSel)):(P.inv[shopSel]||0)}
+function shopCard(){const id=shopSel,it=ITEMS[id],bm=shopTab==='buy',pr=bm?buyPrice(id):sellVal(id),mx=shopMax();shopQty=Math.max(1,Math.min(shopQty,Math.max(1,mx)));
  const lv=bm&&it.req&&P.lvl<it.req,can=mx>0&&!lv,rows=itemRows(id).concat([[bm?'Price':'Sells for',pr+' mesos each'],['Owned',P.inv[id]||0]]);
  const mh=240+29*rows.length,box='<div class="mcard" style="display:flex;flex-direction:column;min-height:'+mh+'px">';
  if(shopConfirm){const n=shopQty,tot=pr*n,after=bm?P.mesos-tot:P.mesos+tot,r=(a,b)=>'<div class="mr"><span>'+a+'</span><b>'+b+'</b></div>';
@@ -509,7 +529,7 @@ function shopPanel(){const items=shopTab==='buy'?(MAPS[P.map].shopList||SHOPLIST
  for(let i=0,N=Math.max(24,Math.ceil(items.length/4)*4);i<N;i++){const e=items[i];g+=e?'<button class="slot'+(shopSel===e[0]?' sel':'')+'" data-sh="'+e[0]+'" title="'+ITEMS[e[0]].n+'">'+ITEMS[e[0]].i+(e[1]>1?'<b class="qt">'+e[1]+'</b>':'')+'</button>':'<div class="slot empty"></div>'}
  return '<div class="panel"><div class="row"><h2>'+(MAPS[P.map].shopName||'Amherst General Store')+'</h2><span class="mute">'+P.mesos+' mesos</span></div><div class="tabs"><button class="'+(shopTab==='buy'?'on':'')+'" data-st="buy">Buy</button><button class="'+(shopTab==='sell'?'on':'')+'" data-st="sell">Sell</button></div>'+(shopSel?shopCard():'<div class="mute" style="margin-top:8px">'+(items.length?'':'You have nothing to sell.')+'</div>')+'<div class="ex" style="margin:6px 0"><button class="main" onclick="enchOpen()">📜 Enchanting</button></div><div class="inv">'+g+'</div><div class="ex"><button id="lv">Leave the shop</button></div></div>'}
 function shopDo(){const id=shopSel,it=ITEMS[id];if(!id||!inShop)return;const n=Math.max(1,shopQty);
- if(shopTab==='buy'){if(it.req&&P.lvl<it.req)return;const c=it.buy*n;if(P.mesos<c)return log('You don\'t have enough mesos.','bad','items'),render();P.mesos-=c;P.inv[id]=(P.inv[id]||0)+n;log('Bought '+n+' '+it.n+' for '+c+' mesos.'+((it.w||it.s)?' Equip it from your inventory.':''),'good','items')}
+ if(shopTab==='buy'){if(it.req&&P.lvl<it.req)return;const c=buyPrice(id)*n;if(P.mesos<c)return log('You don\'t have enough mesos.','bad','items'),render();P.mesos-=c;P.inv[id]=(P.inv[id]||0)+n;log('Bought '+n+' '+it.n+' for '+c+' mesos.'+((it.w||it.s)?' Equip it from your inventory.':''),'good','items')}
  else{const k=Math.min(n,P.inv[id]||0);if(k<1)return;const gain=sellVal(id)*k;P.inv[id]-=k;if(P.inv[id]<=0)delete P.inv[id];P.mesos+=gain;log('Sold '+k+' '+it.n+' for '+gain+' mesos.','good','items')}
  shopQty=1;save();render()}
 const PLAYERS=[];
@@ -814,7 +834,7 @@ const _ir=itemRows;itemRows=function(id,st){const it=ITEMS[id];if(it&&it.scr){co
 /* sources: monster drops, plus White Scroll and Clean Slate 20% in the Cash Shop */
 const SW=[];Object.keys(SCR).forEach(k=>{const d=SCR[k],gt=['oh_sword','oh_axe','oh_bw','th_axe','helmet','top','bottom','gloves','shoes','cape','shield','earring','any','none'].includes(d.tg);if(!gt)return;SW.push([k,d.kind==='std'?(d.r>=60?8:2):.3])});
 function rollScroll(){const T=SW.reduce((a,x)=>a+x[1],0);let r=Math.random()*T;for(const x of SW){r-=x[1];if(r<=0)return'sc_'+x[0]}return'sc_'+SW[0][0]}
-const _dl1=dropLoot;dropLoot=function(k,d){_dl1(k,d);if(Math.random()<.04)addDrop(rollScroll(),1)};
+const _dl1=dropLoot;dropLoot=function(k,d){_dl1(k,d);if(Math.random()<.04*dropRate())addDrop(rollScroll(),1)};
 CASH.push(['sc_white','⚪','White Scroll',1500,'Add it to a scroll attempt. If the scroll fails, the upgrade slot is not used up.'],['sc_clean_20','🧽','Clean Slate Scroll 20%',1000,'Restores one upgrade slot lost to a failed scroll.']);
 const _cb0=cashBuy;cashBuy=function(id){if(!id.startsWith('sc_'))return _cb0(id);const c=CASH.find(x=>x[0]===id);cashInit();if(P.nx<c[3]){log('Not enough NX.','bad','items');return render()}P.nx-=c[3];P.inv[id]=(P.inv[id]||0)+1;log('Bought '+c[2]+' for '+c[3]+' NX.','good','items');save();render()};
 /* ---- Enchanting flow: equipment -> scroll -> confirm ---- */
@@ -905,7 +925,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  app.querySelectorAll('[data-why]').forEach(b=>{b.addEventListener('click',()=>{const c=$('navcap');if(c&&!b.dataset.g)c.textContent=b.dataset.why})});app.querySelectorAll('[data-sh]').forEach(b=>b.onclick=()=>{shopSel=b.dataset.sh;shopQty=1;shopConfirm=false;render()});
  
  app.querySelectorAll('[data-st]').forEach(b=>b.onclick=()=>{shopTab=b.dataset.st;shopSel=null;shopQty=1;shopConfirm=false;render()});
- {const e=$('sq');if(e){e.oninput=()=>{const mx=Math.max(1,shopMax());let v=parseInt(e.value,10);if(isNaN(v)||v<1)v=1;if(v>mx){v=mx;e.value=mx}shopQty=v;const pr=shopTab==='buy'?ITEMS[shopSel].buy:sellVal(shopSel),t=$('stot');if(t)t.textContent=(shopTab==='buy'?'Total: ':'You get: ')+pr*v+' mesos'};e.onblur=()=>{e.value=shopQty}}}
+ {const e=$('sq');if(e){e.oninput=()=>{const mx=Math.max(1,shopMax());let v=parseInt(e.value,10);if(isNaN(v)||v<1)v=1;if(v>mx){v=mx;e.value=mx}shopQty=v;const pr=shopTab==='buy'?buyPrice(shopSel):sellVal(shopSel),t=$('stot');if(t)t.textContent=(shopTab==='buy'?'Total: ':'You get: ')+pr*v+' mesos'};e.onblur=()=>{e.value=shopQty}}}
  q0('smax',()=>{shopQty=Math.max(1,shopMax());render()});q0('sdo',()=>{shopConfirm=true;render()});q0('scf',()=>{shopConfirm=false;shopDo()});q0('scn',()=>{shopConfirm=false;render()});q0('sx',()=>{shopSel=null;shopConfirm=false;render()});
  app.querySelectorAll('[data-pl]').forEach(b=>b.onclick=()=>{viewPlayer=viewPlayer===b.dataset.pl?null:b.dataset.pl;viewPEq=false;render()});
  {const wt=!!talk&&tab==='play';if(wt&&!window._wt)window.scrollTo(0,0);window._wt=wt}
@@ -1729,12 +1749,12 @@ function mobsTick(now){if(!enc)return;let ch=trickle(now);
     if(hot(m)){
      /* aggressive (or provoked): step into your row when it is free, otherwise close the distance along the lane */
      if(canRow){m.row=rr;ch=true}
-     else if(m.gap>0){m.gap--;ch=true;if(m.gap<=0){m.next=now+d.iv;log('The '+d.n+' closes in.','','combat')}}}
+     else if(m.gap>0&&!fld.some(o=>o!==m&&o.row===m.row&&o.gap===m.gap-1)){m.gap--;ch=true;if(m.gap<=0){m.next=now+d.iv;log('The '+d.n+' closes in.','','combat')}}}/* one monster per cell */
     else{
      /* calm monsters wander back and forth along their lane, and drift toward your lane now and then */
      if(canRow&&Math.random()<.4){m.row=rr;ch=true}
-     else if(Math.random()<.8){let g=m.gap+(m.dir||1);if(g<0||g>MAXGAP){m.dir=-(m.dir||1);g=m.gap+m.dir}if(g>=0&&g<=MAXGAP&&g!==m.gap){m.gap=g;ch=true;if(g===0)m.next=now+Math.round(d.iv*1.5)}}}}
-   if(m.gap<=0&&(hot(m)||(d.touch&&!TUT.on))&&now>=m.next){m.next=now+d.iv+R(-200,200);ch=true;
+     else if(Math.random()<.8){let g=m.gap+(m.dir||1);if(g<0||g>MAXGAP){m.dir=-(m.dir||1);g=m.gap+m.dir}if(g>=0&&g<=MAXGAP&&g!==m.gap&&!fld.some(o=>o!==m&&o.row===m.row&&o.gap===g)){m.gap=g;ch=true;if(g===0)m.next=now+Math.round(d.iv*1.5)}}}}
+   if(m.gap<=0&&((hot(m)&&Math.abs(m.row-PRf())<=1)||(d.touch&&!TUT.on&&m.row===PRf()))&&now>=m.next){/* v3.2: only monsters next to you hit you: an angry one from your row or the rows beside it, a wandering one only by bumping into you in your row */m.next=now+d.iv+R(-200,200);ch=true;
     if(!darkOn()){if(Math.random()<Math.min(.95,Math.max(.5,.95-avoid()/100))){const dv=m.dis>now?(m.disv|0):0,x=Math.max(1,Math.round((R(d.atk[0],d.atk[1])-dv)*(1-defRed())));P.hp-=guardTake(x);log('The '+d.n+' hits you for '+x+'.','bad','combat')}else log('The '+d.n+' misses.','','combat')}
     if(P.hp<=0){die();break}}}
   if(ch)render()}
@@ -2052,7 +2072,7 @@ function tutCheck(){if(!TUT.on)return false;
  return false}
 {const _w=win;win=function(){if(enc&&enc.k==='training_snail'){fld=[];enc=null;TUT.step=5;TUT.on=false;
   log('Todd: Well done! That is all there is to it. Out in the fields, more monsters will join the fight, so keep an eye on HP.','good','combat');
-  if(!P.tutDone){P.tutDone=1;gain(20);log('Training complete. +20 EXP.','good','combat')}save();return}return _w.apply(this,arguments)}}
+  if(!P.tutDone){P.tutDone=1;gain(20);log('Training complete. +'+XR(20)+' EXP.','good','combat')}save();return}return _w.apply(this,arguments)}}
 {const _t=trickle;trickle=function(now){if(TUT.on)return false;return _t(now)}}
 {const _d=die;die=function(){if(TUT.on){P.hp=Math.max(2,Math.floor(P.maxHp/2));tutEnd('Todd: Careful! That is enough for now.');return}return _d.apply(this,arguments)}}
 {const _dl=dlg;dlg=function(){if(talk&&talk.npc==='todd'){const pg=talk.page;
@@ -2100,7 +2120,7 @@ function syncFeat(){for(let i=FEAT.length-1;i>=0;i--)if(FEAT[i][0]==='admin'||FE
 function findItem(q){q=String(q||'').trim().toLowerCase();if(!q)return null;if(ITEMS[q])return q;const ids=Object.keys(ITEMS);return ids.find(k=>ITEMS[k].n.toLowerCase()===q)||ids.find(k=>ITEMS[k].n.toLowerCase().includes(q))||ids.find(k=>k.includes(q.replace(/\s+/g,'_')))||null}
 function slotByName(n){n=String(n||'').trim().toLowerCase();for(let i=0;i<6;i++){const d=slotData(i);if(d&&d.name&&d.name.toLowerCase()===n)return[i,d]}return null}
 function slotSave(i,d){try{LS.setItem('mapleish_c'+i,JSON.stringify(d))}catch(e){}}
-const gmOpen={self:true,items:false,tp:false,world:false,roles:false,ban:false,audit:false,mmute:true,mkick:false,mlog:false};
+const gmOpen={rates:true,hot:true,self:true,items:false,tp:false,world:false,roles:false,ban:false,audit:false,mmute:true,mkick:false,mlog:false};
 let gmMsg='';
 function gmEnd(){fld=[];enc=null;autoSeek=false;seeking=false;clearTimeout(autoT);talk=null;inShop=false;selNpc=null}
 function gmPanel(role){
@@ -2113,7 +2133,18 @@ function gmPanel(role){
  const players=[KICHI.n].concat([0,1,2,3,4,5].map(i=>slotData(i)).filter(d=>d&&d.name).map(d=>d.name)).filter((n,i,a)=>a.indexOf(n)===i);
  let h='<div class="panel win"><div class="pad mute">Signed in as <b>'+esc2(MYID())+'</b> ('+myRole()+')</div></div>'+note;
  if(role==='admin'){
-  h+=sec('self','Edit a character',
+  h+=sec('rates','World settings','<div class="mute" style="font-size:13px">Base rates for all players (1-1000). EXP: <b>x'+expBase()+'</b> &middot; Drop: <b>x'+dropBase()+'</b>'+(hotNow().length?' &middot; with hot-time now: EXP <b>x'+expRate()+'</b>, Drop <b>x'+dropRate()+'</b>':'')+'</div>'
+   +row(inp('so_gm_rate','EXP rate 1-1000','flex:1'),btn('rate','Set'),btn('rate1','x1'))
+   +row(inp('so_gm_drate','Drop rate 1-1000','flex:1'),btn('drate','Set'),btn('drate1','x1'))
+   +'<div class="mute" style="font-size:13px;margin-top:10px">Scrolling notice (shown after the welcome, server time, rates and hot-times in the bar at the top of the game and website). Now: <b>'+(worldCfg().msg?esc2(worldCfg().msg):'none')+'</b></div>'
+   +row(inp('so_gm_notice','Custom message (up to 150 letters)','flex:1'),btn('notice','Set'),btn('notice0','Clear')))
+  +sec('hot','Hot-time ('+hotList().length+'/24)','<div class="mute" style="font-size:13px">Scheduled EXP and drop boosts. Times are California time. While one is running, its EXP and drop multipliers apply on top of the base rates (the biggest one wins if several overlap), and the top bar announces it.</div>'
+   +hotList().map((x,i)=>{const st=hotState(x);return '<div class="mrow"><span class="av">'+(st.on?'🔥':x.on?'⏰':'💤')+'</span><div style="flex:1"><div><b>'+esc2(x.name)+'</b> &middot; EXP x'+clampR(x.exp)+', Drop x'+clampR(x.drop)+'</div><div class="mute">'+esc2(x.date)+' '+esc2(x.time)+' for '+(+x.hours)+' h, '+({none:'once',daily:'every day',weekly:'every week'}[x.repeat]||'once')+(st.on?' &middot; running now':'')+'</div></div><button data-gm="htog:'+i+'">'+(x.on?'Disable':'Enable')+'</button><button data-gm="hdel:'+i+'">Delete</button></div>'}).join('')
+   +(hotList().length<24?row(inp('so_gm_hname','Name, e.g. Weekend Hot-time'))
+    +row(inp('so_gm_hexp','EXP x (1-1000)','flex:1'),inp('so_gm_hdrop','Drop x (1-1000)','flex:1'))
+    +row('<input id="so_gm_hdate" type="date" value="'+val('so_gm_hdate')+'" style="flex:1;min-width:0">','<input id="so_gm_htime" type="time" value="'+val('so_gm_htime')+'" style="flex:1;min-width:0">')
+    +row(inp('so_gm_hhours','Hours','flex:1'),'<select id="so_gm_hrep" style="flex:1">'+[['none','Once'],['daily','Every day'],['weekly','Every week']].map(o=>'<option value="'+o[0]+'"'+((soDraft.so_gm_hrep||'none')===o[0]?' selected':'')+'>'+o[1]+'</option>').join('')+'</select>',btn('hadd','Add')):'<div class="mute" style="margin-top:6px">24 hot-times is the limit. Delete one to add another.</div>'))
+  +sec('self','Edit a character',
    row(inp('so_gm_target','Character name (blank = me)'))
    +row(inp('so_gm_lvl','Level (1-'+MAXL+')'),inp('so_gm_exp','EXP'))+row(inp('so_gm_str','STR'),inp('so_gm_dex','DEX'),inp('so_gm_int','INT'),inp('so_gm_luk','LUK'))
    +row(inp('so_gm_ap','Ability pts'),inp('so_gm_sp','Skill pts'),inp('so_gm_mesos','Mesos'))+row(inp('so_gm_hp','Max HP'),inp('so_gm_mp','Max MP'))
@@ -2151,7 +2182,7 @@ let gmFound='';
 function gmDo(a,arg){const v=id=>(((document.getElementById(id)||{}).value)||soDraft[id]||'').trim(),clr=id=>{delete soDraft[id]};gmMsg='';
  const role=myRole(),needAdm=()=>{if(!isAdm()){gmMsg='Admins only.';return true}return false},needMod=()=>{if(!isMod()){gmMsg='Moderators only.';return true}return false};
  if(a==='tg'){gmOpen[arg]=!gmOpen[arg];render();return}
- if(['apply','heal','revive','clearmap','find','give','tpmap','tpplayer','refill','killall','kichiback','say','ban','unban'].includes(a)&&needAdm())return render();
+ if(['rate','rate1','drate','drate1','hadd','htog','hdel','notice','notice0','apply','heal','revive','clearmap','find','give','tpmap','tpplayer','refill','killall','kichiback','say','ban','unban'].includes(a)&&needAdm())return render();
  if(['mute','unmute','kick','warn','delmsg','clearchat'].includes(a)&&needMod())return render();
  if(a==='apply'){const tn=v('so_gm_target'),sl=tn&&tn.toLowerCase()!==P.name.toLowerCase()?slotByName(tn):null;if(tn&&tn.toLowerCase()!==P.name.toLowerCase()&&!sl){gmMsg='No saved character named '+tn+'.';return render()}const T=sl?sl[1]:P;const n=k=>{const x=v('so_gm_'+k);return x===''||isNaN(+x)?null:Math.floor(+x)},ch=[];
   const lv=n('lvl');if(lv!==null){const to=Math.max(1,Math.min(MAXL,lv)),d=to-T.lvl;T.lvl=to;T.exp=0;if(d>0){T.ap+=5*d;if(T.job)T.sp+=3*d;T.maxHp+=14*d;T.maxMp+=11*d}else if(d<0){T.maxHp=Math.max(50,T.maxHp+14*d);T.maxMp=Math.max(5,T.maxMp+11*d)}T.hp=T.maxHp;T.mp=T.maxMp;ch.push('level '+to)}
@@ -2160,6 +2191,16 @@ function gmDo(a,arg){const v=id=>(((document.getElementById(id)||{}).value)||soD
   const j=v('so_gm_job');if(j){T.job=j==='none'?null:j;ch.push('class '+(T.job||'beginner'))}
   ['lvl','exp','str','dex','int','luk','ap','sp','mesos','hp','mp'].forEach(k=>clr('so_gm_'+k));clr('so_gm_job');
   clr('so_gm_target');if(sl&&ch.length)slotSave(sl[0],T);gmMsg=ch.length?'Updated '+(sl?T.name:'you')+': '+ch.join(', ')+'.':'Nothing to change.';if(ch.length)audit('edited '+(sl?T.name:'self')+': '+ch.join(', '))}
+ else if(a==='rate'||a==='rate1'){const r=a==='rate1'?1:Math.floor(+v('so_gm_rate'));if(!(r>=1&&r<=1000))gmMsg='The EXP rate must be a whole number from 1 to 1000.';else{try{LS.setItem('mapleish_rates',JSON.stringify(Object.assign(worldCfg(),{exp:r,by:MYID(),t:Date.now()})))}catch(e){}clr('so_gm_rate');gmMsg='EXP rate is now x'+r+'.';audit('set EXP rate to x'+r)}}
+ else if(a==='drate'||a==='drate1'){const r=a==='drate1'?1:Math.floor(+v('so_gm_drate'));if(!(r>=1&&r<=1000))gmMsg='The drop rate must be a whole number from 1 to 1000.';else{const c=worldCfg();c.drop=r;c.by=MYID();c.t=Date.now();try{LS.setItem('mapleish_rates',JSON.stringify(c))}catch(e){}clr('so_gm_drate');gmMsg='Drop rate is now x'+r+'.';audit('set drop rate to x'+r)}}
+ else if(a==='hadd'){const c=worldCfg(),L=Array.isArray(c.hot)?c.hot:[];const name=v('so_gm_hname').replace(/\s+/g,' ').slice(0,40),ex=Math.floor(+v('so_gm_hexp')||1),dr=Math.floor(+v('so_gm_hdrop')||1),date=v('so_gm_hdate'),time=v('so_gm_htime'),hrs=+v('so_gm_hhours'),rep=v('so_gm_hrep')||'none';
+  const maxH=rep==='daily'?24:rep==='weekly'?168:720;
+  if(L.length>=24)gmMsg='24 hot-times is the limit.';else if(!name)gmMsg='Give the hot-time a name.';else if(!(ex>=1&&ex<=1000&&dr>=1&&dr<=1000))gmMsg='EXP and drop must be 1 to 1000.';else if(ex===1&&dr===1)gmMsg='Set an EXP or drop multiplier above 1.';
+  else if(!/^\d{4}-\d\d-\d\d$/.test(date)||!/^\d\d?:\d\d$/.test(time))gmMsg='Pick a start date and time (California time).';else if(!(hrs>0&&hrs<=maxH))gmMsg='Hours must be more than 0 and at most '+maxH+(rep==='none'?'':' for a hot-time that repeats '+(rep==='daily'?'every day':'every week'))+'.';
+  else{L.push({name,exp:ex,drop:dr,date,time,hours:Math.round(hrs*4)/4,repeat:['none','daily','weekly'].includes(rep)?rep:'none',on:true});c.hot=L;c.by=MYID();c.t=Date.now();try{LS.setItem('mapleish_rates',JSON.stringify(c))}catch(e){}
+   ['hname','hexp','hdrop','hdate','htime','hhours','hrep'].forEach(k=>clr('so_gm_'+k));gmMsg='Hot-time "'+name+'" added.';audit('added hot-time '+name+' (EXP x'+ex+', drop x'+dr+')')}}
+ else if(a==='htog'||a==='hdel'){const c=worldCfg(),L=Array.isArray(c.hot)?c.hot:[],x=L[+arg];if(x){if(a==='hdel'){L.splice(+arg,1);gmMsg='Hot-time "'+x.name+'" deleted.';audit('deleted hot-time '+x.name)}else{x.on=!x.on;gmMsg='Hot-time "'+x.name+'" '+(x.on?'enabled':'disabled')+'.';audit((x.on?'enabled':'disabled')+' hot-time '+x.name)}c.hot=L;c.by=MYID();c.t=Date.now();try{LS.setItem('mapleish_rates',JSON.stringify(c))}catch(e){}}}
+ else if(a==='notice'||a==='notice0'){const t=a==='notice0'?'':v('so_gm_notice').replace(/\s+/g,' ').slice(0,150);const c=worldCfg();if(t)c.msg=t;else delete c.msg;c.by=MYID();c.t=Date.now();try{LS.setItem('mapleish_rates',JSON.stringify(c))}catch(e){}clr('so_gm_notice');gmMsg=t?'Scrolling notice set.':'Scrolling notice cleared.';audit(t?'set notice: '+t.slice(0,40):'cleared notice')}
  else if(a==='heal'){P.hp=P.maxHp;P.mp=P.maxMp;gmMsg='Healed.';audit('healed self')}
  else if(a==='revive'){P.dead=0;P.hp=Math.max(P.hp,Math.floor(P.maxHp/2));gmMsg='Revived.';audit('revived self')}
  else if(a==='clearmap'){P.cleared=P.cleared||{};P.cleared[P.map]=1;gmMsg='Exits of '+MAPS[P.map].n+' are open.';audit('opened exits of '+P.map)}
@@ -2344,9 +2385,9 @@ for(const k in V.npcs){const x=V.npcs[k];
  if(!NPCS[k])NPCS[k]={n:x.n,i:x.i,role:x.role||'',hi:x.hi||(x.n+' nods at you.')};
  if(x.shop){const L=x.shop.map(s=>s[0]).filter(id=>ITEMS[id]);x.shop.forEach(s=>{const it=ITEMS[s[0]];if(it&&!it.buy)it.buy=s[1]});
   if(x.shopArmor||!L.length)L.push(...tiers(GR,[1,5,10,15,20]).filter(id=>!L.includes(id)));
-  NPCS[k].shop=1;NPCS[k].shopList=L;NPCS[k].shopName=x.n+(x.role?' - '+x.role:'')}}
+  NPCS[k].shop=1;NPCS[k].shopList=L;NPCS[k].shopPrice=Object.fromEntries(x.shop.filter(s=>ITEMS[s[0]]));NPCS[k].shopName=x.n+(x.role?' - '+x.role:'')}}
 /* the old made-up shopkeepers have no place on the real maps; the job instructors keep their quests and job advancement */
-{const _d=dlgDo;dlgDo=function(k){if(k==='shop'&&talk){const N=NPCS[talk.npc],m=MAPS[P.map];if(N&&N.shopList){m.shop=1;m.shopList=N.shopList;m.shopName=N.shopName}}return _d(k)}}
+{const _d=dlgDo;dlgDo=function(k){if(k==='shop'&&talk){const N=NPCS[talk.npc],m=MAPS[P.map];if(N&&N.shopList){m.shop=1;m.shopList=N.shopList;m.shopName=N.shopName;m.shopPrice=N.shopPrice||null}}return _d(k)}}
 /* ---------- quests from the data ---------- */
 for(const k in V.quests){const q=Object.assign({},V.quests[k]);if(q.mk)q.mk=q.mk.filter(x=>MON[x[0]]);if(q.col)q.col=q.col.filter(c=>ITEMS[c[0]]);
  if(q.type==='kill'&&q.mk&&q.mk.length===1&&!q.col){q.mon=q.mk[0][0];q.cnt=q.mk[0][1];delete q.mk}
@@ -2671,7 +2712,7 @@ const nextTick=now=>now+1000;
 seek=function(){const m=MAPS[P.map];if(m.town||enc)return false;releaseStale();const now=Date.now();nextSpawn=nextTick(now);
  const n=spawnWave(now,true);if(!n)return false;enc=nearMob(null);
  log(n===1?'A '+MON[enc.k].n+' (Lv '+MON[enc.k].lv+') appears.':n+' monsters appear.','','combat');return true};
-trickle=function(now){if(now<nextSpawn)return false;nextSpawn=nextTick(now);const n=spawnWave(now,false);if(n)log(n===1?'A monster appears.':n+' monsters appear.','','combat');return n>0};
+trickle=function(now){if(!autoSeek)return false;/* v3.2: with Auto-hunt off nothing respawns, so the fight ends when the board is clear */if(now<nextSpawn)return false;nextSpawn=nextTick(now);const n=spawnWave(now,false);if(n)log(n===1?'A monster appears.':n+' monsters appear.','','combat');return n>0};
 /* Endure: in the original it recovers HP while hanging on ropes. This game has no ropes, so Endure does the same job
    in combat: every 31 s at Lv1 down to every 10 s at Lv8 you recover HP as if standing still (10 + Improving HP
    Recovery). It had no effect at all before. */
@@ -2788,8 +2829,8 @@ const SKDELAY={
  rage:'cast',rush:{tab:T_RUSH,base:420}};
 for(const k in ITEMS){const it=ITEMS[k];if(!it||!it.w)continue;if(it.tier==null)it.tier=SPD_TIER[it.spd]||5}
 FIST.tier=6;
-const boosterOn=()=>false;/* 2nd job weapon boosters plug in here */
-const spellBoostOn=()=>false;/* Spell Booster plugs in here */
+const boosterOn=()=>typeof seBoosterOn==='function'&&seBoosterOn();/* 2nd job weapon boosters (skill engine) */
+const spellBoostOn=()=>typeof seSpellBoostOn==='function'&&seSpellBoostOn();/* Spell Booster (3rd job) */
 const wTy=()=>{const w=W();return w===FIST?null:(w.ty||(()=>{try{return tyOf(P.weapon)}catch(e){return null}})())};
 const weapMs=(ty,tier,boost)=>{const x=WTAB[ty]||[T_ONE,810];return tabMs(x[0],x[1],tier,boost)};
 function actTime(k){const d=SKDELAY[k]||'w',tier=W().tier||6,b=boosterOn();
@@ -2836,6 +2877,398 @@ function stripClassSkills(){if(!P||!P.sk)return;const lbl=JOBLBL[P.job]||null;le
  if(gone.length){P.sp+=back;if(Array.isArray(P.qseen))P.qseen=P.qseen.filter(k=>!(SKJ[k]&&SKJ[k].job&&SKJ[k].job!==lbl));P.b={};try{qsSync()}catch(e){}
   log('Your class changed: '+gone.join(', ')+' removed, '+back+' SP returned.','','system');save()}}
 {const _r=render;render=function(){if(scr==='game'&&P&&P.skJob!==(P.job||null)){P.skJob=P.job||null;stripClassSkills()}return _r.apply(this,arguments)}}
+
+/* ===== v3.2: skill engine + 2nd job (all 12 branches) =====
+   One engine runs every 2nd job skill straight from the v83 data (V83.sk: per-level mpCon, hpCon, damage, mad,
+   mobCount, attackCount, time, prop, x, y, mastery ...). Each skill only adds its own rule below (SPEC): which weapon,
+   which shape (one target, several, a row), and any special effect (stun, poison, knock-back, drain, steal ...).
+   The engine also owns the things 2nd job brings: weapon boosters (attack speed), masteries (minimum damage and
+   accuracy), Final Attack, MP Eater, Critical Throw, monster status effects, party-less versions of party buffs.
+   Damage now follows the v62 formula: minimum = (primary stat x 0.9 x mastery + secondary stat) x attack / 100, with
+   a 10% base mastery until a mastery skill raises it (it was a flat 60% of the maximum before).
+   2nd job advancement at level 30: your 1st job instructor -> letter -> job instructor -> test room (30 Dark Marbles,
+   or 15 Potent Wind Crystals for Pirates) -> The Proof of a Hero -> back to your instructor -> choose your path. ===== */
+const SKD2=V83.sk||{};
+/* ---------- branches ---------- */
+const BR={
+ fighter:{fam:'swordsman',n:'Fighter',ids:[1100000,1100001,1100002,1100003,1101004,1101005,1101006,1101007],d:'Masters swords and axes; Rage raises attack, Power Guard turns damage back on monsters.'},
+ page:{fam:'swordsman',n:'Page',ids:[1200000,1200001,1200002,1200003,1201004,1201005,1201006,1201007],d:'Masters swords and blunt weapons; Threaten weakens monsters, Power Guard turns damage back.'},
+ spearman:{fam:'swordsman',n:'Spearman',ids:[1300000,1300001,1300002,1300003,1301004,1301005,1301006,1301007],d:'Masters spears and polearms; Hyper Body raises max HP and MP, Iron Will raises defense.'},
+ fpwizard:{fam:'magician',n:'Wizard (Fire, Poison)',ids:[2100000,2101001,2101002,2101003,2101004,2101005],d:'Fire Arrow and Poison Breath; Meditation raises magic attack.'},
+ ilwizard:{fam:'magician',n:'Wizard (Ice, Lightning)',ids:[2200000,2201001,2201002,2201003,2201004,2201005],d:'Cold Beam freezes, Thunder Bolt hits up to 6 monsters.'},
+ cleric:{fam:'magician',n:'Cleric',ids:[2300000,2301001,2301002,2301003,2301004,2301005],d:'Heal restores HP and hurts undead; Bless and Invincible protect.'},
+ hunter:{fam:'archer',n:'Hunter',ids:[3100000,3100001,3101002,3101003,3101004,3101005],d:'Bows; Arrow Bomb stuns up to 6 monsters.'},
+ crossbowman:{fam:'archer',n:'Crossbowman',ids:[3200000,3200001,3201002,3201003,3201004,3201005],d:'Crossbows; Iron Arrow pierces a whole row.'},
+ assassin:{fam:'rogue',n:'Assassin',ids:[4100000,4100001,4100002,4101003,4101004,4101005],d:'Claws; Drain heals you, Critical Throw lands big hits.'},
+ bandit:{fam:'rogue',n:'Bandit',ids:[4200000,4200001,4201002,4201003,4201004,4201005],d:'Daggers; Savage Blow hits 6 times, Steal takes items.'},
+ brawler:{fam:'pirate',n:'Brawler',ids:[5100000,5100001,5101002,5101003,5101004,5101005,5101006,5101007],d:'Knuckles; Corkscrew Blow and Backspin Blow hit groups and stun.'},
+ gunslinger:{fam:'pirate',n:'Gunslinger',ids:[5200000,5201001,5201002,5201003,5201004,5201005,5201006],d:'Guns; Grenade hits 6 monsters, Blank Shot stuns.'}};
+/* ---------- weapon groups ---------- */
+const WG={sw:['oh_sword','th_sword'],ax:['oh_axe','th_axe'],bw:['oh_bw','th_bw'],sp:['spear'],pa:['polearm'],bow:['bow'],xb:['crossbow'],cl:['claw'],dg:['dagger'],kn:['knuckle'],gn:['gun'],mw:['wand','staff']};
+const curTy=()=>{const w=W();if(w===FIST||!P.weapon||!eqOk(P.weapon))return null;return w.ty||(()=>{try{return tyOf(P.weapon)}catch(e){return null}})()};
+const wIs=g=>{const t=curTy();return !!t&&WG[g].includes(t)};
+const WGN={sw:'sword',ax:'axe',bw:'blunt weapon',sp:'spear',pa:'polearm',bow:'bow',xb:'crossbow',cl:'claw',dg:'dagger',kn:'knuckle',gn:'gun',mw:'wand or staff'};
+/* ---------- what each skill does (numbers come from the data) ----------
+   k: passive | mastery | final | buff | booster | debuff | phys | magic | heal | teleport | mprec
+   w: weapon group needed · sh: shape (one | multi | row) · rx: extra reach · el: element */
+const SPEC={
+ 1100000:{k:'mastery',w:'sw'},1100001:{k:'mastery',w:'ax'},1100002:{k:'final',w:'sw'},1100003:{k:'final',w:'ax'},
+ 1101004:{k:'booster',w:'sw'},1101005:{k:'booster',w:'ax'},1101006:{k:'buff',fx:'rage'},1101007:{k:'buff',fx:'pguard'},
+ 1200000:{k:'mastery',w:'sw'},1200001:{k:'mastery',w:'bw'},1200002:{k:'final',w:'sw'},1200003:{k:'final',w:'bw'},
+ 1201004:{k:'booster',w:'sw'},1201005:{k:'booster',w:'bw'},1201006:{k:'debuff',fx:'threaten',reach:2},1201007:{k:'buff',fx:'pguard'},
+ 1300000:{k:'mastery',w:'sp'},1300001:{k:'mastery',w:'pa'},1300002:{k:'final',w:'sp'},1300003:{k:'final',w:'pa'},
+ 1301004:{k:'booster',w:'sp'},1301005:{k:'booster',w:'pa'},1301006:{k:'buff',fx:'ironwill'},1301007:{k:'buff',fx:'hyperbody'},
+ 2100000:{k:'passive',fx:'mpeater'},2101001:{k:'buff',fx:'meditation'},2101002:{k:'teleport'},2101003:{k:'debuff',fx:'slow'},
+ 2101004:{k:'magic',sh:'one',el:'fire'},2101005:{k:'magic',sh:'one',el:'poison',fx:'poison'},
+ 2200000:{k:'passive',fx:'mpeater'},2201001:{k:'buff',fx:'meditation'},2201002:{k:'teleport'},2201003:{k:'debuff',fx:'slow'},
+ 2201004:{k:'magic',sh:'one',el:'ice',fx:'freeze'},2201005:{k:'magic',sh:'multi',el:'lightning'},
+ 2300000:{k:'passive',fx:'mpeater'},2301001:{k:'teleport'},2301002:{k:'heal'},2301003:{k:'buff',fx:'invincible'},2301004:{k:'buff',fx:'bless'},
+ 2301005:{k:'magic',sh:'one',el:'holy'},
+ 3100000:{k:'mastery',w:'bow'},3100001:{k:'final',w:'bow'},3101002:{k:'booster',w:'bow'},3101003:{k:'phys',w:'bow',sh:'multi',reach:1,fx:'knockback'},
+ 3101004:{k:'buff',fx:'soularrow',w:'bow'},3101005:{k:'phys',w:'bow',sh:'multi',dmgKey:'x',fx:'stun'},
+ 3200000:{k:'mastery',w:'xb'},3200001:{k:'final',w:'xb'},3201002:{k:'booster',w:'xb'},3201003:{k:'phys',w:'xb',sh:'multi',reach:1,fx:'knockback'},
+ 3201004:{k:'buff',fx:'soularrow',w:'xb'},3201005:{k:'phys',w:'xb',sh:'row',rx:1},
+ 4100000:{k:'mastery',w:'cl'},4100001:{k:'passive',fx:'critthrow'},4100002:{k:'passive',fx:'endure'},4101003:{k:'booster',w:'cl'},
+ 4101004:{k:'buff',fx:'haste'},4101005:{k:'phys',w:'cl',sh:'one',fx:'drain'},
+ 4200000:{k:'mastery',w:'dg'},4200001:{k:'passive',fx:'endure'},4201002:{k:'booster',w:'dg'},4201003:{k:'buff',fx:'haste'},
+ 4201004:{k:'phys',w:'dg',sh:'one',fx:'steal'},4201005:{k:'phys',w:'dg',sh:'one'},
+ 5100000:{k:'passive',fx:'maxhp'},5100001:{k:'mastery',w:'kn'},5101002:{k:'phys',w:'kn',sh:'multi',fx:'stun'},5101003:{k:'phys',w:'kn',sh:'one',fx:'stun'},
+ 5101004:{k:'phys',w:'kn',sh:'multi',rx:1},5101005:{k:'mprec'},5101006:{k:'booster',w:'kn'},5101007:{k:'buff',fx:'barrel'},
+ 5200000:{k:'mastery',w:'gn'},5201001:{k:'phys',w:'gn',sh:'multi',ammo:1},5201002:{k:'phys',w:'gn',sh:'multi',rx:1,ammo:0},5201003:{k:'booster',w:'gn'},
+ 5201004:{k:'phys',w:'gn',sh:'multi',fx:'stun',ammo:1},5201005:{k:'buff',fx:'wings'},5201006:{k:'phys',w:'gn',sh:'one',fx:'recoil',ammo:1}};
+const ICON={mastery:'📘',final:'💫',booster:'⚡',buff:'✨',debuff:'🌀',phys:'💥',magic:'🔮',heal:'💖',teleport:'🌀',mprec:'🔁',passive:'📗'};
+const FXICON={rage:'😤',pguard:'🛡️',ironwill:'🧱',hyperbody:'💪',meditation:'🧘',invincible:'🔰',bless:'🙏',soularrow:'👻',haste:'💨',barrel:'🛢️',wings:'🪽',threaten:'😠',slow:'🐢',
+ knockback:'🎯',stun:'💣',drain:'🩸',steal:'🫳',poison:'☠️',freeze:'❄️',mpeater:'🔵',critthrow:'🎯',endure:'❤️‍🩹',maxhp:'❤️'};
+/* ---------- registry: key = 'k' + skill id ---------- */
+const SE={};
+for(const b in BR)for(const id of BR[b].ids){const d=SKD2[id],sp=SPEC[id];if(!d||!sp)continue;SE['k'+id]=Object.assign({id,br:b,n:d.n,max:d.max},sp)}
+const seKeyOf=id=>'k'+id;
+const seLv=(k,n)=>{const e=SE[k],L=(SKD2[e.id]||{}).lv||[];const i=Math.max(1,Math.min(L.length,n|0||1))-1;return L[i]||{}};
+const seOwn=k=>!!SE[k]&&P&&P.job2===SE[k].br;
+const seN=k=>seOwn(k)?sl(k):0;
+const isJ2=b=>!!P&&P.job2===b;
+const brOf=()=>P&&P.job2?BR[P.job2]:null;
+/* ---------- skill window entries (same shape as the 1st job ones) ---------- */
+const tyName=e=>({mastery:'Passive',final:'Passive',passive:'Passive',buff:'Supportive',booster:'Supportive',debuff:'Supportive',teleport:'Supportive',mprec:'Supportive',heal:'Active',phys:'Active',magic:'Active'})[e.k];
+const NOEFFECT={wings:'This game has no jumping, so Wings has no effect here.'};
+for(const k in SE){const e=SE[k],d=SKD2[e.id];
+ const pre=(d.req||[]).map(([nm,lv])=>{const m=Object.keys(SE).find(x=>SE[x].br===e.br&&SE[x].n===nm);return m?[m,lv]:null}).filter(Boolean);
+ SKJ[k]={ic:FXICON[e.fx]||ICON[e.k]||'✨',nm:e.n,max:e.max,ty:tyName(e),pre,d:(d.desc||'').replace(/\s*Required Skill\s*:.*$/i,'')+(NOEFFECT[e.fx]?' ('+NOEFFECT[e.fx]+')':''),
+  fx:n=>seLv(k,n).t||'',job:BR[e.br].n,
+  cost:(e.k==='mastery'||e.k==='final'||e.k==='passive')?null:(n=>{const l=seLv(k,n);return [l.hpCon?l.hpCon+' HP':'',l.mpCon?l.mpCon+' MP':'',l.x&&e.k==='mprec'?l.x+'% max HP':''].filter(Boolean).join(' · ')||'None'}),
+  du:n=>{const l=seLv(k,n);return l.time&&e.k!=='magic'&&e.k!=='phys'?l.time+' s':''}};
+ if(!SKJ[k].cost)delete SKJ[k].cost;
+ if(!['mastery','final','passive'].includes(e.k))SKL[k]=[SKJ[k].ic,e.n.replace(/ : .*/,'').replace(/^(Final Attack|Power Knock-Back)$/,'$1')];
+ SKT[k]=2;
+ /* attack timing: spells 810 ms whatever the weapon; buffs the 600 ms cast; weapon skills swing the weapon */
+ if(e.k==='magic'||e.k==='heal')SKDELAY[k]={fixed:[810,720]};
+ else if(['buff','booster','debuff','mprec'].includes(e.k)){SKDELAY[k]='cast';BUFFK.add(k)}
+ else if(e.k==='teleport')SKDELAY[k]={fixed:[600,540]}}
+/* ---------- passives the stat formulas read ---------- */
+const masteryPct=()=>{if(!P||!P.job2)return 10;for(const k in SE){const e=SE[k];if(e.k==='mastery'&&seOwn(k)&&wIs(e.w)){const n=sl(k);if(n)return 10+5*(seLv(k,n).mastery|0)}}return 10};
+const masteryAcc=()=>{if(!P||!P.job2)return 0;for(const k in SE){const e=SE[k];if(e.k==='mastery'&&seOwn(k)&&wIs(e.w)){const n=sl(k);if(n)return seLv(k,n).x|0}}return 0};
+const buffOn=k=>!!P&&!!P.b&&P.b[k]>Date.now();
+const bv=(k,f)=>buffOn(k)&&P.b[k+'_v']?(P.b[k+'_v'][f]|0):0;
+const BKEYS=()=>Object.keys(SE).filter(k=>SE[k].k==='buff'||SE[k].k==='booster');
+function seWatk(){let a=0;for(const k of BKEYS())if(SE[k].fx==='rage')a+=bv(k,'pad');return a}
+function seMatk(){let a=0;for(const k of BKEYS())if(SE[k].fx==='meditation')a+=bv(k,'mad');return a}
+function seDef(){let a=0;for(const k of BKEYS())a+=bv(k,'pdd');return a}
+function seSpeed(){let a=0;for(const k of BKEYS())if(SE[k].fx==='haste')a+=bv(k,'speed');return a}
+function seBoosterOn(){if(!P||!P.job2)return false;for(const k of BKEYS()){const e=SE[k];if(e.k==='booster'&&buffOn(k)&&wIs(e.w))return true}return false}
+const soulOn=()=>{if(!P||!P.job2)return false;for(const k of BKEYS()){const e=SE[k];if(e.fx==='soularrow'&&buffOn(k)&&wIs(e.w))return true}return false};
+{const _ab=accBonus;accBonus=function(){let a=_ab()+masteryAcc();for(const k of BKEYS())a+=bv(k,'acc');return a}}
+{const _av=avBonus;avBonus=function(){let a=_av();for(const k of BKEYS())a+=bv(k,'eva');return a}}
+/* physical damage: v62 formula with mastery for the minimum; Rage adds weapon attack */
+function physParts(){const w=W(),S=eS('str'),D=eS('dex'),L=eS('luk');
+ const sa=(w.rng&&ammoN()>0)?((ITEMS[ammoId()]||{}).sa||0):0,watk=(w.watk||0)+sa+seWatk();let pr,sc;
+ if(w.rng==='claw'){pr=L*w.mult;sc=D}else if(w.rng){pr=D*w.mult;sc=S}else if(w.dag&&isRog()){pr=L*w.mult;sc=S+D}else{pr=S*w.mult;sc=D}
+ return{pr,sc,watk}}
+wMax=function(){const p=physParts();return Math.floor((p.pr+p.sc)*p.watk/100)};
+dmgRange=function(){const p=physParts(),mx=Math.max(1,Math.floor((p.pr+p.sc)*p.watk/100)),mn=Math.floor((p.pr*0.9*masteryPct()/100+p.sc)*p.watk/100);return[Math.max(1,Math.min(mx,mn)),mx]};
+{const _mr=magRange;magRange=function(atk,mast){const m=seMatk();if(!m)return _mr(atk,mast);const w=W(),old=w.matk;try{w.matk=(old||0)+m;return _mr(atk,mast)}finally{w.matk=old}}}
+/* Critical Throw (Assassin, claws) */
+{const _cr=critRoll;critRoll=function(x){x=_cr(x);if(!isJ2('assassin')||!wIs('cl'))return x;const n=sl('k4100001');if(!n)return x;const l=seLv('k4100001',n);return Math.random()*100<(l.prop|0)?Math.floor(x*(l.damage||100)/100):x}}
+/* Power Guard (reduce and return damage) and Invincible (reduce damage) */
+{const _gt=guardTake;guardTake=function(x){if(P&&P.job2){for(const k of BKEYS()){const e=SE[k];if(!buffOn(k))continue;
+   if(e.fx==='pguard'){const pct=bv(k,'x'),back=Math.floor(x*pct/100);if(back>0){x-=back;const m=fld.filter(f=>f.gap<=0&&f.hp>0).sort((a,b)=>Math.abs(a.row-PRf())-Math.abs(b.row-PRf()))[0];
+     if(m){const dmg=Math.min(back,Math.floor(m.max*0.1)||back);m.hp-=dmg;m.prov=true;log('Power Guard returns '+dmg+' damage to the '+MON[m.k].n+'.','hit','combat');if(m.hp<=0&&fld.includes(m))setTimeout(()=>{if(fld.includes(m)&&m.hp<=0){killMob(m);render()}},0)}}}
+   if(e.fx==='invincible')x=Math.floor(x*(100-bv(k,'x'))/100)}}
+  return _gt(Math.max(0,x))}}
+/* Hyper Body: max HP/MP up while it lasts (also undone after a reload) */
+function hbTick(){if(!P||!P.hb)return;if(Date.now()<P.hb.until)return;P.maxHp=Math.max(1,P.maxHp-P.hb.hp);P.maxMp=Math.max(1,P.maxMp-P.hb.mp);P.hp=Math.min(P.hp,P.maxHp);P.mp=Math.min(P.mp,P.maxMp);delete P.hb;log('Hyper Body wears off.','','combat')}
+/* Endure (thieves): extra HP and MP every few seconds; Improve MaxHP (Brawler): more HP per level */
+let enT=0;
+setInterval(()=>{if(!P||P.dead)return;hbTick();const now=Date.now();
+ for(const k of ['k4100002','k4200001'])if(seOwn(k)&&sl(k)){const l=seLv(k,sl(k));if(now-enT>=(l.time||10)*1000){enT=now;P.hp=Math.min(P.maxHp,P.hp+(l.hp|0));P.mp=Math.min(P.maxMp,P.mp+(l.mp|0))}}},1000);
+{const _g=gain;gain=function(x){const l0=P?P.lvl:0;const r=_g(x);if(P&&P.lvl>l0&&isJ2('brawler')&&sl('k5100000')){const add=(seLv('k5100000',sl('k5100000')).x|0)*(P.lvl-l0);P.maxHp+=add;P.hp+=add}return r}}
+/* ---------- monster status effects ---------- */
+const stOn=(m,f)=>m[f]&&m[f]>Date.now();
+{const _mt=mobsTick;mobsTick=function(now){
+  const before=new Map();for(const m of fld){if(stOn(m,'stun')||stOn(m,'frz')){m.mv=Math.max(m.mv||0,m.stun||0,m.frz||0);m.next=Math.max(m.next||0,m.stun||0,m.frz||0)}before.set(m,m.mv)}
+  const r=_mt(now);
+  for(const m of fld)if(stOn(m,'slow')&&m.mv!==before.get(m)&&m.mv>now)m.mv=now+Math.round((m.mv-now)*100/Math.max(20,100-(m.slowv|0)));
+  return r}}
+setInterval(()=>{if(!P||!enc)return;const now=Date.now();let ch=false;
+ for(const m of fld){if(m.psn&&m.psn.until>now&&now>=m.psn.next){m.psn.next=now+1000;const d=Math.min(m.psn.dmg,m.hp-1);if(d>0){m.hp-=d;ch=true}}}
+ if(ch&&typeof render==='function')render()},250);
+/* ---------- the engine ---------- */
+const seCd={};
+const say=(t,c)=>{log(t,c||'','combat');render()};
+const elMul=(m,el)=>{const e=(MON[m.k]||{}).el||{};const r=el&&e[el];return r==='w'?1.5:r==='r'?0.5:r==='i'?0:1};
+function seTargets(e,reach,n){const pool=fld.filter(m=>m.hp>0&&m.gap<=reach);if(!pool.length)return[];
+ if(e.sh==='row'){const c=pool.slice().sort((a,b)=>a.gap-b.gap||Math.abs(a.row-PRf())-Math.abs(b.row-PRf()))[0];return pool.filter(m=>m.row===c.row).sort((a,b)=>a.gap-b.gap).slice(0,n)}
+ return targetsFor(reach,n).filter(m=>m.hp>0)}
+function seReach(e){if(e.reach!=null)return e.reach;if(e.k==='magic'||e.k==='heal'||e.k==='debuff')return MG_REACH;return Math.min(MAXGAP,wReach()+(e.rx|0))}
+function seKill(ts){for(const m of ts)if(m.hp<=0&&fld.includes(m))killMob(m)}
+/* MP Eater: magic hits may drain MP from the monster */
+function mpEat(m){if(!P||!P.job2)return;const k={fpwizard:'k2100000',ilwizard:'k2200000',cleric:'k2300000'}[P.job2];if(!k||!sl(k))return;const l=seLv(k,sl(k));
+ if(m.mpEaten||Math.random()*100>=(l.prop|0))return;const mm=(MON[m.k]||{}).mp||((MON[m.k]||{}).lv||1)*10;const g=Math.floor(mm*(l.x|0)/100);if(g>0){m.mpEaten=1;P.mp=Math.min(P.maxMp,P.mp+g);log('MP Eater: +'+g+' MP.','good','combat')}}
+/* Final Attack: after a weapon attack, a chance of one more strong hit */
+function finalAttack(){if(!P||!P.job2||!enc)return;for(const k in SE){const e=SE[k];if(e.k!=='final'||!seOwn(k)||!wIs(e.w))continue;const n=sl(k);if(!n)continue;const l=seLv(k,n);
+  if(Math.random()*100>=(l.prop|0))return;const t=targetsFor(wReach(),1).filter(m=>m.hp>0)[0];if(!t)return;const d=MON[t.k],r=dmgRange(),x=Math.max(1,Math.floor(critRoll(R(r[0],r[1]))*(l.damage||100)/100));
+  t.hp-=x;t.prov=true;log('Final Attack hits the '+d.n+' for '+x+'.','hit','combat');seKill([t]);return}}
+function seUse(k){const e=SE[k];if(!e||!P||P.dead)return;const n=sl(k);if(!n||!seOwn(k))return;const l=seLv(k,n),now=Date.now(),nm=e.n;
+ if(seCd[k]>now)return say(nm+' is not ready yet.');
+ const passive=['mastery','final','passive'].includes(e.k);if(passive)return;
+ const needsTarget=['phys','magic','debuff'].includes(e.k);
+ if(needsTarget&&!enc)return;
+ if((needsTarget||e.k==='heal'||e.k==='teleport')&&(now<atkReady()||now-lastMv<moveCd()))return;
+ if(e.w&&e.k!=='buff'&&!wIs(e.w))return say('You need a '+WGN[e.w]+' to use '+nm+'.','bad');
+ if((e.k==='magic'||e.k==='heal')&&!hasMW())return say('You need a wand or staff to use '+nm+'.','bad');
+ const mp=l.mpCon|0,hp=l.hpCon|0;
+ if(P.mp<mp)return say('You don\'t have enough MP for that.','bad');
+ if(hp&&P.hp<=hp)return say('You don\'t have enough HP for that.','bad');
+ const reach=seReach(e);
+ /* ----- attacks ----- */
+ if(e.k==='phys'||e.k==='magic'){const cnt=e.k==='magic'?(l.mobCount||(e.sh==='multi'?6:1)):(l.mobCount||1),ts=seTargets(e,reach,e.sh==='one'?1:cnt);
+  if(!ts.length)return say('No enemy is in reach.');
+  const ranged=e.k==='phys'&&!!W().rng,shots=(e.ammo!=null?e.ammo:(ranged?1:0));
+  if(shots&&!soulOn()&&ammoN()<shots)return say('You don\'t have enough '+((ITEMS[ammoId()]||{}).n||'ammo')+'.','bad');
+  P.mp-=mp;P.hp-=hp;lastAtk=now;if(shots&&!soulOn())useAmmo(shots);
+  const hits=l.attackCount||1,pct=e.dmgKey?(l[e.dmgKey]||100):(l.damage||100);let dealt=0;
+  for(const m of ts){const d=MON[m.k];m.prov=true;
+   for(let h=0;h<hits;h++){if(m.hp<=0)break;
+    const ch=Math.min(1,Math.max(.35,.8+((e.k==='magic'?accMagic():acc())-d.av)/50));
+    if(Math.random()>ch){log(nm+' misses the '+d.n+'.','','combat');continue}
+    let x;if(e.k==='magic'){const r=magRange(l.mad||100,10+5*(l.mastery|0));x=R(r[0],r[1])}else{const r=dmgRange();x=Math.max(1,Math.floor(critRoll(R(r[0],r[1]))*pct/100))}
+    x=Math.floor(x*elMul(m,e.el));if(e.el&&elMul(m,e.el)===0){log('The '+d.n+' is immune to '+e.el+'.','','combat');continue}
+    x=Math.max(1,x);m.hp-=x;dealt+=x;log(nm+' hits the '+d.n+' for '+x+'.','hit','combat');if(e.k==='magic')mpEat(m)}
+   /* effects on each target that is still standing */
+   if(m.hp>0){const roll=Math.random()*100<(l.prop==null?100:l.prop);
+    if(e.fx==='stun'&&roll){m.stun=now+(l.time||1)*1000;log('The '+d.n+' is stunned.','','combat')}
+    if(e.fx==='freeze'&&elMul(m,'ice')>0){m.frz=now+(l.time||2)*1000;log('The '+d.n+' is frozen.','','combat')}
+    if(e.fx==='poison'&&roll&&elMul(m,'poison')>0){const r=magRange(l.mad||70,10+5*(l.mastery|0));m.psn={until:now+(l.time||10)*1000,next:now+1000,dmg:Math.max(1,Math.floor(r[0]/2))};log('The '+d.n+' is poisoned.','','combat')}
+    if(e.fx==='knockback'&&Math.random()*100<(l.prop||70)){if(cellFree(m,m.row,Math.min(MAXGAP,m.gap+1))){m.gap=Math.min(MAXGAP,m.gap+1);m.mv=now+mvT(d)}}
+    if(e.fx==='steal'&&!m.stolen&&roll){m.stolen=1;const dr=(DROPS[m.k]||{}).i||[];const pick=dr.filter(x=>ITEMS[x[0]]);if(pick.length){const it=pick[R(0,pick.length-1)][0];P.inv[it]=(P.inv[it]|0)+1;log('You steal '+ITEMS[it].n+' from the '+d.n+'.','good','items')}}}}
+  if(e.fx==='drain'&&dealt>0){const g=Math.min(Math.floor(dealt*(l.x|0)/100),Math.floor(P.maxHp/2));if(g>0){P.hp=Math.min(P.maxHp,P.hp+g);log('Drain: +'+g+' HP.','good','combat')}}
+  if(e.fx==='recoil'){shiftMobs(1,{delay:0});log('The recoil throws you back a step.','','combat')}
+  seKill(ts);if(e.k==='phys')finalAttack();save();return render()}
+ /* ----- heal: heals you, hurts undead in reach ----- */
+ if(e.k==='heal'){P.mp-=mp;lastAtk=now;const amt=Math.max(1,Math.floor((eS('int')*1.2+eS('luk')+((W().matk|0)+seMatk()))*(l.hp||100)/100));
+  P.hp=Math.min(P.maxHp,P.hp+amt);log('Heal: +'+amt+' HP.','good','combat');
+  if(enc){const ts=targetsFor(reach,l.mobCount||6).filter(m=>m.hp>0&&(MON[m.k]||{}).ud);for(const m of ts){const x=Math.max(1,Math.floor(amt*elMul(m,'holy')));m.hp-=x;m.prov=true;log('Heal burns the undead '+MON[m.k].n+' for '+x+'.','hit','combat')}seKill(ts)}
+  save();return render()}
+ /* ----- teleport: two steps back at once ----- */
+ if(e.k==='teleport'){if(!enc)return;P.mp-=mp;lastMv=now-moveCd();const moved=(shiftMobs(1,{delay:0})+shiftMobs(1,{delay:0}))>0;
+  log(moved?'You teleport away.':'Nothing to teleport away from.','','combat');return render()}
+ /* ----- MP Recovery (Brawler) ----- */
+ if(e.k==='mprec'){const cost=Math.floor(P.maxHp*(l.x|0)/100);if(P.hp<=cost)return say('You don\'t have enough HP for that.','bad');
+  P.hp-=cost;const g=Math.floor(cost*(l.y||100)/100);P.mp=Math.min(P.maxMp,P.mp+g);seCd[k]=now+(l.cooltime||25)*1000;log('MP Recovery: -'+cost+' HP, +'+g+' MP.','good','combat');return render()}
+ /* ----- debuffs on monsters ----- */
+ if(e.k==='debuff'){const ts=targetsFor(reach,l.mobCount||6).filter(m=>m.hp>0);if(!ts.length)return say('No enemy is in reach.');
+  P.mp-=mp;lastAtk=now;const until=now+(l.time||30)*1000;
+  for(const m of ts){m.prov=true;if(e.fx==='threaten'){m.dis=until;m.disv=Math.abs(l.x|0)}if(e.fx==='slow'){m.slow=until;m.slowv=Math.abs(l.x|0)}}
+  log(nm+' affects '+ts.length+' monster'+(ts.length>1?'s':'')+'.','good','combat');return render()}
+ /* ----- buffs ----- */
+ if(e.k==='buff'||e.k==='booster'){if(e.fx==='wings')return say(NOEFFECT.wings);
+  if(e.fx==='barrel'&&Math.random()*100<(l.prop|0)){P.mp-=mp;seCd[k]=now+(l.cooltime||15)*1000;return say('Oak Barrel failed.')}
+  P.mp-=mp;P.hp-=hp;const dur=(l.time||60)*1000;P.b[k]=now+dur;P.b[k+'_v']={pad:l.pad|0,pdd:(l.pdd|0)+(e.fx==='rage'?0:0),mad:l.mad|0,acc:l.acc|0,eva:l.eva|0,speed:l.speed|0,x:l.x|0};
+  if(e.fx==='hyperbody'){if(P.hb){P.maxHp-=P.hb.hp;P.maxMp-=P.hb.mp}const ah=Math.floor((P.hb?P.maxHp:P.maxHp)*(l.x|0)/100),am=Math.floor(P.maxMp*(l.y|0)/100);P.hb={hp:ah,mp:am,until:now+dur};P.maxHp+=ah;P.maxMp+=am}
+  if(e.fx==='barrel'){P.b.dark=now+dur;seCd[k]=now+(l.cooltime||15)*1000}
+  log(nm+' for '+(l.time||60)+' s.','good','combat');save();return render()}}
+/* ---------- quick slots ---------- */
+{const _qi=qsInfo,_qu=qsUse;
+ qsInfo=function(k,now){const e=SE[k];if(!e)return _qi(k,now);const n=sl(k)||1,l=seLv(k,n),ic=SKL[k]?SKL[k][0]:'✨',nm=SKL[k]?SKL[k][1]:e.n;const mp=l.mpCon|0,t=v=>(v/1000).toFixed(1)+'s';
+  const wait=Math.max(atkReady(),lastMv+moveCd())-now,cd=(seCd[k]||0)-now,on=buffOn(k);
+  const wrong=e.w&&e.k!=='buff'&&!wIs(e.w),wrongM=(e.k==='magic'||e.k==='heal')&&!hasMW();
+  const tgt=['phys','magic','debuff'].includes(e.k),far=tgt&&!!enc&&!fld.some(m=>m.hp>0&&m.gap<=seReach(e));
+  let sub=mp?mp+' MP':'Ready';if(on)sub=Math.ceil((P.b[k]-now)/1000)+'s';if(cd>0)sub=Math.ceil(cd/1000)+'s';if(wrong)sub=WGN[e.w];if(wrongM)sub='Wand/staff';if(tgt&&!enc)sub=mp+' MP';else if(far)sub='Too far';else if(tgt&&wait>0)sub=t(wait);
+  return{ic,nm,sub,dis:!seOwn(k)||wrong||wrongM||cd>0||P.mp<mp||(tgt&&(!enc||far||wait>0))}};
+ qsUse=function(k){if(SE[k])return seUse(k);const a0=lastAtk;_qu(k);
+  /* Final Attack follows the 1st job weapon attacks too */
+  if(lastAtk!==a0&&P&&P.job2&&['basic','powerstrike','slashblast','arrowblow','doubleshot','lucky7','dstab','flashfist','somersault','pdshot'].includes(k))finalAttack()}}
+{const _mc=magCast;magCast=function(name,hits,mpc,atk,mast){const e0=enc;const r=_mc(name,hits,mpc,atk,mast);if(r&&e0&&fld.includes(e0)&&e0.hp>0)mpEat(e0);return r}}
+/* ---------- skill window: 2nd job tab, spending, class rules ---------- */
+{const _fb=featBody;featBody=function(id){if(id!=='skills'||!P)return _fb(id);SKTABS[2]=P.job2?BR[P.job2].n:'2nd Job';
+  const h=_fb(id);if(!(typeof skTab!=='undefined'&&skTab===2&&P.job2))return h;
+  const cut=h.indexOf('<div class="pad" style="text-align:center"><div style="font-size:40px">🔒');const head=cut>=0?h.slice(0,cut):h;
+  const list=BR[P.job2].ids.map(id=>'k'+id).filter(k=>SKJ[k]).map(k=>{const d=SKJ[k],n=sl(k),on=skSel===k,ok=skPreOk(k);
+   return '<div class="mrow" data-sks="'+k+'" style="cursor:pointer'+(on?';background:#fff3c4':'')+'"><span class="av">'+d.ic+'</span><div style="flex:1"><div>'+d.nm+' <span class="pill b">Lv '+n+'/'+d.max+'</span></div><div class="mute">'+(d.fx(Math.max(1,n))||'')+(ok?'':' · Requires '+preTxt(k))+'</div></div><button class="plus" data-k="'+k+'" '+(P.sp&&n<d.max&&ok?'':'disabled')+'>+</button></div>'+(on?skDetail(k):'')}).join('');
+  return head+list}}
+{const _sp=spendSk;spendSk=function(k){if(!P)return;
+  if(SE[k]){const d=SKJ[k];if(!seOwn(k)||P.sp<1||(P.sk[k]|0)>=d.max||!skPreOk(k))return;P.sk[k]=(P.sk[k]|0)+1;P.sp--;save();return render()}
+  if(P.job2&&SKJ[k]&&!SKD[k])return;/* after 2nd job, new SP goes to 2nd job skills only (v62) */
+  return _sp(k)}}
+{const _jn=jobName;jobName=function(){return P&&P.job2&&BR[P.job2]?BR[P.job2].n:_jn()}}
+stripClassSkills=function(){if(!P||!P.sk)return;if(P.job2&&(!BR[P.job2]||BR[P.job2].fam!==P.job))delete P.job2;
+ const ok=new Set([JOBLBL[P.job]||null,P.job2?BR[P.job2].n:null].filter(Boolean));let back=0;const gone=[];
+ for(const k in P.sk){const d=SKJ[k];if(!d||!d.job)continue;if(!ok.has(d.job)&&(P.sk[k]|0)>0){back+=P.sk[k]|0;gone.push(d.nm||k);P.sk[k]=0}}
+ if(gone.length){P.sp+=back;if(Array.isArray(P.qseen))P.qseen=P.qseen.filter(k=>!(SKJ[k]&&SKJ[k].job&&!ok.has(SKJ[k].job)));P.b={};try{qsSync()}catch(e){}
+  log('Your class changed: '+gone.join(', ')+' removed, '+back+' SP returned.','','system');save()}};
+/* ---------- 2nd job advancement ---------- */
+const J2={swordsman:{npc:'balrog',test:'n1072000',inside:'n1072004',map:'v108000300',letter:'i4031008',ln:'Dances with Balrog\'s Letter',item:'i4031013',need:30,town:'Perion'},
+ magician:{npc:'grendel',test:'n1072001',inside:'n1072005',map:'v108000200',letter:'i4031009',ln:'Grendel the Really Old\'s Letter',item:'i4031013',need:30,town:'Ellinia'},
+ archer:{npc:'athena',test:'n1072002',inside:'n1072006',map:'v108000100',letter:'i4031010',ln:'Athena Pierce\'s Letter',item:'i4031013',need:30,town:'Henesys'},
+ rogue:{npc:'darklord',test:'n1072003',inside:'n1072007',map:'v108000400',letter:'i4031011',ln:'Dark Lord\'s Letter',item:'i4031013',need:30,town:'Kerning City'},
+ pirate:{npc:'n1090000',test:'n1090000',inside:'n1072008',map:'v108000500',letter:null,item:'i4031857',need:15,town:'the Nautilus'}};
+const PROOF='i4031012';
+if(!ITEMS[PROOF])ITEMS[PROOF]={n:'The Proof of a Hero',i:'🏅',sell:0};DESC[PROOF]=DESC[PROOF]||'Proof that you passed the 2nd job advancement test.';
+for(const f in J2){const j=J2[f];if(j.letter&&!ITEMS[j.letter])ITEMS[j.letter]={n:j.ln,i:'✉️',sell:0};if(!ITEMS[j.item])ITEMS[j.item]={n:j.item==='i4031013'?'Dark Marble':'Potent Wind Crystal',i:j.item==='i4031013'?'🔮':'💎',sell:0}}
+/* test rooms: no walking in or out, you are sent there and back */
+for(const f in J2){const m=MAPS[J2[f].map];if(m){m.ex=[];m.hidden=1;m.jobtest=f;m.need=999;if(NAV[J2[f].map])delete NAV[J2[f].map];if(WPOS[J2[f].map])delete WPOS[J2[f].map]}}
+if(MON.m9001005&&!(DROPS.m9001005&&DROPS.m9001005.i&&DROPS.m9001005.i.some(x=>x[0]==='i4031857')))DROPS.m9001005={m:[0,0,0],i:[['i4031857',0.7,1,1]]};
+for(const k of ['m9000100','m9000101','m9000200','m9000201','m9000001','m9000002','m9000300','m9000301'])if(MON[k])MON[k].n=MON[k].n.replace(/ 2$/,'');
+const outsideMap=f=>Object.keys(MAPS).find(k=>!MAPS[k].hidden&&(MAPS[k].npcs||[]).includes(J2[f].test))||Object.keys(MAPS).find(k=>(MAPS[k].npcs||[]).includes(J2[f].npc));
+const j2st=()=>(P.j2=P.j2||{});
+function j2Dlg(d){const n=talk.npc,f=P.job,j=J2[f];if(!j||P.job2||P.lvl<30)return;
+ const st=j2st();
+ /* 1st job instructor: start the test, or choose your path with the proof */
+ if(n===j.npc){if(P.inv[PROOF]>0){d.t+='<br><br>You have The Proof of a Hero. Choose your path. This choice is final.';
+    for(const b in BR)if(BR[b].fam===f)d.ch.splice(d.ch.length-1,0,['Become a '+BR[b].n+': '+BR[b].d,'j2:pick:'+b]);return}
+  if(!st.letter){if(P.sp>0){d.t+='<br><br><span class="mute">You are ready for the 2nd job advancement, but spend your remaining '+P.sp+' SP first.</span>';return}
+   d.ch.splice(d.ch.length-1,0,['I want the 2nd job advancement','j2:start'])}
+  else d.t+='<br><br><span class="mute">'+(j.letter?'Take my letter to the job instructor near '+j.town+'.':'Go into the test room through me when you are ready.')+'</span>'}
+ /* the job instructor outside the test room (Kyrin for pirates) */
+ if(n===j.test&&st.letter&&!(P.inv[PROOF]>0)&&MAPS[P.map]&&!MAPS[P.map].jobtest){d.t+='<br><br>Collect '+j.need+' '+ITEMS[j.item].n+'s in the test room and bring them to my colleague inside.';d.ch.splice(d.ch.length-1,0,['Enter the test room','j2:enter'])}
+ /* the instructor inside the test room */
+ if(n===j.inside&&MAPS[P.map]&&MAPS[P.map].jobtest){const have=P.inv[j.item]|0;d.t+='<br><br>'+ITEMS[j.item].n+': '+have+' / '+j.need+'.';
+  if(have>=j.need)d.ch.splice(d.ch.length-1,0,['Hand over the '+j.need+' '+ITEMS[j.item].n+'s','j2:proof']);d.ch.splice(d.ch.length-1,0,['Leave the test room','j2:leave'])}}
+{const _dl=dlg;dlg=function(){const d=_dl();try{if(talk&&P)j2Dlg(d)}catch(e){}return d}}
+{const _dd=dlgDo;dlgDo=function(k){if(!/^j2:/.test(k))return _dd(k);const f=P.job,j=J2[f];if(!j)return;const st=j2st();
+  if(k==='j2:start'){if(P.lvl<30||P.job2||P.sp>0)return;st.letter=1;if(j.letter)P.inv[j.letter]=(P.inv[j.letter]|0)+1;
+   log(j.letter?'You receive '+ITEMS[j.letter].n+'. Take it to the job instructor near '+j.town+'.':'Kyrin: Talk to me again to enter the test room.','good','quest')}
+  else if(k==='j2:enter'){if(!st.letter)return;if(j.letter&&!(P.inv[j.letter]>0)){P.inv[j.letter]=1}
+   delete P.inv[j.item];enc=null;fld=[];autoSeek=false;seeking=false;P.map=j.map;talk=null;log('You enter '+MAPS[j.map].n+'. Collect '+j.need+' '+ITEMS[j.item].n+'s.','good','quest')}
+  else if(k==='j2:proof'){if((P.inv[j.item]|0)<j.need)return;delete P.inv[j.item];if(j.letter)delete P.inv[j.letter];P.inv[PROOF]=1;enc=null;fld=[];autoSeek=false;P.map=outsideMap(f)||P.map;talk=null;
+   log('You receive The Proof of a Hero. Take it back to your instructor.','good','quest')}
+  else if(k==='j2:leave'){delete P.inv[j.item];enc=null;fld=[];autoSeek=false;P.map=outsideMap(f)||P.map;talk=null;log('You leave the test room.','','quest')}
+  else if(k.startsWith('j2:pick:')){const b=k.slice(8);if(!BR[b]||BR[b].fam!==f||!(P.inv[PROOF]>0))return;delete P.inv[PROOF];P.job2=b;P.skJob=P.job;P.sp+=1;delete P.j2;
+   log('You are now a '+BR[b].n+'! Your new skills are in the Skills tab under '+BR[b].n+'.','good','quest');try{qsSync()}catch(e){}}
+  save();render()}}
+/* bosses and test rooms: never a training target for travel, the world map or the auto path */
+if(typeof canTravel==='function'){const _ct=canTravel;canTravel=function(k){return !(MAPS[k]&&MAPS[k].hidden)&&_ct(k)}}
+
+/* ===== v3.2: combat fixes from play testing =====
+   - One monster per cell. Players may share a cell, monsters may not: walking, wandering, closing in, advancing,
+     backing away, knock-back, Teleport and Recoil Shot all stop at an occupied cell.
+   - Monsters step every 2.4 s at Speed 0 (was 1.4 s; monsters without data stepped every 0.6 s).
+   - Auto-hunt off: nothing respawns, so the fight ends when the board is clear. And you can walk away: with Auto-hunt
+     off, Back step when no monster is next to you leaves the fight. ===== */
+const cellFree=(m,row,gap)=>!fld.some(o=>o!==m&&o.hp>0&&o.row===row&&o.gap===gap);
+/* move every monster by d columns (+1 away, -1 closer), nearest first when closing in, farthest first when backing off */
+function shiftMobs(d,opts){const now=Date.now(),o=opts||{};let moved=0;
+ const ms=fld.filter(m=>m.hp>0).sort((a,b)=>d<0?a.gap-b.gap:b.gap-a.gap);
+ for(const m of ms){const g=Math.max(0,Math.min(MAXGAP,m.gap+d));if(g===m.gap||!cellFree(m,m.row,g))continue;m.gap=g;moved++;
+  if(d<0&&g<=0)m.next=now+MON[m.k].iv;if(d>0&&o.delay!=null)m.mv=now+o.delay+mvT(MON[m.k])}
+ return moved}
+stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc=moveCd();if(now-lastAtk<mc||now-lastMv<mc)return;
+ if(dir<0){if(!fld.some(m=>m.gap>0))return;lastMv=now;shiftMobs(-1);log('You advance.','','combat');return render()}
+ if(!autoSeek&&!fld.some(m=>m.hp>0&&m.gap<=0)){/* walk away */const a=WORLD[P.map];if(a)a.forEach(s=>{if(s.by&&fld.some(m=>m.eid===s.by))s.by=0});
+  fld=[];enc=null;lastMv=now;log('You walk away from the fight.','','combat');return render()}
+ if(!fld.some(m=>m.gap<MAXGAP))return;lastMv=now;
+ if(Math.random()<Math.min(.9,Math.max(.25,.5+(speed()-100)/100))){shiftMobs(1,{delay:mc*2});lastMv=now-Math.floor(mc/2);log('You back away.','','combat')}
+ else log('You stumble and fail to back away.','bad','combat');
+ render()};
+/* the skill engine's pushes respect cells too */
+{const _mv=(m,d)=>{const g=Math.max(0,Math.min(MAXGAP,m.gap+d));if(g!==m.gap&&cellFree(m,m.row,g)){m.gap=g;return true}return false};
+ window.__pushMob=_mv}
+
+/* ===== v3.2: the Maple Island shops from the data, with their own stock and prices (as Victoria's since v2.2):
+   - Sid, Amherst Weapon Store: Razor, Wooden Club, Hand Axe, Sword.
+   - Lucy, Amherst Department Store: Egg, Apple, White/Orange/Red Potion, and Green Apple (30 MP). Green Apple is not
+     in any Maple Island shop in the data; it was added on request so magician hopefuls can keep MP up before Victoria.
+     The data has no shop price for it, so it costs 60 mesos (about 2 mesos per MP, like Blue Potions).
+   - Pan, Southperry Armor Store: the 13 beginner clothes for 50 mesos each.
+   The old made-up Amherst town shop is gone; you shop by talking to the shopkeeper. ===== */
+{const mi=(npc,key,role,shopName,extra)=>{const D=NPCS[key];if(!D||!D.shopList)return null;const N=NPCS[npc]||(NPCS[npc]={n:D.n,i:'🛒',hi:D.hi});
+  N.role=role;N.shop=1;N.shopName=shopName;N.shopList=D.shopList.slice();N.shopPrice=Object.assign({},D.shopPrice);
+  for(const [id,pr] of extra||[])if(ITEMS[id]&&!N.shopList.includes(id)){N.shopList.push(id);N.shopPrice[id]=pr;if(!ITEMS[id].buy)ITEMS[id].buy=pr}
+  return N};
+ mi('sid','n11000','Weapon seller','Amherst Weapon Store');
+ if(mi('lucy','n11100','Grocer','Amherst Department Store',[['i2010009',60]])){NPCS.lucy.i='🧺';if(!MAPS.amherst.npcs.includes('lucy'))MAPS.amherst.npcs.splice(MAPS.amherst.npcs.indexOf('sid')+1,0,'lucy')}
+ if(mi('pan','n21000','Armor seller','Southperry Armor Store')){NPCS.pan.i='👕';if(!MAPS.southperry.npcs.includes('pan'))MAPS.southperry.npcs.push('pan')}
+ for(const k of ['n11000','n11100','n21000'])delete NPCS[k];
+ delete MAPS.amherst.shop;delete MAPS.amherst.shopList;
+ MAPS.amherst.hint='Sid sells weapons and Lucy sells potions and food. Lucas and Rain have quests.';
+ MAPS.southperry.hint=(MAPS.southperry.hint||'')+' Pan sells beginner clothes.';
+ if(NPCS.sid)NPCS.sid.hi='On sale! Really CHEAP!'}
+/* ===== v3.2: Maple Island keeps its own v62-style layout; the maps and NPCs the data has that it was missing are added
+   (the Adventurer Training Center stays out):
+   - Split Road of Destiny (east of Amherst): the five job instructors explain their classes. Tomato Field now opens off
+     it, and it leads on to Southperry, as in the data.
+   - Amherst Townstreet, between Amherst and the Small Field of Flowers.
+   - Mushroom Town 2 is the data's Mushroom Town Townstreet (renamed).
+   - New NPCs: Robin (Dangerous Forest), Bari (The Field West of Southperry), Paul (Southperry), Lucy and Pan (shops
+     above). Their data lines are used as their greetings. ===== */
+{const SR={sr_athena:['Athena Pierce','🏹','Bowman instructor',"Bowmen are blessed with dexterity and power, taking charge of long-distance attacks, providing support for those at the front line of the battle. Very adept at using landscape as part of the arsenal."],
+  sr_grendel:['Grendel the Really Old','🧙','Magician instructor',"Magicians are armed with flashy element-based spells and secondary magic that aids party as a whole. After the 2nd job adv., the elemental-based magic will provide ample amount of damage to enemies of opposite element."],
+  sr_balrog:['Dances with Balrog','⚔️','Warrior instructor',"Warriors possess an enormous power with stamina to back it up, and they shine the brightest in melee combat situation. Regular attacks are powerful to begin with, and armed with complex skills, the job is perfect for explosive attacks."],
+  sr_darklord:['Dark Lord','🗡️','Thief instructor',"Thieves are a perfect blend of luck, dexterity, and power that are adept at the surprise attacks against helpless enemies. A high level of avoidability and speed allows Thieves to attack enemies from various angles."],
+  sr_kyrin:['Kyrin','🔫','Pirate instructor',"Pirates are blessed with outstanding dexterity and power, utilizing their guns for long-range attacks while using their power on melee combat situations. Gunslingers use elemental-based bullets for added damage, while Infighters transform to a different being for maximum effect."]};
+ const where={sr_athena:'Henesys',sr_grendel:'Ellinia',sr_balrog:'Perion',sr_darklord:'Kerning City',sr_kyrin:'the Nautilus'};
+ for(const k in SR){const a=SR[k];NPCS[k]={n:a[0],i:a[1],role:a[2],hi:a[3]+' Reach level 10 (Magicians level 8) and come see me in '+where[k]+' on Victoria Island to become one.'}}
+ Object.assign(NPCS,{
+  robin:{n:'Robin',i:'📖',role:'Walking encyclopedia',hi:"Be careful! You'll see monsters around here. Tap a monster to attack it, and walk over what it drops to pick it up."},
+  bari:{n:'Bari',i:'🪵',role:"Pio's nephew",hi:'I am good at making anything! Since my uncle is Pio in Amherst, he used to teach me lots of things when I was young.'},
+  paul:{n:'Paul',i:'🧒',role:'Event goer',hi:"Where's my brother...? I need to get to where the event takes place..."}});
+ MAPS.split_road_of_destiny={n:'Split Road of Destiny',i:'🪧',d:'The road where beginners choose their future. The five job instructors wait here to tell you about their classes.',town:1,ret:'amherst',mons:[],
+  npcs:['sr_balrog','sr_grendel','sr_athena','sr_darklord','sr_kyrin'],ex:[['amherst','West to Amherst'],['tomato_field','Tomato Field'],['southperry','South to Southperry']],art:['#86c765','#5fa84a']};
+ MAPS.amherst_townstreet={n:'Amherst Townstreet',i:'🏘️',d:'A quiet street of houses at the edge of Amherst, leading out to the flower fields.',town:1,ret:'amherst',mons:[],npcs:[],
+  ex:[['amherst','Back to Amherst'],['snail_field','Small Field of Flowers']],art:['#9fd27a','#6fb24f']};
+ const relink=(from,old,to,label)=>{const m=MAPS[from];if(!m)return;const e=m.ex.find(x=>x[0]===old);if(e){e[0]=to;e[1]=label}else m.ex.push([to,label])};
+ /* Amherst -> Split Road of Destiny (Tomato Field moves behind it); Amherst -> Amherst Townstreet -> flowers */
+ relink('amherst','tomato_field','split_road_of_destiny','East to the Split Road of Destiny');
+ relink('amherst','snail_field','amherst_townstreet','Amherst Townstreet');
+ relink('tomato_field','amherst','split_road_of_destiny','Back to the Split Road of Destiny');
+ relink('snail_field','amherst','amherst_townstreet','Back to Amherst Townstreet');
+ if(!MAPS.southperry.ex.some(e=>e[0]==='split_road_of_destiny'))MAPS.southperry.ex.splice(1,0,['split_road_of_destiny','North to the Split Road of Destiny']);
+ MAPS.training_camp.n='Mushroom Town Townstreet';
+ MAPS.dangerous_forest.npcs=(MAPS.dangerous_forest.npcs||[]).concat(['robin']);
+ MAPS.field_west_of_southperry.npcs=(MAPS.field_west_of_southperry.npcs||[]).concat(['bari']);
+ MAPS.southperry.npcs.splice(0,0,'paul');
+ /* world map positions (island coordinates, as in 10-maple-island.js) */
+ for(const [k,x,y,l] of [['split_road_of_destiny',86,46,'Destiny Rd'],['amherst_townstreet',70,57,'Townstreet']]){NAV[k]=[x,y,l];WPOS[k]=[2+x*.36,30+y*.56]}
+ if(NAV.training_camp)NAV.training_camp[2]='Townstreet'}
+/* ===== v3.2: the scrolling notice bar across the top of the game and the website (like v62's top notice). It always
+   shows the welcome with the version and the server time (California, Pacific time); then any hot-time running now
+   (name, EXP/drop boost, when it ends), the current rates when they are not x1, and the admin's custom message
+   (Admin menu -> World settings / Hot-time). Hot-times are separate from the website's Events. ===== */
+(function(){
+ const VER=()=>(typeof UPDATE_LOG!=='undefined'&&UPDATE_LOG[0]&&UPDATE_LOG[0].v)||'';
+ /* times show in the player's own time zone (from the browser), with the zone name */
+ const fmt=t=>{try{return new Date(t).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',timeZoneName:'short'})}catch(e){return new Date(t).toLocaleTimeString()}};
+ const wallFmt=w=>{const d=new Date(w);let h=d.getUTCHours(),m=d.getUTCMinutes();const ap=h<12?'AM':'PM';h=h%12||12;return h+':'+String(m).padStart(2,'0')+' '+ap};
+ const bar=document.createElement('div');bar.id='topnote';bar.setAttribute('aria-live','off');
+ bar.innerHTML='<div class="tn-run"><span class="tn-w"></span><span class="tn-sep">✦</span><span class="tn-t"></span><span class="tn-x"></span></div>';
+ document.body.appendChild(bar);
+ const $=c=>bar.querySelector(c),sep='<span class="tn-sep">✦</span>';let last='';
+ const timeText=()=>'Time '+fmt(Date.now());
+ function fill(){const c=worldCfg(),hot=hotNow(),er=expRate(),dr=dropRate();
+  $('.tn-w').textContent='Welcome to Maplelite'+(VER()?' v'+VER():'')+'!';$('.tn-t').textContent=timeText();
+  let x=hot.map(h=>sep+'<span class="tn-hot">🔥 Hot-time: '+esc2(h.name)+'</span> EXP x'+clampR(h.exp)+(clampR(h.drop)>1?', Drop x'+clampR(h.drop):'')+' until '+fmt(Date.now()+(hotState(h).ends-hotState(h).wall))).join('');
+  if(er!==1||dr!==1)x+=sep+'Rates now: EXP x'+er+', Drop x'+dr;
+  if(c.msg)x+=sep+esc2(c.msg);$('.tn-x').innerHTML=x}
+ function tick(){const on=typeof scr==='undefined'||scr!=='game'||!!P;bar.style.display=on?'':'none';document.body.classList.toggle('has-topnote',on);
+  if(!on)return;const k=JSON.stringify(worldCfg())+'|'+hotNow().map(h=>h.name).join(',');if(k!==last){last=k;fill()}else $('.tn-t').textContent=timeText()}
+ fill();tick();setInterval(tick,1000);
+ const st=document.createElement('style');st.textContent=
+  '#topnote{position:fixed;left:0;right:0;top:0;height:22px;z-index:9000;overflow:hidden;background:rgba(20,28,52,.88);border-bottom:2px solid #f2c14e;color:#fff6d8;font:12px/22px Maplestory,Arial,sans-serif;white-space:nowrap;pointer-events:none}'
+  +'#topnote .tn-run{display:inline-block;padding-left:100%;animation:tnScroll 30s linear infinite}'
+  +'#topnote .tn-sep{color:#f2c14e;margin:0 10px}#topnote .tn-w{color:#ffe27a;font-weight:bold}#topnote .tn-hot{color:#ff9d5c;font-weight:bold}'
+  +'@keyframes tnScroll{from{transform:translateX(0)}to{transform:translateX(-100%)}}'
+  +'@media (prefers-reduced-motion:reduce){#topnote .tn-run{animation-duration:70s}}'
+  +'body.has-topnote #app,body.has-topnote #site{padding-top:24px}';
+ document.head.appendChild(st)})();
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
@@ -2886,7 +3319,7 @@ const day=t=>t?new Date(t).toLocaleDateString(undefined,{year:'numeric',month:'s
 /* keep window.__KV.me in step with logins and logouts */
 async function refreshMe(){const r=await get('/api/me');if(window.__KV)window.__KV.me=r.me||null;return r.me}
 /* ---------- heartbeat ---------- */
-setInterval(()=>{if(me()&&document.visibilityState==='visible')fetch('/api/ping',{method:'POST',credentials:'same-origin'}).catch(()=>{})},60000);
+setInterval(()=>{if(me()&&document.visibilityState==='visible')fetch('/api/ping',{method:'POST',credentials:'same-origin'}).then(r=>r.json()).then(j=>{/* the EXP rate an admin set reaches players already online within a minute */if(j&&'rates' in j&&window.__KV){if(j.rates==null)delete window.__KV.shared.mapleish_rates;else window.__KV.shared.mapleish_rates=j.rates}}).catch(()=>{})},60000);
 /* ---------- server box ---------- */
 let stats=null,lastHtml='';
 function paintStats(){const st=$('ws-stats');if(!st)return;
