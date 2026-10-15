@@ -16,8 +16,10 @@ const LS=(()=>{const real=window.localStorage;let kv=window.__KV||{user:{},share
      window.__serverNote&&window.__serverNote('The server refused a save: '+j.error+' Your last good save was kept.')}
     else if(r.status===401)window.__serverNote&&window.__serverNote('You are logged out. Log in again to keep saving.')})
    .catch(()=>{window.__serverNote&&window.__serverNote('Cannot reach the server. Progress will save when it is back.');pending[scope+k]=v;setTimeout(()=>queue(scope,k),5000)})};
- const queue=(scope,k)=>{clearTimeout(timers[scope+k]);timers[scope+k]=setTimeout(()=>put(scope,k),700)};
- const flush=()=>{for(const id in timers){clearTimeout(timers[id]);const scope=id.startsWith('user')?'user':'shared';const k=id.slice(scope.length);if((scope+k) in pending)put(scope,k)}};
+ /* at most one write per key every 4 s for characters (700 ms for chat/site), always with the newest value; this keeps
+    the free database's daily write allowance for real play */
+ const queue=(scope,k)=>{const id=scope+k;if(timers[id])return;timers[id]=setTimeout(()=>{delete timers[id];if(id in pending)put(scope,k)},scope==='user'?4000:700)};
+ const flush=()=>{for(const id in timers){clearTimeout(timers[id]);delete timers[id];const scope=id.startsWith('user')?'user':'shared';const k=id.slice(scope.length);if((scope+k) in pending)put(scope,k)}};
  window.addEventListener('pagehide',flush);document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')flush()});
  const S={
   getItem(k){if(k==='mapleish_accts')return JSON.stringify(kv.accts||{});
