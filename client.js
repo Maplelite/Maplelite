@@ -3362,7 +3362,9 @@ const stepsTo=m=>Math.max(m.gap,Math.abs(m.row-PRf()));
 closestMob=function(r){const alive=fld.filter(m=>m.hp>0);if(!alive.length)return null;const inR=r==null?[]:alive.filter(m=>m.gap<=r);
  const pool=inR.length?inR:alive;let b=null,bs=1e9;for(const m of pool){const s=stepsTo(m)*1000+m.gap*10+Math.abs(m.row-PRf());if(s<bs){bs=s;b=m}}return b};
 const reachFor=k=>{try{if(!k||k==='basic')return wReach();if(typeof SE!=='undefined'&&SE[k])return seReach(SE[k]);if(typeof SKREACH!=='undefined'&&SKREACH[k])return SKREACH[k]();if(k==='ebolt'||k==='mclaw')return MG_REACH}catch(e){}return wReach()};
-const keepTarget=()=>{if(fld.some(m=>m.hp>0)&&(!enc||enc.hp<=0||!fld.includes(enc)))enc=closestMob(wReach())};
+/* v3.4: the target is always the nearest monster you can reach (checked on every redraw), so buttons never show
+   "Too far" while a monster stands next to you */
+const keepTarget=()=>{if(fld.some(m=>m.hp>0))enc=closestMob(wReach())};
 aimClosest=function(){keepTarget()};
 {const _qu=qsUse;qsUse=function(k){fixPos();if(fld.some(m=>m.hp>0))enc=closestMob(reachFor(k));return _qu(k)}}
 {const _at=attack;attack=function(){fixPos();if(fld.some(m=>m.hp>0))enc=closestMob(wReach());return _at()}}
