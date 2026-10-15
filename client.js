@@ -936,7 +936,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  app.querySelectorAll('[data-skp]').forEach(b=>b.onclick=()=>{skPage=+b.dataset.skp;qPick=null;render()});
  app.querySelectorAll('[data-eqs]').forEach(b=>b.onclick=()=>{pop={id:eqOf(b.dataset.eqs),eq:true};render()});
  app.querySelectorAll('.mcard').forEach(c=>c.onclick=e=>e.stopPropagation());
- app.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>{const a=b.dataset.pa,id=pop&&pop.id;if(a==='equip'){equipItem(id);pop=null}else if(a==='unequip'){unequipItem(slotOf(id));pop=null}else if(a==='use'){if(P.hp>=P.maxHp&&!(id==='apple'&&P.q.roger==='active'))log('Your HP is already full.','','items');useItem(id);if(!(P.inv[id]>0))pop=null}else if(a==='s0'||a==='s1'){const i=+a[1],o=1-i;if(P.pq[i]===id)P.pq[i]=null;else{if(P.pq[o]===id)P.pq[o]=null;P.pq[i]=id}save()}else pop=null;render()});
+ app.querySelectorAll('[data-pa]').forEach(b=>b.onclick=()=>{const a=b.dataset.pa,id=pop&&pop.id;if(a==='equip'){equipItem(id);pop=null}else if(a==='unequip'){unequipItem(slotOf(id));pop=null}else if(a==='use'){if(P.hp>=P.maxHp&&(ITEMS[id].heal||ITEMS[id].hpp)&&!(ITEMS[id].mpheal||ITEMS[id].mpp)&&!(id==='apple'&&P.q.roger==='active'))log('Your HP is already full.','','items');useItem(id);if(!(P.inv[id]>0))pop=null}else if(a==='s0'||a==='s1'){const i=+a[1],o=1-i;if(P.pq[i]===id)P.pq[i]=null;else{if(P.pq[o]===id)P.pq[o]=null;P.pq[i]=id}save()}else pop=null;render()});
  const q=(i,f)=>{const e=$(i);if(e)e.onclick=f};q('adv',()=>stand(-1));q('bk',()=>stand(1));q('pq0',()=>pqClick(0));q('pq1',()=>pqClick(1));q('fl',flee);q('sk',()=>beginSeek(false));{const e=$('as');if(e)e.onchange=()=>{if(e.checked){autoSeek=true;if(!enc&&!MAPS[P.map].town)return beginSeek(true);return render()}autoSeek=false;render()}}{const go=st=>{autoLoot=st;lootAsk=false;autoSeek=true;if(!enc&&!MAPS[P.map].town)return beginSeek(true);render()};q('la_kill',()=>go('kill'));q('la_end',()=>go('end'));q('la_x',()=>{lootAsk=false;render()})}app.querySelectorAll('[data-qs]').forEach(b=>b.onclick=()=>{const i=+b.dataset.qs;if(qEdit){qPick=(qPick&&qPick.t==='s'&&qPick.i===i)?null:{t:'s',i};return render()}qsUse(P.qs[i])});app.querySelectorAll('[data-qe]').forEach(b=>b.onclick=()=>{qEdit=!qEdit;qPick=null;render()});app.querySelectorAll('[data-qpv]').forEach(b=>b.onclick=()=>{const v=b.dataset.qpv||null;if(qPick){if(qPick.t==='s')qsSet(qPick.i,v);else pqSet(qPick.i,v)}qPick=null;render()});q('fb',()=>{feat=null;render()});q('cb',()=>{cview=null;render()});q('reset',resetChar);q('tochars',()=>leaveGame('chars'));q('stchars',()=>leaveGame('chars'));q('stout',()=>leaveGame('title'));{const e=$('mv');if(e)e.onchange=()=>{mapView=e.value;render()}}app.querySelectorAll('[data-z]').forEach(b=>b.onclick=()=>{mapView=b.dataset.z;render()});q('lv',()=>{inShop=false;render()});q('lootTg',()=>{lootOpen=!lootOpen;render()})}
 let scr='title',SLOT=0,wsel=0,chsel=1,cs=0,delArm=false;
 let curUser='';const MYID=()=>curUser;
@@ -1024,7 +1024,9 @@ function flow(){
 /* A map is passable if it is a town, was cleared since you arrived, or you out-level its toughest monster by 25+ (unless m.special). */
 const maxLv=m=>Math.max(0,...(m.mons||[]).map(k=>MON[k]?MON[k].lv:0));
 const freeMove=m=>!m.town&&!m.special&&(m.mons||[]).length>0&&P.lvl>=maxLv(m)+25;
-const isOpen=id=>{const m=MAPS[id];return !!m&&(!!m.town||!!(P.cleared&&P.cleared[id])||freeMove(m))};
+/* v3.3: the beginner training at the Mushroom Town gates can be skipped from level 8 */
+const TRAINING_MAPS=['mushroom_west','mushroom_town','training_camp','mushroom_east'];
+const isOpen=id=>{const m=MAPS[id];return !!m&&(!!m.town||!!(P.cleared&&P.cleared[id])||freeMove(m)||(P.lvl>=8&&TRAINING_MAPS.includes(id)))};
 
 /* Medal slot */
 ITEMS.newbie_medal={n:'Newbie Medal',i:'🏅',s:'Medal',req:0,sell:1,def:0,bon:null,mhp:5,mmp:5};
@@ -1453,7 +1455,7 @@ function wReach(){const w=W();if(w===FIST||!P.weapon||!eqOk(P.weapon))return 0;
  if(w.rng==='claw')return Math.min(MAXGAP,3+(isRog()?Math.floor(sl('keen')/4):0));
  if(w.rng==='gun')return 3;
  if(w.rng)return Math.min(MAXGAP,3+(isArc()&&sl('eye')>=8?1:0));
- return w.reach!=null?w.reach:1}
+ return w.reach!=null?w.reach:(['spear','polearm'].includes(typeof wTy==='function'?wTy():null)?1:0)}/* v3.2: one-handed and two-handed melee reach like a punch (next to you); spears and polearms one cell further */
 function accBonus(){return (isArc()?sl('bless')+((P.b&&P.b.focus>Date.now())?(P.b.focusv|0):0):0)+(isRog()?sl('nimble'):0)}
 function avBonus(){return (isArc()&&P.b&&P.b.focus>Date.now()?(P.b.focusv|0):0)+(isRog()?sl('nimble'):0)}
 function critRoll(x){if(!isArc()||!W().rng)return x;const n=sl('crit');if(!n)return x;const rate=n<=10?10+2*n:20+n;
@@ -1745,15 +1747,15 @@ function trickle(now){if(now<nextSpawn)return false;nextSpawn=now+spawnDelay();
 function mobsTick(now){if(!enc)return;let ch=trickle(now);
   for(const m of fld.slice()){if(!enc||!fld.includes(m))continue;const d=MON[m.k];
    if(now>=m.mv){m.mv=now+mvT(d);
-    const rr=m.row+Math.sign(PRf()-m.row),canRow=m.row!==PRf()&&!fld.some(o=>o.row===rr&&o.gap===m.gap);
+    const rr=m.row+Math.sign(PRf()-m.row),canRow=m.row!==PRf()&&cellFree(m,rr,m.gap);
     if(hot(m)){
      /* aggressive (or provoked): step into your row when it is free, otherwise close the distance along the lane */
      if(canRow){m.row=rr;ch=true}
-     else if(m.gap>0&&!fld.some(o=>o!==m&&o.row===m.row&&o.gap===m.gap-1)){m.gap--;ch=true;if(m.gap<=0){m.next=now+d.iv;log('The '+d.n+' closes in.','','combat')}}}/* one monster per cell */
+     else if(m.gap>0&&cellFree(m,m.row,m.gap-1)){m.gap--;ch=true;if(m.gap<=0){m.next=now+d.iv;log('The '+d.n+' closes in.','','combat')}}}/* one monster per cell */
     else{
      /* calm monsters wander back and forth along their lane, and drift toward your lane now and then */
      if(canRow&&Math.random()<.4){m.row=rr;ch=true}
-     else if(Math.random()<.8){let g=m.gap+(m.dir||1);if(g<0||g>MAXGAP){m.dir=-(m.dir||1);g=m.gap+m.dir}if(g>=0&&g<=MAXGAP&&g!==m.gap&&!fld.some(o=>o!==m&&o.row===m.row&&o.gap===g)){m.gap=g;ch=true;if(g===0)m.next=now+Math.round(d.iv*1.5)}}}}
+     else if(Math.random()<.8){const mg=maxG(m);let g=m.gap+(m.dir||1);if(g<0||g>mg){m.dir=-(m.dir||1);g=m.gap+m.dir}if(g>=0&&g<=mg&&g!==m.gap&&cellFree(m,m.row,g)){m.gap=g;ch=true;if(g===0)m.next=now+Math.round(d.iv*1.5)}}}}
    if(m.gap<=0&&((hot(m)&&Math.abs(m.row-PRf())<=1)||(d.touch&&!TUT.on&&m.row===PRf()))&&now>=m.next){/* v3.2: only monsters next to you hit you: an angry one from your row or the rows beside it, a wandering one only by bumping into you in your row */m.next=now+d.iv+R(-200,200);ch=true;
     if(!darkOn()){if(Math.random()<Math.min(.95,Math.max(.5,.95-avoid()/100))){const dv=m.dis>now?(m.disv|0):0,x=Math.max(1,Math.round((R(d.atk[0],d.atk[1])-dv)*(1-defRed())));P.hp-=guardTake(x);log('The '+d.n+' hits you for '+x+'.','bad','combat')}else log('The '+d.n+' misses.','','combat')}
     if(P.hp<=0){die();break}}}
@@ -3058,7 +3060,7 @@ function seUse(k){const e=SE[k];if(!e||!P||P.dead)return;const n=sl(k);if(!n||!s
     if(e.fx==='stun'&&roll){m.stun=now+(l.time||1)*1000;log('The '+d.n+' is stunned.','','combat')}
     if(e.fx==='freeze'&&elMul(m,'ice')>0){m.frz=now+(l.time||2)*1000;log('The '+d.n+' is frozen.','','combat')}
     if(e.fx==='poison'&&roll&&elMul(m,'poison')>0){const r=magRange(l.mad||70,10+5*(l.mastery|0));m.psn={until:now+(l.time||10)*1000,next:now+1000,dmg:Math.max(1,Math.floor(r[0]/2))};log('The '+d.n+' is poisoned.','','combat')}
-    if(e.fx==='knockback'&&Math.random()*100<(l.prop||70)){if(cellFree(m,m.row,Math.min(MAXGAP,m.gap+1))){m.gap=Math.min(MAXGAP,m.gap+1);m.mv=now+mvT(d)}}
+    if(e.fx==='knockback'&&Math.random()*100<(l.prop||70)){if(cellFree(m,m.row,Math.min(maxG(m),m.gap+1))){m.gap=Math.min(maxG(m),m.gap+1);m.mv=now+mvT(d)}}
     if(e.fx==='steal'&&!m.stolen&&roll){m.stolen=1;const dr=(DROPS[m.k]||{}).i||[];const pick=dr.filter(x=>ITEMS[x[0]]);if(pick.length){const it=pick[R(0,pick.length-1)][0];P.inv[it]=(P.inv[it]|0)+1;log('You steal '+ITEMS[it].n+' from the '+d.n+'.','good','items')}}}}
   if(e.fx==='drain'&&dealt>0){const g=Math.min(Math.floor(dealt*(l.x|0)/100),Math.floor(P.maxHp/2));if(g>0){P.hp=Math.min(P.maxHp,P.hp+g);log('Drain: +'+g+' HP.','good','combat')}}
   if(e.fx==='recoil'){shiftMobs(1,{delay:0});log('The recoil throws you back a step.','','combat')}
@@ -3164,7 +3166,7 @@ if(typeof canTravel==='function'){const _ct=canTravel;canTravel=function(k){retu
    - Monsters step every 2.4 s at Speed 0 (was 1.4 s; monsters without data stepped every 0.6 s).
    - Auto-hunt off: nothing respawns, so the fight ends when the board is clear. And you can walk away: with Auto-hunt
      off, Back step when no monster is next to you leaves the fight. ===== */
-const cellFree=(m,row,gap)=>!fld.some(o=>o!==m&&o.hp>0&&o.row===row&&o.gap===gap);
+var cellFree=(m,row,gap)=>!fld.some(o=>o!==m&&o.hp>0&&o.row===row&&o.gap===gap);
 /* move every monster by d columns (+1 away, -1 closer), nearest first when closing in, farthest first when backing off */
 function shiftMobs(d,opts){const now=Date.now(),o=opts||{};let moved=0;
  const ms=fld.filter(m=>m.hp>0).sort((a,b)=>d<0?a.gap-b.gap:b.gap-a.gap);
@@ -3239,6 +3241,53 @@ stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc
  /* world map positions (island coordinates, as in 10-maple-island.js) */
  for(const [k,x,y,l] of [['split_road_of_destiny',86,46,'Destiny Rd'],['amherst_townstreet',70,57,'Townstreet']]){NAV[k]=[x,y,l];WPOS[k]=[2+x*.36,30+y*.56]}
  if(NAV.training_camp)NAV.training_camp[2]='Townstreet'}
+/* ===== v3.2: the shop items that were missing (they need things the game did not do yet):
+   - Return Scrolls (Nearest Town, Lith Harbor, Ellinia, Perion, Henesys, Kerning City, Sleepywood, Nautilus): take you to
+     that town at once, ending any fight. Not in job test rooms; on Maple Island only Nearest Town works (one way island).
+   - Timed potions (Warrior, Magic, Sniper, Dexterity, Speed Potion; also Wizard Potion, Drake's Blood/Meat, Sap of
+     Ancient Tree from drops): their W.ATK / M.ATK / Accuracy / Avoid / Speed / W.DEF bonus for the data's duration.
+     Using the same potion again restarts its timer.
+   - 100% scrolls from El Moth and Tulcus: real game scrolls (Inventory -> Enchanting), +1 of the data's stat, never fail.
+   - Status cures (Antidote, Eyedrop, Tonic, Holy Water, All Cure Potion), Pet Food, Revitalizer and the Sky-blue Wooden
+     Chair are sold, but there are no player status effects, pets or sitting yet, so using them only says so (and does not
+     use them up). ===== */
+{/* 100% scrolls -> game scrolls */
+ const norm=t=>t.toLowerCase().replace('pole arm','polearm').replace('knuckler','knuckle').replace('blunt weapon','bw');
+ const STK={'W.Atk':'watk','M.Atk':'matk','W.Def':'def','M.Def':'mdef','HP':'hp','DEX':'dex','INT':'int','LUK':'luk','STR':'str','Jump':'jump','Speed':'speed','Avoid':'eva'};
+ if(typeof LBL!=='undefined'&&!LBL.eva)LBL.eva='Avoid';
+ const swap={};
+ for(const id in ITEMS){const it=ITEMS[id];if(!it.scr100)continue;const nm=norm(it.n);
+  const tg=(WT.concat(AF)).map(a=>[a[0],norm(a[1])]).sort((a,b)=>b[1].length-a[1].length).find(a=>nm.includes('for '+a[1]+' for'));
+  const m=/^([A-Za-z.]+) \+(\d+)/.exec(it.scr100);if(!tg||!m||!STK[m[1]])continue;const st=STK[m[1]],key=tg[0]+'_'+st+'_100';
+  if(!SCR[key])addS(key,it.n.replace(/ 100%$/,'')+' 100%',100,tg[0],{[st]:+m[2]});ITEMS['sc_'+key].buy=it.buy;ITEMS['sc_'+key].sell=it.sell;swap[id]='sc_'+key}
+ for(const k in NPCS){const N=NPCS[k];if(!N.shopList)continue;N.shopList=N.shopList.map(id=>{if(!swap[id])return id;if(N.shopPrice){N.shopPrice[swap[id]]=N.shopPrice[id];delete N.shopPrice[id]}return swap[id]})}
+ for(const k in DROPS)if(DROPS[k]&&DROPS[k].i)DROPS[k].i.forEach(e=>{if(swap[e[0]])e[0]=swap[e[0]]});
+ for(const id in swap)delete ITEMS[id];
+ /* timed potion bonuses: P.ib = {itemId: until}; the bonus is read from the item */
+ const ib=k=>{if(!P||!P.ib)return 0;const now=Date.now();let a=0;for(const id in P.ib){if(P.ib[id]<=now){delete P.ib[id];continue}const b=ITEMS[id]&&ITEMS[id].buff;if(b&&b[k])a+=b[k]}return a};
+ window.itemBuff=ib;
+ {const f=seWatk;seWatk=function(){return f()+ib('watk')}}{const f=seMatk;seMatk=function(){return f()+ib('matk')}}
+ {const f=seSpeed;seSpeed=function(){return f()+ib('speed')}}{const f=seDef;seDef=function(){return f()+ib('def')}}
+ {const f=accBonus;accBonus=function(){return f()+ib('acc')}}{const f=avBonus;avBonus=function(){return f()+ib('eva')}}
+ const TOWN={'Lith Harbor':'lith_harbor','Ellinia':'ellinia','Perion':'perion','Henesys':'henesys','Kerning City':'kerning_city','Sleepywood':'v105040300','Nautilus':'v120000000'};
+ const special=it=>it&&(it.ret||it.buff||it.cure||it.pet||it.chair);
+ const LB={watk:'W.ATK',matk:'M.ATK',acc:'Accuracy',eva:'Avoid',speed:'Speed',def:'W.DEF',mdef:'M.DEF'};
+ const bText=b=>Object.keys(b).map(k=>(LB[k]||k)+' +'+b[k]).join(', ');
+ const _use=useItem;useItem=function(id){const it=ITEMS[id];if(!special(it))return _use(id);if(!P||!(P.inv[id]>0))return;
+  const take=()=>{P.inv[id]--;if(P.inv[id]<=0)delete P.inv[id]};
+  if(it.ret){if(P.dead)return;const m=MAPS[P.map]||{};if(m.hidden||m.jobtest){log('You cannot use that here.','bad','items');return render()}
+   const onMaple=!m.vid&&!(typeof VNAV!=='undefined'&&VNAV[P.map]);const to=it.ret==='Nearest Town'?(m.ret||P.map):TOWN[it.ret];
+   if(it.ret!=='Nearest Town'&&onMaple){log('Return Scrolls to Victoria Island do not work on Maple Island.','bad','items');return render()}
+   if(!to||!MAPS[to]){log('That scroll has nowhere to take you.','bad','items');return render()}
+   if(to===P.map&&!fld.length){log('You are already in '+MAPS[to].n+'.','','items');return render()}
+   const a=WORLD[P.map];if(a)a.forEach(s=>{if(s.by&&fld.some(m2=>m2.eid===s.by))s.by=0});gmEnd();take();P.map=to;P.kills=0;tab='play';
+   log('You read the '+it.n+' and arrive in '+MAPS[to].n+'.','good','items');save();return render()}
+  if(it.buff){P.ib=P.ib||{};P.ib[id]=Date.now()+it.dur*1000;take();log(it.n+': '+bText(it.buff)+' for '+(it.dur>=120?Math.round(it.dur/60)+' minutes':it.dur+' seconds')+'.','good','items');save();return render()}
+  log(it.cure?'You are not affected by anything it cures (player status effects are not in the game yet).':it.pet?'You do not have a pet (pets are not in the game yet).':'You sit down for a moment (sitting does nothing yet).','','items');return render()};
+ const _pop=popHtml;popHtml=function(){const it=pop&&ITEMS[pop.id];if(!pop||pop.eq||!special(it))return _pop.apply(this,arguments);const n=P.inv[pop.id]||0;
+  const left=it.buff&&P.ib&&P.ib[pop.id]>Date.now()?Math.ceil((P.ib[pop.id]-Date.now())/1000):0;
+  const rows=[['Type',it.ret?'Return Scroll':it.buff?'Potion':it.chair?'Chair':'Consumable'],[it.ret?'Takes you to':it.buff?'Effect':'Use',it.ret?it.ret:it.buff?bText(it.buff)+' for '+it.dur+' s':'No effect yet']].concat(left?[['Active',left+' s left']]:[]).concat([['Owned',n]]);
+  return '<div class="mcard"><div class="mh"><span class="mi">'+it.i+'</span><div><b>'+it.n+'</b><div class="mute">'+(it.d||'')+'</div></div></div>'+rows.map(r=>'<div class="mr"><span>'+r[0]+'</span><b>'+r[1]+'</b></div>').join('')+'<div class="ex" style="margin-top:10px">'+(n>0?'<button class="main" data-pa="use">Use</button>':'')+'<button data-pa="close">Close</button></div></div>'}}
 /* ===== v3.2: the scrolling notice bar across the top of the game and the website (like v62's top notice). It always
    shows the welcome with the version and the server time (California, Pacific time); then any hot-time running now
    (name, EXP/drop boost, when it ends), the current rates when they are not x1, and the admin's custom message
@@ -3257,9 +3306,11 @@ stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc
   $('.tn-w').textContent='Welcome to Maplelite'+(VER()?' v'+VER():'')+'!';$('.tn-t').textContent=timeText();
   let x=hot.map(h=>sep+'<span class="tn-hot">🔥 Hot-time: '+esc2(h.name)+'</span> EXP x'+clampR(h.exp)+(clampR(h.drop)>1?', Drop x'+clampR(h.drop):'')+' until '+fmt(Date.now()+(hotState(h).ends-hotState(h).wall))).join('');
   if(er!==1||dr!==1)x+=sep+'Rates now: EXP x'+er+', Drop x'+dr;
+  const ev=typeof evTickerText==='function'?evTickerText():'';if(ev)x+=sep+'<span class="tn-hot">'+esc2(ev)+'</span>';
   if(c.msg)x+=sep+esc2(c.msg);$('.tn-x').innerHTML=x}
- function tick(){const on=typeof scr==='undefined'||scr!=='game'||!!P;bar.style.display=on?'':'none';document.body.classList.toggle('has-topnote',on);
-  if(!on)return;const k=JSON.stringify(worldCfg())+'|'+hotNow().map(h=>h.name).join(',');if(k!==last){last=k;fill()}else $('.tn-t').textContent=timeText()}
+ function tick(){/* hidden while combat locks the screen, so it never covers the fight */const locked=typeof scr!=='undefined'&&scr==='game'&&typeof fld!=='undefined'&&fld.length>0&&typeof scrollLockPref!=='undefined'&&scrollLockPref&&tab==='play';
+  const on=(typeof scr==='undefined'||scr!=='game'||!!P)&&!locked;bar.style.display=on?'':'none';document.body.classList.toggle('has-topnote',on);
+  if(!on)return;const k=JSON.stringify(worldCfg())+'|'+hotNow().map(h=>h.name).join(',')+'|'+(typeof evTickerText==='function'?evTickerText():'');if(k!==last){last=k;fill()}else $('.tn-t').textContent=timeText()}
  fill();tick();setInterval(tick,1000);
  const st=document.createElement('style');st.textContent=
   '#topnote{position:fixed;left:0;right:0;top:0;height:22px;z-index:9000;overflow:hidden;background:rgba(20,28,52,.88);border-bottom:2px solid #f2c14e;color:#fff6d8;font:12px/22px Maplestory,Arial,sans-serif;white-space:nowrap;pointer-events:none}'
@@ -3269,6 +3320,213 @@ stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc
   +'@media (prefers-reduced-motion:reduce){#topnote .tn-run{animation-duration:70s}}'
   +'body.has-topnote #app,body.has-topnote #site{padding-top:24px}';
  document.head.appendChild(st)})();
+
+/* ===== v3.3: real positions on the combat grid
+   - You stand on a column of the 7-wide grid (PC). Monsters stand on a side of you (m.side: +1 right, -1 left) at a
+     distance (m.gap: 0 = the cell next to you). One monster per cell; players may share cells.
+   - Spawn side: the arrow button on your character card picks where you appear when a fight starts: left edge (monsters
+     come from the right), center (from both sides) or right edge (from the left). It never changes a fight in progress.
+   - You face your target. Advance steps toward it, Back step away from it (Back step can still stumble). Stepping off
+     either edge of the grid leaves the fight, but not within your movement time of attacking or being hit.
+   - Targeting: every attack goes at the nearest monster it can reach (fewest steps away, counting rows), or the nearest
+     monster if none is in reach. If the old target is gone, the nearest one becomes the target at once, so you can never
+     be left in a fight with nothing to attack. ===== */
+let PC=0,inFight=false,lastHit=0;
+const SPAWN_SIDES=[['left','◀','Left'],['center','▼','Center'],['right','▶','Right']];
+const spawnCol=()=>{const s=(P&&P.spawn)||'left';return s==='center'?Math.floor(COLS/2):s==='right'?COLS-1:0};
+function maxG(m){return m.side<0?PC-1:COLS-2-PC}
+const colOf=m=>PC+(m.side<0?-1:1)*(m.gap+1);
+cellFree=function(m,row,gap,side){const sd=side||(m&&m.side)||1,c=PC+(sd<0?-1:1)*(gap+1);if(c<0||c>=COLS||gap<0)return false;
+ return !fld.some(o=>o!==m&&o.hp>0&&o.row===row&&colOf(o)===c)};
+/* every free cell a new monster may appear in: not right next to you */
+freeCells=function(){const c=[];for(let r=0;r<NRf();r++){const inRow=fld.filter(o=>o.row===r&&o.hp>0);if(inRow.length>=ROWCAP)continue;
+  for(const sd of [1,-1]){const mg=sd<0?PC-1:COLS-2-PC;for(let g=1;g<=mg;g++)if(cellFree(null,r,g,sd))c.push([r,g,sd])}}return c};
+spawnWave=function(now,first){let n=0;const want=boardCap()-fld.length;
+ for(let i=0;i<want;i++){const cells=freeCells();if(!cells.length)break;const s=claimSlot(P.map);if(s<0)break;
+  const sl0=mobSlots(P.map)[s],k=sl0.k,d=MON[k],eid=++eidSeq;sl0.by=eid;const c=cells[R(0,cells.length-1)];
+  fld.push({k,hp:d.hp,max:d.hp,gap:c[1],side:c[2],dir:Math.random()<.5?-1:1,row:c[0],eid,sm:P.map,si:s,ag:!!d.ag,mv:now+mvT(d)+R(0,600),next:now+d.iv+R(-200,200)});n++}
+ return n};
+/* any monster made elsewhere (tutorial, tests, older code) gets a valid side and cell */
+function fixPos(){const alive=fld.filter(m=>m.hp>0);
+ if(!alive.length){if(!fld.length)inFight=false;return}
+ if(!inFight){inFight=true}
+ for(const m of alive){if(m.side!==1&&m.side!==-1)m.side=PC>=COLS-1?-1:1;
+  if(m.side<0&&PC<=0)m.side=1;if(m.side>0&&PC>=COLS-1)m.side=-1;
+  m.gap=Math.max(0,Math.min(maxG(m),m.gap|0))}
+ const seen=new Set();for(const m of alive){let k=m.row+':'+colOf(m);if(!seen.has(k)){seen.add(k);continue}
+  /* clash: move to the nearest free cell in the same row, either side */
+  let done=false;for(let g=0;g<COLS&&!done;g++)for(const sd of [m.side,-m.side]){const mg=sd<0?PC-1:COLS-2-PC;if(g>mg)continue;const kk=m.row+':'+(PC+sd*(g+1));if(!seen.has(kk)){m.side=sd;m.gap=g;seen.add(kk);done=true;break}}}}
+{const _sk=seek;seek=function(){if(!enc&&!fld.length){PC=spawnCol();inFight=false}return _sk.apply(this,arguments)}}
+/* targeting */
+const stepsTo=m=>Math.max(m.gap,Math.abs(m.row-PRf()));
+closestMob=function(r){const alive=fld.filter(m=>m.hp>0);if(!alive.length)return null;const inR=r==null?[]:alive.filter(m=>m.gap<=r);
+ const pool=inR.length?inR:alive;let b=null,bs=1e9;for(const m of pool){const s=stepsTo(m)*1000+m.gap*10+Math.abs(m.row-PRf());if(s<bs){bs=s;b=m}}return b};
+const reachFor=k=>{try{if(!k||k==='basic')return wReach();if(typeof SE!=='undefined'&&SE[k])return seReach(SE[k]);if(typeof SKREACH!=='undefined'&&SKREACH[k])return SKREACH[k]();if(k==='ebolt'||k==='mclaw')return MG_REACH}catch(e){}return wReach()};
+const keepTarget=()=>{if(fld.some(m=>m.hp>0)&&(!enc||enc.hp<=0||!fld.includes(enc)))enc=closestMob(wReach())};
+aimClosest=function(){keepTarget()};
+{const _qu=qsUse;qsUse=function(k){fixPos();if(fld.some(m=>m.hp>0))enc=closestMob(reachFor(k));return _qu(k)}}
+{const _at=attack;attack=function(){fixPos();if(fld.some(m=>m.hp>0))enc=closestMob(wReach());return _at()}}
+/* who hit you last: for the leave-the-fight rule */
+{const _mt=mobsTick;mobsTick=function(){const h=P&&P.hp;const r=_mt.apply(this,arguments);if(P&&P.hp<h)lastHit=Date.now();return r}}
+const facing=()=>{const t=enc&&enc.hp>0?enc:closestMob(null);return t?(t.side<0?-1:1):(PC>=COLS-1?-1:1)};
+/* move yourself one column; monsters keep their cells */
+function stepTo(nc){const cols=fld.map(m=>[m,colOf(m)]);PC=nc;for(const [m,c] of cols){m.side=c<PC?-1:1;m.gap=Math.abs(c-PC)-1;if(m.gap<0){m.gap=0}}fixPos()}
+function leaveFight(){const a=WORLD[P.map];if(a)a.forEach(s=>{if(s.by&&fld.some(m=>m.eid===s.by))s.by=0});fld=[];enc=null;autoSeek=false;seeking=false;inFight=false;log('You leave the fight.','','combat')}
+stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;fixPos();const now=Date.now(),mc=moveCd();if(now-lastAtk<mc||now-lastMv<mc)return;
+ const f=facing(),nc=PC+(dir<0?f:-f);
+ if(nc<0||nc>=COLS){if(now-Math.max(lastAtk,lastHit)<mc){log('You are still in the thick of it. You can\'t leave the fight yet.','bad','combat');return render()}
+  lastMv=now;leaveFight();return render()}
+ if(fld.some(m=>m.hp>0&&m.row===PRf()&&colOf(m)===nc)){log('A monster blocks the way.','','combat');return render()}
+ if(dir>0&&Math.random()>=Math.min(.9,Math.max(.25,.5+(speed()-100)/100))){lastMv=now;log('You stumble and fail to back away.','bad','combat');return render()}
+ lastMv=now;stepTo(nc);for(const m of fld)if(m.gap<=0&&m.hp>0&&now>m.next-200)m.next=Math.max(m.next,now+Math.round(MON[m.k].iv/2));
+ log(dir<0?'You advance.':'You back away.','','combat');render()};
+/* the skill engine's moves: d=-1 a step toward your target, d=+1 a step away; returns 1 if you moved */
+shiftMobs=function(d){if(!fld.length)return 0;fixPos();const f=facing(),nc=PC+(d<0?f:-f);
+ if(nc>=0&&nc<COLS&&!fld.some(m=>m.hp>0&&m.row===PRf()&&colOf(m)===nc)){stepTo(nc);return 1}
+ /* no room behind you (edge of the grid): Teleport and Recoil Shot push the monsters back instead */
+ if(d>0){let n=0;for(const m of fld.filter(m=>m.hp>0).sort((a,b)=>b.gap-a.gap))if(window.__pushMob(m,1))n++;return n?1:0}return 0};
+window.__pushMob=(m,d)=>{const g=Math.max(0,Math.min(maxG(m),m.gap+d));if(g!==m.gap&&cellFree(m,m.row,g)){m.gap=g;return true}return false};
+/* the grid */
+laneHtml=function(){fixPos();const LH=Math.max(20,Math.min(30,Math.floor(210/NRf())));let h='<div style="margin-top:8px;display:flex;flex-direction:column;gap:3px;min-height:'+(NRf()*(LH+3)-3)+'px">';
+ const f=facing();
+ for(let r=0;r<NRf();r++){const ms=fld.filter(m=>m.row===r&&m.hp>0);let c='';
+  for(let i=0;i<COLS;i++){const cell=ms.filter(m=>colOf(m)===i),me=i===PC&&r===PRf();
+   c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+(f<0?'<small style="font-size:9px">◀</small>':'')+'🧍'+(f>0?'<small style="font-size:9px">▶</small>':'')+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
+  h+='<div class="lrow" style="display:flex;background:rgba(120,140,180,.12);border-radius:6px;min-height:'+LH+'px">'+c+'</div>'}
+ return h+'</div>'};
+/* keep the target valid on every redraw, and draw the spawn-side button on the character card */
+{const _r=render;render=function(){if(fld.length){fixPos();keepTarget()}else inFight=false;const out=_r.apply(this,arguments);
+  try{if(typeof scr!=='undefined'&&scr==='game'&&P){const box=document.querySelector('#app .sbar .lvb');if(box&&!box.querySelector('#spawnbtn')){const s=SPAWN_SIDES.find(x=>x[0]===(P.spawn||'left'))||SPAWN_SIDES[0];
+    const b=document.createElement('button');b.id='spawnbtn';b.type='button';b.title='Where you appear when a fight starts: '+s[2]+'. Tap to change.';b.textContent=s[1];
+    b.style.cssText='min-height:0;height:22px;width:26px;padding:0;margin-left:6px;font-size:12px;line-height:20px;border-radius:6px;vertical-align:middle';box.appendChild(b)}}}catch(e){}
+  return out}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#spawnbtn');if(!b||!P)return;e.stopPropagation();const i=SPAWN_SIDES.findIndex(x=>x[0]===(P.spawn||'left'));P.spawn=SPAWN_SIDES[(i+1)%3][0];
+ log('Spawn side: '+SPAWN_SIDES[(i+1)%3][2]+'. You will appear there when your next fight starts.','','combat');save();render()},true);
+
+/* ===== v3.3: the Maze event (a scheduled event, separate from hot-time and from the website's Events page)
+   - When: every 4 hours on the hour, California time (12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM), plus any extra start an
+     admin schedules (Admin menu -> Maze event). An admin can turn the 4-hour schedule off.
+   - How: at the start time entries open and a 5-minute countdown runs; then the maze starts and runs for 10 minutes.
+     Entries stay open the whole 15 minutes: talk to the Artale Administrator in any town to join (once per event).
+     Before the start you wait in the Event Waiting Room; after it you go straight into the maze.
+   - The maze: the same grid as combat, no skills, no monsters. Move Up, Down, Back and Forward (one step per your
+     movement time, from Speed) and reach the flag at the far end. Everyone in one event gets the same maze.
+   - Finish or run out of time: either way you go to the Event Prize Room. The prize NPC gives finishers an Event
+     Trophy, and takes everyone back to the town they joined from.
+   - No trading in event maps (trading only ever works between players on the same map).
+   - While an event is open, a timer block at the top of the Play screen shows the time left and the nearest town with
+     an Artale Administrator; the notice bar announces it too. ===== */
+(function(){
+ const EV_WAIT=5*60e3,EV_RUN=10*60e3,EV_LEN=EV_WAIT+EV_RUN,SLOT=4*3600e3;
+ const EVNPC='artale_admin',EVTOWNS=['amherst','southperry','lith_harbor','henesys','ellinia','perion','kerning_city'];
+ /* the schedule */
+ if(typeof gmOpen!=='undefined')gmOpen.evt=true;
+ const evCfg=()=>{const c=worldCfg();return c.ev&&typeof c.ev==='object'?c.ev:{}};
+ function evStarts(now){const c=evCfg(),out=[];if(c.auto!==false){const w=pacWall(now),sw=Math.floor(w/SLOT)*SLOT;out.push(now-(w-sw),now-(w-sw)+SLOT)}
+  for(const t of Array.isArray(c.extra)?c.extra:[])if(+t>0)out.push(+t);return out.sort((a,b)=>a-b)}
+ window.evState=function(now){now=now||Date.now();const s=evStarts(now).find(t=>now>=t&&now<t+EV_LEN);
+  if(s==null){const nx=evStarts(now).find(t=>t>now);return{phase:null,next:nx}}
+  return{phase:now<s+EV_WAIT?'wait':'run',id:Math.floor(s/60e3),start:s,runAt:s+EV_WAIT,end:s+EV_LEN}};
+ /* maps and NPCs */
+ const EVMAPS=['evt_lobby','evt_maze','evt_prize'];
+ window.inEventMap=k=>EVMAPS.includes(k||(P&&P.map));
+ Object.assign(MAPS,{
+  evt_lobby:{n:'Event Waiting Room',i:'⏳',d:'Contestants gather here until the maze opens.',town:1,hidden:1,noTrade:1,ret:'henesys',mons:[],npcs:[],ex:[],art:['#b9a3e3','#8e74c9']},
+  evt_maze:{n:'The Maze',i:'🌀',d:'Find the way to the flag before time runs out.',town:1,hidden:1,noTrade:1,ret:'henesys',mons:[],npcs:[],ex:[],art:['#9fd27a','#5fa84a']},
+  evt_prize:{n:'Event Prize Room',i:'🏆',d:'Where every contestant ends up. Collect your prize, then head home.',town:1,hidden:1,noTrade:1,ret:'henesys',mons:[],npcs:['evt_prize'],ex:[],art:['#f2d27a','#d9a640']}});
+ for(const k of EVMAPS){delete NAV[k];if(typeof WPOS!=='undefined')delete WPOS[k]}
+ NPCS[EVNPC]=Object.assign(NPCS[EVNPC]||{},{n:'Artale Administrator',i:'🛡️',role:'Events',hi:NPCS[EVNPC]&&NPCS[EVNPC].hi||'Welcome! Events are held here every 4 hours.'});
+ NPCS.evt_prize={n:'Artale Administrator',i:'🏆',role:'Event prizes',hi:'Well done, everyone! Talk to me for your prize and a ride home.'};
+ for(const t of EVTOWNS)if(MAPS[t]&&!(MAPS[t].npcs||[]).includes(EVNPC))(MAPS[t].npcs=MAPS[t].npcs||[]).push(EVNPC);
+ if(!ITEMS.i4000038)ITEMS.i4000038={n:'Event Trophy',i:'🏆',sell:30000,d:'A souvenir for entering the event. Made out of gold, so you can sell it for a high price.'};
+ /* the maze: 5 rows x 21 columns of tiles, carved from 3 x 11 rooms; the same for everyone in one event */
+ const MR=5,MC=21;let mz=null;
+ function rng(seed){let a=seed>>>0;return()=>{a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+ function makeMaze(id){const r=rng(id*2654435761),W=[...Array(MR)].map(()=>Array(MC).fill(1)),seen=new Set(),st=[[2,0]];W[2][0]=0;seen.add('2,0');
+  while(st.length){const [y,x]=st[st.length-1],nb=[[0,2],[0,-2],[2,0],[-2,0]].map(d=>[y+d[0],x+d[1],d]).filter(q=>q[0]>=0&&q[0]<MR&&q[1]>=0&&q[1]<MC&&!seen.has(q[0]+','+q[1]));
+   if(!nb.length){st.pop();continue}const q=nb[Math.floor(r()*nb.length)];W[y+q[2][0]/2][x+q[2][1]/2]=0;W[q[0]][q[1]]=0;seen.add(q[0]+','+q[1]);st.push([q[0],q[1]])}
+  /* a few extra openings so it is not a single corridor */
+  for(let i=0;i<6;i++){const y=[0,2,4][Math.floor(r()*3)],x=1+2*Math.floor(r()*10);W[y][x]=0}
+  const gy=[0,2,4][Math.floor(r()*3)];return{W,gy,gx:MC-1}}
+ const mzFor=id=>{if(!mz||mz.id!==id){mz=Object.assign(makeMaze(id),{id,y:2,x:0})}return mz};
+ window.mazeForTest=id=>makeMaze(id);
+ /* joining, leaving, prizes */
+ function evJoin(){const s=evState();if(!s.phase)return log('There is no event right now.','','quest');if(P.evt&&P.evt.id===s.id)return log('You already took part in this event.','','quest');
+  P.evt={id:s.id,from:P.map,done:false,got:false};talk=null;inShop=false;
+  if(s.phase==='wait'){P.map='evt_lobby';log('You enter the Event Waiting Room. The maze opens in '+fmtLeft(s.runAt-Date.now())+'.','good','quest')}
+  else{P.map='evt_maze';mz=null;mzFor(s.id);log('You enter the maze. Find the flag!','good','quest')}
+  tab='play';save();render()}
+ function toPrize(won){if(!P.evt)P.evt={id:0,from:'henesys'};P.evt.done=!!won;P.map='evt_prize';mz=null;
+  log(won?'You reached the flag! Collect your Event Trophy from the Artale Administrator.':'Time is up. The Artale Administrator will take you home.',won?'good':'','quest');save();render()}
+ function goHome(){const to=P.evt&&MAPS[P.evt.from]&&!inEventMap(P.evt.from)?P.evt.from:'henesys';P.map=to;talk=null;log('You are back in '+MAPS[to].n+'.','','quest');save();render()}
+ const fmtLeft=ms=>{ms=Math.max(0,ms);const m=Math.floor(ms/60e3),s=Math.floor(ms%60e3/1000);return m+':'+String(s).padStart(2,'0')};
+ /* talking */
+ {const _dl=dlg;dlg=function(){const d=_dl();try{if(talk&&P){const n=talk.npc,s=evState(),last=d.ch.length-1;
+   if(n===EVNPC&&!inEventMap()&&(!talk.page||talk.page==='main')){
+    if(s.phase){const joined=P.evt&&P.evt.id===s.id;d.t+='<br><br>🎉 <b>The Maze event is open!</b> '+(s.phase==='wait'?'It starts in '+fmtLeft(s.runAt-Date.now())+'.':'It ends in '+fmtLeft(s.end-Date.now())+'.')+(joined?' You already took part in this one.':'');if(!joined)d.ch.splice(last,0,['Join the Maze event','ev:join'])}
+    else d.t+='<br><br><span class="mute">The next Maze event starts '+(s.next?'at '+new Date(s.next).toLocaleTimeString([],{hour:'numeric',minute:'2-digit',timeZoneName:'short'}):'when an admin schedules one')+'.</span>'}
+   if(n==='evt_prize'&&P.map==='evt_prize'){const won=P.evt&&P.evt.done&&!P.evt.got;
+    d.t=won?'Congratulations on finishing the maze! Here is your Event Trophy.':P.evt&&P.evt.got?'Thanks for taking part. Ready to go home?':'Not this time, but thanks for taking part! Ready to go home?';
+    d.ch=(won?[['Take the Event Trophy','ev:prize']]:[]).concat([['Return to '+(P.evt&&MAPS[P.evt.from]?MAPS[P.evt.from].n:'Henesys'),'ev:home']])}}}catch(e){}return d}}
+ {const _dd=dlgDo;dlgDo=function(k){if(!/^ev:/.test(k))return _dd(k);
+   if(k==='ev:join')return evJoin();
+   if(k==='ev:prize'){if(P.evt&&P.evt.done&&!P.evt.got){P.evt.got=true;P.inv.i4000038=(P.inv.i4000038||0)+1;log('You received an Event Trophy.','good','items');save()}talk.page='main';return render()}
+   if(k==='ev:home')return goHome()}}
+ /* trading: same map only, never in event maps */
+ window.canTradeWith=other=>!!(P&&other&&other.map===P.map&&!(MAPS[P.map]||{}).noTrade);
+ /* moving in the maze */
+ let lastStep=0;
+ window.mazeMove=function(dy,dx,force){if(!P||P.map!=='evt_maze')return;const s=evState();if(s.phase!=='run'||!P.evt||P.evt.id!==s.id)return;
+  const m=mzFor(s.id),now=Date.now(),cd=moveCd();if(!force&&now-lastStep<cd)return;const y=m.y+dy,x=m.x+dx;
+  if(y<0||y>=MR||x<0||x>=MC||m.W[y][x]){lastStep=now;return render()}lastStep=now;m.y=y;m.x=x;
+  if(y===m.gy&&x===m.gx)return toPrize(true);render()};
+ function mazeHtml(){const s=evState(),m=mzFor(s.id),x0=Math.max(0,Math.min(MC-7,m.x-3)),LH=28;let h='<div class="pad"><div class="row"><h2>🌀 The Maze</h2><b id="mz-left">'+fmtLeft(s.end-Date.now())+'</b></div><div class="mute">Reach the 🏁. Column '+(m.x+1)+' of '+MC+'.</div><div style="margin-top:8px;display:flex;flex-direction:column;gap:3px">';
+  for(let y=0;y<MR;y++){let c='';for(let x=x0;x<x0+7;x++){const wall=m.W[y][x],me=y===m.y&&x===m.x,goal=y===m.gy&&x===m.gx;
+    c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;min-height:'+LH+'px;font-size:18px;border-left:'+(x>x0?'1px dashed #b9c4d6':'0')+';background:'+(wall?'#6b5a4a':'transparent')+'">'+(me?'🧍':goal?'🏁':wall?'<span style="font-size:13px">🧱</span>':'')+'</div>'}
+   h+='<div class="lrow" style="display:flex;background:rgba(120,140,180,.12);border-radius:6px;overflow:hidden">'+c+'</div>'}
+  const b=(id,t,l)=>'<button id="'+id+'" style="flex:1;min-height:54px;font-size:15px">'+t+'<br><small>'+l+'</small></button>';
+  return h+'</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">'+'<div></div>'+b('mzU','▲','Up')+'<div></div>'+b('mzB','◀','Back')+b('mzD','▼','Down')+b('mzF','▶','Forward')+'</div><div class="mute" style="margin-top:6px">No skills or items here, just your feet. Arrow keys work too.</div></div>'}
+ document.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('#mzU,#mzD,#mzB,#mzF');if(!t)return;e.preventDefault();({mzU:()=>mazeMove(-1,0),mzD:()=>mazeMove(1,0),mzB:()=>mazeMove(0,-1),mzF:()=>mazeMove(0,1)})[t.id]()},true);
+ document.addEventListener('keydown',e=>{if(!P||P.map!=='evt_maze'||/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||''))return;const k={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[e.key];if(k){e.preventDefault();mazeMove(k[0],k[1])}});
+ /* nearest town with an Artale Administrator, by walking distance */
+ function nearestEvTown(){const start=P.map,seen=new Set([start]),q=[start];while(q.length){const k=q.shift();if(EVTOWNS.includes(k)&&MAPS[k])return k;for(const e of (MAPS[k]&&MAPS[k].ex)||[])if(MAPS[e[0]]&&!seen.has(e[0])){seen.add(e[0]);q.push(e[0])}}return 'henesys'}
+ /* the timer block, maze panel and event map clean-up on every redraw */
+ {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(typeof scr!=='undefined'&&scr==='game'&&P&&tab==='play'){const app=document.getElementById('app'),tabs=app&&app.querySelector('.tabs');const s=evState();
+   if(s.phase&&tabs&&!document.getElementById('evtimer')){const inEv=inEventMap(),joined=P.evt&&P.evt.id===s.id;const d=document.createElement('div');d.id='evtimer';d.className='panel';
+    const near=nearestEvTown();d.innerHTML='<div class="pad" style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🎉</span><div style="flex:1"><b>Maze event '+(s.phase==='wait'?'starts in':'ends in')+' <span id="ev-left">'+fmtLeft((s.phase==='wait'?s.runAt:s.end)-Date.now())+'</span></b><div class="mute">'+(inEv?(P.map==='evt_lobby'?'Waiting for the maze to open.':P.map==='evt_maze'?'Find the flag!':'Collect your prize from the Artale Administrator.'):joined?'You already took part in this one.':'Join at the Artale Administrator. Nearest: '+MAPS[near].n+'.')+'</div></div></div>';
+    tabs.insertAdjacentElement('afterend',d)}
+   if(P.map==='evt_maze'&&s.phase==='run'){const first=app.querySelector(':scope > .panel:not(#evtimer)');if(first)first.innerHTML=mazeHtml();
+    app.querySelectorAll(':scope > .panel').forEach(p=>{if(p.querySelector('.qgrid,.tiles,.wm'))p.style.display='none'})}}}catch(e){}return out}}
+ /* every second: countdowns, moving contestants along, sending everyone home when it is over */
+ let lastPhase='';setInterval(()=>{if(!P||typeof scr==='undefined'||scr!=='game')return;const s=evState(),ph=(s.phase||'')+':'+(s.id||'');
+  const L=document.getElementById('ev-left');if(L&&s.phase)L.textContent=fmtLeft((s.phase==='wait'?s.runAt:s.end)-Date.now());
+  const M=document.getElementById('mz-left');if(M&&s.phase)M.textContent=fmtLeft(s.end-Date.now());
+  if(inEventMap()&&P.map!=='evt_prize'){if(!P.evt||!s.phase||P.evt.id!==s.id)return toPrize(false);
+   if(P.map==='evt_lobby'&&s.phase==='run'){P.map='evt_maze';mz=null;mzFor(s.id);log('The maze is open. Go!','good','quest');save();return render()}}
+  if(ph!==lastPhase){lastPhase=ph;render()}},1000);
+ /* for the notice bar */
+ window.evTickerText=()=>{const s=evState();return s.phase?(s.phase==='wait'?'🎉 Maze event: entries are open, it starts in '+fmtLeft(s.runAt-Date.now()).replace(/:\d\d$/,' min')+'. Talk to the Artale Administrator in any town.':'🎉 Maze event running now. Join at the Artale Administrator in any town.'):''};
+ /* admin: Maze event schedule */
+ {const _gp=gmPanel;gmPanel=function(role){let h=_gp(role);if(role!=='admin')return h;const c=evCfg(),s=evState(),ex=(Array.isArray(c.extra)?c.extra:[]).filter(t=>t+EV_LEN>Date.now()).sort((a,b)=>a-b);
+   const lt=t=>new Date(t).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
+   const body='<div class="mute" style="font-size:13px">Every 4 hours on the hour (California time) entries open for 5 minutes, then the maze runs for 10. '+(s.phase?'<b>An event is open now ('+s.phase+').</b>':'Next: '+(s.next?lt(s.next):'none scheduled')+'.')+'</div>'
+    +'<div style="display:flex;gap:6px;margin-top:6px"><button data-gm="evauto">'+(c.auto===false?'Turn the 4-hour schedule on':'Turn the 4-hour schedule off')+'</button><button data-gm="evnow">Start one now</button></div>'
+    +ex.map((t,i)=>'<div class="mrow"><span class="av">🌀</span><div style="flex:1">'+lt(t)+'</div><button data-gm="evdel:'+t+'">Cancel</button></div>').join('')
+    +(ex.length<24?'<div style="display:flex;gap:6px;margin-top:6px"><input id="so_gm_evdate" type="date" value="'+(soDraft.so_gm_evdate||'')+'" style="flex:1;min-width:0"><input id="so_gm_evtime" type="time" value="'+(soDraft.so_gm_evtime||'')+'" style="flex:1;min-width:0"><button data-gm="evadd">Schedule</button></div><div class="mute" style="font-size:12px">Extra start time, California time.</div>':'');
+   const open=!!gmOpen.evt;
+   return h.replace('<div class="panel win"><button data-gm="tg:self"','<div class="panel win"><button data-gm="tg:evt" style="width:100%;display:flex;justify-content:space-between;padding:10px 12px;border-radius:0;box-shadow:none;border-width:0 0 2px 0"><span>Maze event</span><span>'+(open?'▾':'▸')+'</span></button>'+(open?'<div class="pad">'+body+'</div>':'')+'</div><div class="panel win"><button data-gm="tg:self"')}}
+ {const _gd=gmDo;gmDo=function(a,arg){if(!/^ev/.test(a))return _gd(a,arg);if(!isAdm()){gmMsg='Admins only.';return render()}
+   const c=worldCfg(),ev=c.ev&&typeof c.ev==='object'?c.ev:{};ev.extra=(Array.isArray(ev.extra)?ev.extra:[]).filter(t=>t+EV_LEN>Date.now());
+   if(a==='evauto'){ev.auto=ev.auto===false?true:false;gmMsg='The 4-hour Maze event schedule is '+(ev.auto?'on':'off')+'.';audit('maze schedule '+(ev.auto?'on':'off'))}
+   else if(a==='evnow'){if(evState().phase){gmMsg='An event is already open.';return render()}ev.extra.push(Date.now());gmMsg='A Maze event is open now. It starts in 5 minutes.';audit('started a maze event')}
+   else if(a==='evdel'){ev.extra=ev.extra.filter(t=>String(t)!==String(arg));gmMsg='Event cancelled.';audit('cancelled a maze event')}
+   else if(a==='evadd'){const d=((document.getElementById('so_gm_evdate')||{}).value||soDraft.so_gm_evdate||''),t=((document.getElementById('so_gm_evtime')||{}).value||soDraft.so_gm_evtime||'');
+    const m=/^(\d{4})-(\d\d)-(\d\d)$/.exec(d),tm=/^(\d\d?):(\d\d)$/.exec(t);if(!m||!tm){gmMsg='Pick a date and time (California time).';return render()}
+    const wall=Date.UTC(+m[1],+m[2]-1,+m[3],+tm[1],+tm[2]),ts=Date.now()+(wall-pacWall(Date.now()));if(ts<Date.now()-60e3){gmMsg='That time has passed.';return render()}
+    if(ev.extra.length>=24){gmMsg='24 extra events is the limit.';return render()}ev.extra.push(Math.round(ts/60e3)*60e3);delete soDraft.so_gm_evdate;delete soDraft.so_gm_evtime;gmMsg='Maze event scheduled.';audit('scheduled a maze event')}
+   else if(a==='evt'){}
+   c.ev=ev;c.by=MYID();c.t=Date.now();try{LS.setItem('mapleish_rates',JSON.stringify(c))}catch(e){}save();render()}}
+})();
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
@@ -3348,7 +3606,7 @@ async function showRank(){open(rkA,rkV);rkV.innerHTML='<div class="ws-av"><div c
  const r=await get('/api/rankings?job='+rkJob);const J=['all','beginner','swordsman','archer','rogue','magician','pirate'];
  rkV.innerHTML='<div class="ws-av"><div class="ws-card"><h2>🏆 Rankings</h2><div class="ws-tabs" style="flex-wrap:wrap;margin:6px 0 10px">'+J.map(j=>'<button class="ws-tab'+(rkJob===j?' on':'')+'" data-rk="'+j+'">'+(j==='all'?'All':JOBI[j]+' '+JOBN[j])+'</button>').join('')+'</div>'
   +(r.error?'<p class="sa-empty">'+esc(r.error)+'</p>':!r.list.length?'<p class="sa-empty">No characters yet. Be the first!</p>':
-   '<div class="rk-t">'+r.list.map(c=>'<div class="ws-row rk-r'+(c.rank<=3?' rk'+c.rank:'')+'"><span><b class="rk-n">'+(c.rank<=3?['🥇','🥈','🥉'][c.rank-1]:'#'+c.rank)+'</b> '+esc(c.name)+(c.mode?' <small>'+esc((MODES[c.mode]||['',''])[1])+'</small>':'')+'</span><span>'+JOBI[c.job]+' '+JOBN[c.job]+' · <b>Lv '+c.lvl+'</b></span></div>').join('')+'</div>')
+   '<div class="rk-t">'+r.list.map(c=>'<div class="ws-row rk-r'+(c.rank<=3?' rk'+c.rank:'')+'"><span><b class="rk-n">'+(c.rank<=3?['🥇','🥈','🥉'][c.rank-1]:'#'+c.rank)+'</b> '+esc(c.name)+(c.gm?' <small class="rk-gm" title="Staff character">GM</small>':'')+(c.mode?' <small>'+esc((MODES[c.mode]||['',''])[1])+'</small>':'')+'</span><span>'+JOBI[c.job]+' '+JOBN[c.job]+' · <b>Lv '+c.lvl+'</b></span></div>').join('')+'</div>')
   +'<p class="ws-note" style="margin-top:10px">Top 100 by level, then EXP. Updated live. Staff accounts are not ranked.</p></div></div>';
  rkV.querySelectorAll('[data-rk]').forEach(b=>b.onclick=()=>{rkJob=b.dataset.rk;showRank()})}
 rkA.addEventListener('click',e=>{e.preventDefault();showRank()});
