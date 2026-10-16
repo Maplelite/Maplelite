@@ -1,4 +1,4 @@
-window.__BUILD='3.5-8717f69293';
+window.__BUILD='3.5-8e896d4683';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4126,6 +4126,55 @@ function phClean(p){if(!p||p._ph)return;const g=window.__phGone,b=k=>String(k||'
  for(const k of Object.keys(p.inv||{})){const bk=baseK(k);if(g.has(bk)){if(PH_REMAP[bk])p.inv[PH_REMAP[bk]]=(p.inv[PH_REMAP[bk]]||0)+p.inv[k];delete p.inv[k]}}
  for(const s of Object.keys(p.eq||{}))if(g.has(baseK(p.eq[s])))delete p.eq[s];if(p.weapon&&g.has(baseK(p.weapon)))p.weapon=null;p._ph=1}
 {const _r=render;render=function(){try{if(P)phClean(P)}catch(e){}return _r.apply(this,arguments)}}
+
+/* v3.5: pixel skill icons. Every skill gets a 16x16 sprite drawn with the same engine as the item icons (icoSvg),
+   in a colour that fits it. First-job skills are mapped by hand; skills from the job data are matched by name.
+   The icon replaces the old emoji everywhere the game shows a skill (quick slots, skill lists, buffs). ===== */
+Object.assign(ICO_T,{
+ sk_burst:`................|.......kk.......|......kcck......|..kk..kack..kk..|..kckkkaakkkck..|...kcaaaaaack...|....kaahhaak....|.kkkaahhhhaakkk.|.kcaaahhhhaaack.|..kkkaahhaakkk..|....kaaaaaak....|...kcaakkaack...|..kckk.kk.kkck..|..kk........kk..|................|................`,
+ sk_sweep:`................|.........kkkk...|.......kkcchk...|.....kkcaaak....|....kcaaakk.....|...kcaakk.......|..kcaak.........|..kcak..........|..kcak..........|..kcaak.........|...kcaakk.......|....kcaaakk.....|.....kkcaaak....|.......kkcchk...|.........kkkk...|................`,
+ sk_bolt:`................|.........kkkk...|........kcck....|.......kcak.....|......kcak......|.....kcakkkk....|....kcaaaack....|....kkkkcak.....|.......kcak.....|......kcak......|.....kcak.......|....kcak........|....kak.........|....kk..........|................|................`,
+ sk_heart:`................|................|..kkk....kkk....|.kcchk..kcaak...|kcchaakkaaaabk..|kchaaaaaaaaabk..|kcaaaaaaaaaabk..|.kaaaaaaaaabk...|..kaaaaaaaabk...|...kaaaaaabk....|....kaaaabk.....|.....kaabk......|......kbk.......|.......k........|................|................`,
+ sk_spiral:`................|.....kkkkkk.....|...kkaaaaaakk...|..kaakkkkkkaak..|.kaak......kaak.|.kak..kkkk..kak.|kaak.kaaaak.kak.|kak.kak..kak.kak|kak.kak.kaak.kak|kak.kaak.kk.kaak|kaak.kaakkkkaak.|.kak..kaaaaaak..|.kaak..kkkkkk...|..kaakk.........|...kkaak........|.....kk.........`,
+ sk_moon:`................|.....kkkkk......|...kkaaaak......|..kaaaakk.......|.kaaaak.........|.kaaak..........|kaaaak..........|kaaak...........|kaaak...........|kaaaak..........|.kaaak..........|.kaaaak.........|..kaaaakk.......|...kkaaaak......|.....kkkkk......|................`,
+ sk_orb:`................|.....kkkkkk.....|...kkcccaaakk...|..kcchhcaaaabk..|..kchhcaaaaabk..|.kccccaaaaaabbk.|.kcaaaaaaaaabbk.|.kaaaaaaaaaabbk.|.kaaaaaaaaabbbk.|.kaaaaaaaabbbbk.|..kaaaaabbbbbk..|..kbaabbbbbbbk..|...kkbbbbbbkk...|.....kkkkkk.....|................|................`,
+ sk_wind:`................|................|..kkkkkkkkk.....|.kcaaaaaaaak....|..kkkkkkkkcak...|...........kak..|....kkkkkkkkak..|...kcaaaaaaak...|....kkkkkkkk....|.kkkkkkkk.......|kcaaaaaaak......|.kkkkkkkcak.....|........kak.....|.......kak......|......kk........|................`,
+ sk_aura:`................|.......kk.......|......kcck......|.....kcaack.....|....kcaaaack....|...kcaaaaaack...|..kkkkaaaakkkk..|.....kaaaak.....|.....kaaaak.....|.....kaaaak.....|.....kaaaak.....|.....kaaaak.....|.....kbbbbk.....|.....kkkkkk.....|................|................`
+});
+/* [sprite, colour, badge sprite, badge colour]: each skill shows what it does, like the classic skill icons:
+   boosters are the weapon with a power-up arrow, elements show the element, attacks show the weapon and its effect */
+const SK_ICO={powerstrike:['sword','#d9443a','sk_burst','#f0a030'],slashblast:['sk_sweep','#58b0ff'],ironbody:['top','#9aa6b2','sk_aura','#f0a030'],
+ arrowblow:['arrow','#c9925a','sk_burst','#e58a2e'],doubleshot:['bow','#c9925a','arrow','#e58a2e'],focus:['eye','#3f86d9'],disorder:['sk_spiral','#8a5ad0'],
+ darksight:['sk_moon','#6a5acd'],dstab:['dagger','#b8c4d0','dagger','#d9443a'],lucky7:['star','#e8b830','star','#d9443a'],mguard:['sk_orb','#3f86d9','shield','#9aa6b2'],
+ marmor:['shield','#8a5ad0','sk_orb','#3f86d9'],ebolt:['sk_bolt','#f0d030'],mclaw:['sk_sweep','#b06ae0','wand','#8a5ad0'],flashfist:['knuckle','#e58a2e','sk_burst','#f0d030'],
+ somersault:['shoes','#58b04a','sk_wind','#9ad0e8'],pdshot:['gun','#9aa6b2','sk_burst','#e58a2e'],dash:['sk_wind','#9ad0e8'],three:['snail','#d9443a'],
+ rec:['sk_heart','#e85a8a'],feet:['shoes','#3f86d9','sk_wind','#9ad0e8']};
+const SK_N={'Sword Booster':['sword','#b8c4d0','sk_aura','#f0a030'],'Axe Booster':['axe','#b8c4d0','sk_aura','#f0a030'],'BW Booster':['mace','#b8c4d0','sk_aura','#f0a030'],
+ 'Spear Booster':['spear','#b8c4d0','sk_aura','#f0a030'],'Pole Arm Booster':['polearm','#b8c4d0','sk_aura','#f0a030'],'Bow Booster':['bow','#c9925a','sk_aura','#f0a030'],
+ 'Crossbow Booster':['crossbow','#c9925a','sk_aura','#f0a030'],'Claw Booster':['claw','#b8c4d0','sk_aura','#f0a030'],'Dagger Booster':['dagger','#b8c4d0','sk_aura','#f0a030'],
+ 'Knuckler Booster':['knuckle','#e58a2e','sk_aura','#f0a030'],'Gun Booster':['gun','#9aa6b2','sk_aura','#f0a030'],
+ 'Rage':['face','#d9443a','sk_aura','#d9443a'],'Power Guard':['shield','#d9443a','sk_burst','#f0a030'],'Threaten':['sk_spiral','#d9443a'],'Iron Will':['shield','#3f86d9','sk_aura','#3f86d9'],
+ 'Hyper Body':['sk_heart','#d9443a','sk_aura','#f0a030'],'Meditation':['sk_orb','#8a5ad0','sk_aura','#f0a030'],'Teleport':['sk_wind','#b06ae0'],'Slow':['sk_spiral','#3f86d9','shoes','#3f86d9'],
+ 'Fire Arrow':['arrow','#d9443a','sk_burst','#f0a030'],'Poison Breath':['sk_orb','#58b04a','sk_wind','#58b04a'],'Cold Beam':['crystal','#7fd0f0'],'Thunder Bolt':['sk_bolt','#f0d030','sk_burst','#f0d030'],
+ 'Heal':['sk_heart','#e85a8a','star','#ffffff'],'Invincible':['shield','#e8b830','star','#ffffff'],'Bless':['sk_aura','#e8b830','star','#ffffff'],'Holy Arrow':['arrow','#e8b830','star','#ffffff'],
+ 'Power Knock-Back':['sk_burst','#e58a2e','sk_wind','#9ad0e8'],'Soul Arrow':['bow','#58b0ff','sk_aura','#58b0ff'],'Arrow Bomb':['arrow','#c9925a','sk_burst','#e8503a'],'Iron Arrow':['arrow','#9aa6b2','shield','#9aa6b2'],
+ 'Haste':['sk_wind','#58b04a','shoes','#58b04a'],'Drain':['sk_orb','#6a2a8a','sk_heart','#e85a8a'],'Steal':['bag','#b07a48','dagger','#b8c4d0'],'Savage Blow':['dagger','#d9443a','sk_sweep','#d9443a'],
+ 'Backspin Blow':['knuckle','#58b0ff','sk_spiral','#58b0ff'],'Double Uppercut':['knuckle','#d9443a','sk_aura','#d9443a'],'Corkscrew Blow':['knuckle','#e8b830','sk_wind','#e8b830'],
+ 'MP Recovery':['sk_heart','#3f86d9','sk_aura','#3f86d9'],'Oak Barrel':['stump','#9a6a3c'],'Invisible Shot':['gun','#9ad0e8','sk_moon','#6a5acd'],'Grenade':['sk_burst','#e8503a','sk_orb','#333333'],
+ 'Blank Shot':['gun','#9aa6b2','sk_spiral','#9aa6b2'],'Wings':['wing','#e8e8e8'],'Recoil Shot':['gun','#e58a2e','sk_wind','#9ad0e8']};
+/* anything not listed: pick a sprite from the skill's name */
+const SK_BYNAME=[[/thunder|lightning|bolt/i,'sk_bolt','#f0d030'],[/fire|flame|blaze|meteor|explosion/i,'sk_burst','#e8503a'],[/ice|cold|frost/i,'crystal','#7fd0f0'],[/poison|venom/i,'sk_orb','#58b04a'],
+ [/heal|recovery|regen/i,'sk_heart','#e85a8a'],[/guard|armor|shield|body|defen/i,'shield','#9aa6b2'],[/boost|rage|bless|focus|soul|charge|will/i,'sk_aura','#f0a030'],
+ [/arrow|shot|rain|bomb/i,'arrow','#c9925a'],[/slash|blade|sword|crush|sweep|brandish|panic|coma|smash/i,'sk_sweep','#58b0ff'],[/star|avenger|shuriken/i,'star','#e8b830'],
+ [/steal|savage|stab|assault/i,'dagger','#b8c4d0'],[/dark|shadow|sight/i,'sk_moon','#6a5acd'],[/teleport|dash|jump|wind|haste/i,'sk_wind','#9ad0e8'],[/claw|magic|mana|spell/i,'sk_sweep','#b06ae0']];
+const skIcoFor=(k,n)=>{if(SK_ICO[k])return SK_ICO[k];if(n&&SK_N[n])return SK_N[n];for(const [re,t,c] of SK_BYNAME)if(re.test(n||k))return [t,c];return ['sk_burst',typeof colorFor==='function'?colorFor(n||k,''):'#8fa6c8']};
+const skImg=(t,c,bt,bc)=>{const main='<img alt="" src="'+icoSvg(t,c)+'" style="width:100%;height:100%;image-rendering:pixelated;display:block">';
+ if(!bt)return '<span class="ski" style="display:inline-block;width:1.15em;height:1.15em;vertical-align:middle">'+main+'</span>';
+ return '<span class="ski" style="position:relative;display:inline-block;width:1.15em;height:1.15em;vertical-align:middle">'+main
+  +'<img alt="" src="'+icoSvg(bt,bc)+'" style="position:absolute;right:-12%;bottom:-12%;width:58%;height:58%;image-rendering:pixelated;filter:drop-shadow(0 0 1px #fff) drop-shadow(0 0 1px #fff)"></span>'};
+function skIconize(){try{for(const k in SKL){const v=SKL[k];if(!v||String(v[0]).startsWith('<span class="ski"'))continue;const [t,c,bt,bc]=skIcoFor(k,v[1]);v[0]=skImg(t,c,bt,bc)}
+ if(typeof SKJ==='object')for(const k in SKJ){const d=SKJ[k];if(d&&d.ic&&!String(d.ic).startsWith('<span class="ski"')){const nm=(SKL[k]||[])[1]||d.n;const [t,c,bt,bc]=skIcoFor(k,nm);d.ic=skImg(t,c,bt,bc)}}}catch(e){}}
+skIconize();setTimeout(skIconize,0);setTimeout(skIconize,1500);
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
