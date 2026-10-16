@@ -1,4 +1,4 @@
-window.__BUILD='3.5-b0fdbeea38';
+window.__BUILD='3.5-823679e081';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -615,7 +615,7 @@ function skDetail(k){const d=SKD[k],n=P.sk[k]|0,l=Math.max(1,n),mpt=d.mp(l)+(n>0
  +(n<d.max?'<div><b>Next (Lv '+(n+1)+'):</b> '+d.fx(n+1)+'</div>':'<div><b>Max level reached.</b></div>')
  +'<div class="mute" style="margin-top:6px">MP cost: '+mpt+' · Cooldown: '+d.cd(l)+' · Duration: '+d.du(l)+'</div>'
  +'<div class="ex" style="margin-top:8px"><button class="main" data-k="'+k+'" '+(P.sp&&n<d.max?'':'disabled')+'>Upgrade (1 SP)</button><button data-sks="">Close</button></div></div>'}
-const FEAT=[['party','👥','Party'],['chat','💬','Chat'],['guild','🛡️','Guild'],['market','🏪','Free Market'],['family','🌳','Family'],['friends','🤝','Buddies'],['skills','✨','Skills'],['quests','📜','Quests'],['equip','🎽','Equipment'],['mail','✉️','Mail'],['cash','💎','Cash Shop'],['rank','🏆','Ranking'],['book','📖','Monster Book'],['pets','🐾','Pets'],['trade','🔁','Trade'],['events','🎉','Events'],['mini','🎲','Mini Games'],['settings','⚙️','System Options']];
+const FEAT=[['party','👥','Party'],['chat','💬','Chat'],['guild','🛡️','Guild'],['market','🏪','Free Market'],['family','🌳','Family'],['friends','🤝','Buddies'],['skills','✨','Skills'],['quests','📜','Quests'],['equip','🎽','Equipment'],['mail','✉️','Mail'],['cash','💎','Cash Shop'],['rank','🏆','Ranking'],['book','📖','Monster Book'],['pets','🐾','Pets'],['trade','🔁','Trade'],['events','🎉','Events'],['mini','🎲','Mini Games'],['settings','⚙️','System']];
 const mr=(ic,t,sub,r)=>'<div class="mrow"><span class="av">'+ic+'</span><div style="flex:1"><div>'+t+'</div><div class="mute">'+sub+'</div></div>'+(r||'')+'</div>';
 const dis=t=>'<button disabled>'+t+'</button>',chips=a=>'<div class="chips">'+a.map(dis).join('')+'</div>',pad=t=>'<div class="pad mute">'+t+'</div>';
 function featBody(id){if(IRON()&&LOCKED.includes(id))return '<div class="pad">🔒 Ironmen can\'t use this.</div>';const nm=P.name.replace(/[<>&]/g,''),I=ITEMS;
@@ -3932,10 +3932,10 @@ function themePanel(){return '<div class="panel" id="themepanel"><h2>🎨 Theme<
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-th]');if(!b)return;thCur=b.dataset.th;try{LS.setItem('ml_theme',thCur)}catch(_){}thApply(thCur);if(typeof render==='function'&&P)render()});
 
 /* System tab: Exit game saves the character, stops any fight and returns to the website, still logged in */
-function exitPanel(){return '<div class="panel" id="exitpanel"><h2>🚪 Exit game</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Saves your character and goes back to the website. You stay logged in.</div><button id="exitgame" class="main" style="width:100%">Exit game</button></div>'}
+function exitPanel(){return '<div class="mrow" id="exitrow"><span class="av">🚪</span><div style="flex:1"><div>Exit game</div><div class="mute">Save and go back to the website. You stay logged in.</div></div><button id="exitgame" class="main">Exit</button></div>'}
 {const _fb=featBody;featBody=function(id){let b=_fb.apply(this,arguments);if(id!=='settings')return b;
  /* order: Theme, Game font, then Exit game and the rest of the System Options */
- const ex=exitPanel();b=b.split(ex).join('');const k=b.indexOf('<div class="mrow">');return k>=0?b.slice(0,k)+ex+b.slice(k):ex+b}}
+ const ex=exitPanel();b=b.split(ex).join('');const k=b.indexOf('<div class="mrow">');const box=r=>'<div class="panel" id="sysopts"><h2>⚙️ System Options</h2>'+r+'</div>';return k>=0?b.slice(0,k)+box(ex+b.slice(k)):box(ex)+b}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#exitgame');if(!b)return;e.stopPropagation();
  try{save()}catch(x){}
  try{if(window.__fight3){window.__fight3.want=false;window.__fight3.on=false}}catch(x){}
