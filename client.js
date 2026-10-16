@@ -3817,7 +3817,7 @@ let gfCur='henesys';try{gfCur=LS.getItem('ml_gfont')||'henesys'}catch(e){}gfAppl
 const gfOffline=()=>location.protocol==='file:';
 function fontPanel(){return '<div class="panel" id="fontpanel"><h2>🔤 Game font</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Changes the game text (titles and the logo stay the same).</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
  +GFONTS.map(f=>{gfLoad(f);const off=f[2]&&gfOffline();return '<button data-gf="'+f[0]+'" class="'+(gfCur===f[0]?'main':'')+'" '+(off?'disabled title="Online version only"':'')+' style="font-family:'+gfFam(f)+',sans-serif!important;min-height:40px">'+f[1]+(f[0]==='henesys'?' (default)':'')+'</button>'}).join('')+'</div></div>'}
-{const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(P&&typeof scr!=='undefined'&&scr==='game'&&tab==='menu'&&!feat&&!document.getElementById('fontpanel')){const app=document.getElementById('app');const d=document.createElement('div');d.innerHTML=fontPanel();app.appendChild(d.firstChild)}}catch(e){}return out}}
+{const _fb=featBody;featBody=function(id){const b=_fb.apply(this,arguments);return id==='settings'?fontPanel()+b:b}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gf]');if(!b)return;gfCur=b.dataset.gf;try{LS.setItem('ml_gfont',gfCur)}catch(_){}gfApply(gfCur);if(typeof render==='function'&&P)render()});
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
@@ -3999,7 +3999,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
-   else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
+   else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,fx:m.fx,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
    else if(m.t==='wsent'){L.chat.push({ts:Date.now(),from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
    else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
    else if(m.t==='achat'){L.chat.push({ts:Date.now(),from:m.from,md:m.md,fx:m.fx,text:m.text,all:true});if(L.chat.length>80)L.chat.shift();if(L.ctab!=='all')L.unread.all=(L.unread.all||0)+1}
@@ -4008,7 +4008,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='whois'){if(m.tag==='g')L.gon=m.list||[];else L.buds=m.list||[]}
    else if(m.t==='ginv'){L.ginv={guild:m.guild,from:m.from,until:Date.now()+60000}}
    else if(m.t==='gupd'){if(m.note)log(m.note,'','guild');gFetch()}
-   else if(m.t==='gchat'){if(L.guild&&m.guild===L.guild.name){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,text:m.text,guild:true});if(L.chat.length>60)L.chat.shift();if(L.ctab!=='guild')L.unread.guild++}}
+   else if(m.t==='gchat'){if(L.guild&&m.guild===L.guild.name){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,fx:m.fx,text:m.text,guild:true});if(L.chat.length>60)L.chat.shift();if(L.ctab!=='guild')L.unread.guild++}}
    else if(m.t==='breq')L.breq={from:m.from,until:Date.now()+60000};
    else if(m.t==='badd'){if(P){P.buddies=P.buddies||[];if(!P.buddies.some(n=>n.toLowerCase()===m.name.toLowerCase())){P.buddies.push(m.name);log(m.name+' is now your buddy.','good','social');save()}askWho()}}
    else if(m.t==='shops')L.shops=m.shops||[];
@@ -4020,7 +4020,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   ws.onclose=()=>{if(L.ws===ws){L.ws=null;L.state='off';L.here=[];paint();retry()}}}
  function retry(){clearTimeout(L.timer);if(!want())return;L.tries++;L.timer=setTimeout(connect,Math.min(30000,3000*L.tries))}
  function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=L.chat.filter(m=>m.party||m.w||m.guild)}}
- const out=o=>{if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
+ const out=o=>{if(o&&/^(chat|pchat|gchat|w)$/.test(o.t)&&L.me&&L.me.staff){const f=adminFx();if(f!=='none')o.fx=f}if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
  /* the 7 basic expressions (v62 F1-F7). A skin (later an NX item) maps 1-7 to other pictures. */
  const EMO=[null,['😊','Happy'],['😟','Troubled'],['😢','Cry'],['😠','Angry'],['😵','Bewildered'],['😳','Stunned'],['😍','Love']];
  window.EMOTE_SKINS={basic:EMO.map(x=>x&&x[0])};
@@ -4186,7 +4186,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function medalIco(md){const it=md&&typeof ITEMS!=='undefined'&&ITEMS[md];return it?'<span class="mdl" title="'+esc(it.n)+'">'+(typeof itemIcon==='function'?itemIcon(md):it.i)+'</span>':''}
  function nm(name,gm,md){return (gm?'<span class="gmtag">[GM]</span> ':'')+medalIco(md)+esc(name)}
  window.liveName=nm;
- function chatLine(m){return m.emote?'<div><b>'+nm(m.from,m.gm,m.md)+'</b> <span style="font-size:20px">'+m.emote+'</span></div>':m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):nm(m.from,m.gm,m.md)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':m.guild?' style="color:#a0661c"':'')+'><b>'+nm(m.from,m.gm,m.md)+':</b> '+esc(m.text)+'</div>'}
+ function chatLine(m){return m.emote?'<div><b>'+nm(m.from,m.gm,m.md)+'</b> <span style="font-size:20px">'+m.emote+'</span></div>':m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):nm(m.from,m.gm,m.md)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':m.guild?' style="color:#a0661c"':'')+'><b>'+nm(m.from,m.gm,m.md)+':</b> '+(m.fx?'<span class="afx afx-'+esc(m.fx)+'">'+esc(m.text)+'</span>':esc(m.text))+'</div>'}
  function chatHtml(){const T=[['all','All'],['map','Map'],['friends','Friends'],['party','Party'],['guild','Guild'],['log','Log']];const t=L.ctab;
   let body;
   if(t==='all'){const staff=L.me&&L.me.staff;const col={map:'#2b6cb0',friends:'#7a3fb5',guild:'#a0661c'};
