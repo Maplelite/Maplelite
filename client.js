@@ -2325,7 +2325,7 @@ function decorate(){if(!P||scr!=='game')return;const app=document.getElementById
  const ci=document.getElementById('so_chat');if(ci&&ci.parentNode&&!(ci.parentNode.nextElementSibling&&ci.parentNode.nextElementSibling.classList.contains('emorow')))ci.parentNode.insertAdjacentHTML('afterend',emoRow());
  /* the face in combat shows the current emote */
  const cp=document.getElementById('cpanel');if(cp){const hd=cp.querySelector('#slk');if(hd&&hd.parentNode&&!hd.parentNode.querySelector('.face-wrap'))hd.parentNode.insertAdjacentHTML('afterbegin',faceWrap(40))}
- if(tab==='menu'&&!feat&&!app.querySelector('.profcard')){const pn=[...app.querySelectorAll('.panel.win')].find(x=>{const t=x.querySelector('.title');return t&&t.textContent.trim()==='MENU'});
+ if(false){const pn=[...app.querySelectorAll('.panel.win')].find(x=>{const t=x.querySelector('.title');return t&&t.textContent.trim()==='MENU'});
   if(pn)pn.insertAdjacentHTML('beforebegin','<div class="panel win profcard"><div class="pad"><div>'+(idleSprite()||'<span class="idleb">'+_avatarRaw(P).replace(/style="[^"]*"/,'style="width:78px;display:block"')+'</span>')+'</div><div class="who"><b>'+selfName()+'</b><span class="mute">Lv '+P.lvl+' '+jobName()+'</span></div></div></div>')}}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{hookIcons();decorate()}catch(e){}return r}}
 hookIcons();
@@ -3794,11 +3794,16 @@ const colKey=t=>String(t||'').replace(/[^A-Za-z ]/g,'').trim().toLowerCase().rep
 function decorateCollapse(){try{if(!P)return;P.ui=P.ui||{};const col=P.ui.col=P.ui.col||{};
  document.querySelectorAll('#app .panel, #livebox, #livechatbox').forEach(pn=>{if(pn.closest('.dlginline'))return;const hd=pn.querySelector(':scope > h2:first-child, :scope > .row:first-child, :scope > .title:first-child');
   if(!hd||hd.querySelector('.colbtn'))return;const txt=(hd.querySelector('h2')||hd).textContent;const k=colKey(txt);if(!k)return;
-  const b=document.createElement('button');b.className='colbtn';b.dataset.col=k;b.textContent=col[k]?'+':'−';b.title=col[k]?'Show':'Hide';hd.appendChild(b);
+  const b=document.createElement('button');b.className='colbtn';b.dataset.col=k;const ch=pn.id==='livechatbox';b.textContent=col[k]?'+':ch?(window.__chatFull?'−':'⤢'):'−';b.title=col[k]?'Show':ch&&!window.__chatFull?'Full screen':'Hide';hd.appendChild(b);
   pn.classList.toggle('collapsed',!!col[k])})}catch(e){}}
 {const _r=render;render=function(){const out=_r.apply(this,arguments);decorateCollapse();return out}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.colbtn');if(!b||!P)return;e.stopPropagation();P.ui=P.ui||{};P.ui.col=P.ui.col||{};
- const k=b.dataset.col;P.ui.col[k]=!P.ui.col[k];const pn=b.closest('.panel,#livebox,#livechatbox');if(pn)pn.classList.toggle('collapsed',P.ui.col[k]);b.textContent=P.ui.col[k]?'+':'−';save()},true);
+ const k=b.dataset.col;const pn=b.closest('.panel,#livebox,#livechatbox');
+ if(pn&&pn.id==='livechatbox'){/* chat: expanded -> full screen -> collapsed -> expanded */
+  if(P.ui.col[k]){P.ui.col[k]=false;window.__chatFull=false}else if(!window.__chatFull){window.__chatFull=true}else{window.__chatFull=false;P.ui.col[k]=true}
+  pn.classList.toggle('collapsed',!!P.ui.col[k]);pn.classList.toggle('full',!!window.__chatFull);document.body.classList.toggle('chatfull',!!window.__chatFull);
+  b.textContent=P.ui.col[k]?'+':window.__chatFull?'−':'⤢';b.title=P.ui.col[k]?'Show':window.__chatFull?'Hide':'Full screen';const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight;save();return}
+ P.ui.col[k]=!P.ui.col[k];if(pn)pn.classList.toggle('collapsed',P.ui.col[k]);b.textContent=P.ui.col[k]?'+':'−';save()},true);
 (()=>{const st=document.createElement('style');st.textContent='.colbtn{margin-left:auto;float:right;min-height:0!important;height:22px;width:26px;padding:0!important;font-size:16px;line-height:18px;border-radius:6px}'
  +'#app .panel>h2:first-child,#app .panel>.row:first-child{display:flex;align-items:center;gap:6px}'
  +'.collapsed>*:not(h2:first-child):not(.row:first-child):not(.title:first-child){display:none!important}'
@@ -4246,7 +4251,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   return '<h2>💬 Chat</h2><div class="pad"><div class="seg ltb" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+T.map(x=>'<button data-ct="'+x[0]+'" class="'+(t===x[0]?'on':'')+'" style="min-width:0;padding:4px 2px;white-space:nowrap">'+x[1]+(x[0]!=='log'&&L.unread[x[0]]&&t!==x[0]?' <b style="color:#d0451b">•'+L.unread[x[0]]+'</b>':'')+'</button>').join('')+'</div>'
    +'<div class="cbox" id="live-chat" style="max-height:180px;min-height:90px;overflow:auto;margin-top:6px">'+body+'</div>'+input+(t!=='log'?emoRow():'')+'</div>'}
  function paint(){const el=document.getElementById('livebox');if(!el)return;const inp=document.getElementById('live-in'),val=inp?inp.value:'',foc=document.activeElement===inp;
-  el.innerHTML=panelHtml();const cx=document.getElementById('livechatbox');if(cx){if(L.unread[L.ctab])L.unread[L.ctab]=0;cx.innerHTML=chatHtml()}const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
+  el.innerHTML=panelHtml();const cx=document.getElementById('livechatbox');if(cx){cx.classList.toggle('full',!!window.__chatFull);document.body.classList.toggle('chatfull',!!window.__chatFull);if(L.unread[L.ctab])L.unread[L.ctab]=0;cx.innerHTML=chatHtml()}const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
  {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(want()&&tab==='play'&&!(MAPS[P.map]||{}).jobtest){const app=document.getElementById('app');
     const people=[...app.querySelectorAll(':scope > .panel')].find(p=>p.querySelector('.npc'))||[...app.querySelectorAll(':scope > .panel')].find(p=>/PEOPLE/i.test((p.querySelector('h2')||{}).textContent||''));
     if(!document.getElementById('livebox')){const d=document.createElement('div');d.id='livebox';d.className='panel';if(people)people.insertAdjacentElement('afterend',d);else{const log=document.getElementById('log');if(log)log.insertAdjacentElement('beforebegin',d);else app.appendChild(d)}const c=document.createElement('div');c.id='livechatbox';c.className='panel';d.insertAdjacentElement('afterend',c);paint()}
@@ -4293,7 +4298,10 @@ function adminFx(){let v='none';try{v=(P&&P.ui&&P.ui.afx)||localStorage.getItem(
 function afxPanel(){const v=adminFx();return '<div class="panel"><h2>📢 All-chat effect</h2><div class="mute" style="margin-bottom:6px">How your messages look in the All chat.</div><div class="afxgrid">'+AFX.map(a=>'<button data-afx="'+a[0]+'" class="'+(a[0]===v?'sel':'')+'"><span class="afx afx-'+a[0]+'">'+a[1]+'</span></button>').join('')+'</div></div>'}
 {const _fb=featBody;featBody=function(id){if(id==='admin'&&typeof L!=='undefined'&&L.me&&L.me.staff){let b='';try{b=_fb.apply(this,arguments)}catch(e){}if(/Admins only/.test(b))b='';return afxPanel()+b}return _fb.apply(this,arguments)}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-afx]');if(!b)return;try{localStorage.setItem('ml_afx',b.dataset.afx)}catch(_){}if(P){P.ui=P.ui||{};P.ui.afx=b.dataset.afx;try{save()}catch(_){}}render()});
-(()=>{const st=document.createElement('style');st.textContent=`.gmtag{color:#d62828;font-weight:bold;text-shadow:0 0 2px #fff}
+(()=>{const st=document.createElement('style');st.textContent=`#livechatbox.full{position:fixed!important;inset:0;z-index:2147483000;margin:0!important;border-radius:0!important;display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px)}
+#livechatbox.full>.pad{flex:1;display:flex;flex-direction:column;min-height:0}#livechatbox.full #live-chat{flex:1;max-height:none!important}
+body.chatfull{overflow:hidden}
+.gmtag{color:#d62828;font-weight:bold;text-shadow:0 0 2px #fff}
 .mdl{display:inline-flex;width:1.1em;height:1.1em;font-size:.9em;align-items:center;justify-content:center;vertical-align:-.15em;margin-right:2px}.mdl img,.mdl svg{width:100%;height:100%}
 .afxgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.afxgrid button.sel{outline:2px solid #e8a04a}
 .afx{font-weight:bold}.afx-none{color:#c2410c}
