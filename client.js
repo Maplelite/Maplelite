@@ -3801,6 +3801,22 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
  +'.collapsed>*:not(h2:first-child):not(.row:first-child):not(.title:first-child){display:none!important}'
  +'.collapsed>h2:first-child,.collapsed>.row:first-child,.collapsed>.title:first-child{margin-bottom:-10px!important}';document.head.appendChild(st)})();
 
+/* v3.5: game font setting (Menu tab). Changes the game/body text only; titles and the logo keep their font.
+   Henesys (Boiled Pasta, default) and Kerning Arcade (Arcade Byte) are built in; the others load from fonts/ when
+   picked (online version). The choice is remembered in this browser. */
+const GFONTS=[['henesys','Henesys',null,"'Maplestory'"],['kerning','Kerning Arcade',null,"'MLTitle'"],['ellinia','Ellinia Fizz','fonts/ellinia-fizz.ttf'],
+ ['lith','Lith Harbor','fonts/lith-harbor.ttf'],['perion','Perion Toon','fonts/perion-toon.ttf'],['sleepy','Sleepywood Bloom','fonts/sleepywood-bloom.ttf']];
+const gfFam=f=>f[3]||("'GF_"+f[0]+"'");
+function gfLoad(f){if(!f[2]||document.getElementById('gf_'+f[0]))return;const st=document.createElement('style');st.id='gf_'+f[0];st.textContent="@font-face{font-family:'GF_"+f[0]+"';src:url("+f[2]+");font-display:swap}";document.head.appendChild(st)}
+function gfApply(id){const f=GFONTS.find(x=>x[0]===id)||GFONTS[0];gfLoad(f);let st=document.getElementById('gfrule');if(!st){st=document.createElement('style');st.id='gfrule';document.head.appendChild(st)}
+ st.textContent=f[0]==='henesys'?'':"#app *:not(h1):not(h2):not(h3):not(.title):not(.ws-logo):not(.clsall),#site *:not(h1):not(h2):not(h3):not(.ws-logo){font-family:"+gfFam(f)+",'Maplestory',sans-serif!important}"}
+let gfCur='henesys';try{gfCur=LS.getItem('ml_gfont')||'henesys'}catch(e){}gfApply(gfCur);
+const gfOffline=()=>location.protocol==='file:';
+function fontPanel(){return '<div class="panel" id="fontpanel"><h2>🔤 Game font</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Changes the game text (titles and the logo stay the same).</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+ +GFONTS.map(f=>{gfLoad(f);const off=f[2]&&gfOffline();return '<button data-gf="'+f[0]+'" class="'+(gfCur===f[0]?'main':'')+'" '+(off?'disabled title="Online version only"':'')+' style="font-family:'+gfFam(f)+',sans-serif!important;min-height:40px">'+f[1]+(f[0]==='henesys'?' (default)':'')+'</button>'}).join('')+'</div></div>'}
+{const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(P&&typeof scr!=='undefined'&&scr==='game'&&tab==='menu'&&!feat&&!document.getElementById('fontpanel')){const app=document.getElementById('app');const d=document.createElement('div');d.innerHTML=fontPanel();app.appendChild(d.firstChild)}}catch(e){}return out}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gf]');if(!b)return;gfCur=b.dataset.gf;try{LS.setItem('ml_gfont',gfCur)}catch(_){}gfApply(gfCur);if(typeof render==='function'&&P)render()});
+
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
    once instead of waiting for a confirmation code. ===== */
