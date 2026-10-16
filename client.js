@@ -1,3 +1,4 @@
+window.__BUILD='3.5-a3effb5002';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3396,10 +3397,12 @@ function stepTo(nc){const cols=fld.map(m=>[m,colOf(m)]);PC=nc;for(const [m,c] of
 function leaveFight(){const a=WORLD[P.map];if(a)a.forEach(s=>{if(s.by&&fld.some(m=>m.eid===s.by))s.by=0});fld=[];enc=null;autoSeek=false;seeking=false;inFight=false;log('You leave the fight.','','combat')}
 stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;fixPos();const now=Date.now(),mc=moveCd();if(now-lastAtk<mc||now-lastMv<mc)return;
  const f=facing(),nc=PC+(dir<0?f:-f);
+ if((nc<0||nc>=COLS)&&dir>0){/* v3.5: Back step at the edge backs you away by pushing the monsters one step back; when none can move (they are all against the far wall), it leaves the fight as before */
+  let n=0;for(const m of fld.filter(m=>m.hp>0).sort((a,b)=>b.gap-a.gap))if(window.__pushMob(m,1))n++;
+  if(n){lastMv=now;for(const m of fld)if(m.hp>0)m.mv=Math.max(m.mv||0,now+mc);log('You back away.','','combat');return render()}}
  if(nc<0||nc>=COLS){if(now-Math.max(lastAtk,lastHit)<mc){log('You are still in the thick of it. You can\'t leave the fight yet.','bad','combat');return render()}
   lastMv=now;leaveFight();return render()}
  if(fld.some(m=>m.hp>0&&m.row===PRf()&&colOf(m)===nc)){log('A monster blocks the way.','','combat');return render()}
- if(dir>0&&Math.random()>=Math.min(.9,Math.max(.25,.5+(speed()-100)/100))){lastMv=now;log('You stumble and fail to back away.','bad','combat');return render()}
  lastMv=now;stepTo(nc);for(const m of fld)if(m.gap<=0&&m.hp>0&&now>m.next-200)m.next=Math.max(m.next,now+Math.round(MON[m.k].iv/2));
  log(dir<0?'You advance.':'You back away.','','combat');render()};
 /* the skill engine's moves: d=-1 a step toward your target, d=+1 a step away; returns 1 if you moved */
@@ -3413,7 +3416,7 @@ laneHtml=function(){fixPos();const LH=Math.max(20,Math.min(30,Math.floor(210/NRf
  const f=facing();
  for(let r=0;r<NRf();r++){const ms=fld.filter(m=>m.row===r&&m.hp>0);let c='';
   for(let i=0;i<COLS;i++){const cell=ms.filter(m=>colOf(m)===i),me=i===PC&&r===PRf();
-   c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+(f<0?'<small style="font-size:9px">◀</small>':'')+'🧍'+(f>0?'<small style="font-size:9px">▶</small>':'')+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
+   c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+'🧍'+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
   h+='<div class="lrow" style="display:flex;background:rgba(120,140,180,.12);border-radius:6px;min-height:'+LH+'px">'+c+'</div>'}
  return h+'</div>'};
 /* keep the target valid on every redraw, and draw the spawn-side button in the fight section (next to Lock) */
@@ -4025,11 +4028,12 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map',trade:null,treq:null,shops:[],myShop:null,draft:[],buds:[],breq:null,wTo:null,emo:{},emoAt:0};
  window.liveState=L;
  const wsUrl=()=>{const base=API||location.origin;let t='';try{t=localStorage.getItem('ml_token')||''}catch(e){}
-  return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')};
+  return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')+'&b='+encodeURIComponent(window.__BUILD||'')};
  const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  function want(){return typeof P!=='undefined'&&P&&typeof scr!=='undefined'&&scr==='game'&&typeof SLOT!=='undefined'&&window.__KV&&window.__KV.me}
  function close(){clearTimeout(L.timer);if(L.ws){const w=L.ws;L.ws=null;try{if(w.readyState===1)w.send('{"t":"bye"}')}catch(e){}try{w.onclose=null;w.close()}catch(e){}}/* leaving on purpose: no grace period */L.state='off';L.here=[];}
- function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
+ window.__liveClose=()=>{L.dead=true;try{close()}catch(e){}};
+ function connect(){if(L.dead)return;close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
    if(m.t==='welcome'){setTimeout(askWho,300);setTimeout(mFetch,500);if(m.me&&m.me.staff&&L.spyOn&&(L.spyOn.map||L.spyOn.friends||L.spyOn.guild))setTimeout(()=>out({t:'spyset',spy:L.spyOn}),500);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;window.__liveStaff=!!(m.me&&m.me.staff);L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
@@ -4327,6 +4331,22 @@ body.chatfull{overflow:hidden}
 .afx .gmtag{-webkit-text-fill-color:#d62828}`;document.head.appendChild(st)})();
 {const _sf=syncFeat;syncFeat=function(){_sf.apply(this,arguments);if(L.me&&L.me.staff&&!FEAT.some(f=>f[0]==='admin'))FEAT.push(['admin','\u{1F6E0}\uFE0F','Admin'])}}
 })();
+
+/* ===== v3.5: one version at a time. Every request carries this client's build (window.__BUILD); the server refuses an
+   older or newer build (426), and this screen asks the player to update. The page also checks /api/ping every
+   2 minutes, so a client left open notices a new release. Updating clears the installed app's cached files. ===== */
+(function(){let shown=false;
+ window.__outdated=function(){if(shown)return;shown=true;try{if(window.__liveClose)window.__liveClose()}catch(e){}
+  const d=document.createElement('div');d.id='ml-outdated';
+  d.innerHTML='<div class="box"><div style="font-size:42px">🍁</div><h2>A new version is out</h2><p>This copy of Maplelite is out of date, so it can\'t connect to the server. Update to keep playing. Your characters are safe on the server.</p><button id="ml-upd" class="main">Update now</button></div>';
+  document.body.appendChild(d);document.getElementById('ml-upd').onclick=async()=>{
+   if(location.protocol==='file:'){location.href='https://maplelite.github.io/Maplelite/';return}
+   try{if(navigator.serviceWorker){for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}}catch(e){}
+   try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(e){}
+   const u=new URL(location.href);u.searchParams.set('u',Date.now());location.replace(u.toString())}};
+ const check=()=>fetch('/api/ping').then(r=>r.json()).then(j=>{if(j&&j.build&&window.__BUILD&&j.build!==window.__BUILD)window.__outdated()}).catch(()=>{});
+ setTimeout(check,1500);setInterval(check,120000);
+ const st=document.createElement('style');st.textContent='#ml-outdated{position:fixed;inset:0;z-index:2147483646;background:rgba(10,15,30,.82);display:flex;align-items:center;justify-content:center;padding:16px}#ml-outdated .box{background:#f7f4ea;color:#243552;max-width:340px;width:100%;border-radius:14px;border:3px solid #18223d;padding:18px;text-align:center}#ml-outdated h2{margin:6px 0}#ml-outdated button{margin-top:10px;min-height:44px;width:100%}';document.head.appendChild(st)})();
 
 /* ===== v1.1: auto-hunt button, no tips, lines message ===== */
 rollTips=function(){return ''};
