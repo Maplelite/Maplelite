@@ -1,4 +1,4 @@
-window.__BUILD='3.5-d209848add';
+window.__BUILD='3.5-0213b57be5';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -1195,7 +1195,7 @@ function avatarSvg(p,wd){const lk=p.look||{g:LK.g[0],face:LK.face[0],hair:LK.hai
 /* a small real-time head icon (face, hair, skin, hat, eyewear) cut from the full avatar */
 function headIcon(p,px){try{return avatarSvg(p,px).replace(/<text x="62" y="68"[^>]*>[^<]*<\/text>/,'').replace(/viewBox="[^"]*"/,'viewBox="17 6 48 46"').replace(/style="[^"]*"/,'style="width:'+px+'px;height:'+px+'px;display:inline-block;vertical-align:middle;border-radius:4px"')}catch(e){return '🧍'}}
 /* a pixel maple leaf that takes the theme's heading colour */
-function leafIcon(){const c='currentColor';return '<svg viewBox="0 0 16 16" width="22" height="22" shape-rendering="crispEdges" style="vertical-align:middle"><path d="M7 0h2v2h2v2h2v2h1v3h-2v2h-2v2h-1v2h-1v-2H7v-2H5v-2H3v-2H1v-3h1V4h2V2h2z" fill="'+c+'"/><path d="M7 15h2v1H7z" fill="#5a3a1a"/></svg>'}
+function leafIcon(){const t=(typeof THEMES!=='undefined'&&THEMES.find(x=>x[0]===thCur))||null;const col=t&&t[0]!=='classic'?t[7]:'#d9443a';try{return icoSvg('leaf',col)}catch(e){return '🍁'}}
 function safeAv(p){try{return avatarSvg(p,110)}catch(e){return '🧙'}}
 function eqOffN(){return [P.weapon].concat(Object.values(P.eq||{})).filter(x=>x&&!eqOk(x)).length}
 function charPanel(){const n=Object.keys(P.eq||{}).length+(P.weapon?1:0);
@@ -3890,7 +3890,8 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#site .ws-sun{background:radial-gradient(circle,'+s1+'66 0,transparent 68%)!important}'
  +'#site .ws-cl{background:'+pn+'!important;opacity:.85!important}'
  +'#site .ws-cl:before,#site .ws-cl:after{background:'+pn+'!important}'
- +'#site .ws-lf{font-size:0!important;width:16px;height:16px;background:'+ton+';clip-path:polygon(50% 0,64% 30%,100% 40%,74% 62%,80% 100%,50% 82%,20% 100%,26% 62%,0 40%,36% 30%);opacity:.85}'
+ +'#site .ws-lf{font-size:0!important;width:16px;height:16px;background:'+ton+'}'
+ +'#site .ws-lf svg{width:18px;height:18px;display:block;opacity:.9}'
  +'.logo{color:'+hd+'!important;text-shadow:2px 2px 0 '+s2+'!important}.logo small{color:'+mu+'!important}'
  +'html{background:'+sky+' fixed!important}'
  +'#app .panel,#site .panel,#app .win,.ws-card{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
@@ -3909,7 +3910,11 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#app .cs,#app .slots button,#app .st4>div{background:linear-gradient('+b1+','+b2+')!important;border-color:'+bd+'!important;color:'+tx+'!important}#app .cs small,#app .slots small,#app .st4 small{color:'+mu+'!important}#app .cs.on{background:'+ton+'!important;color:#fff!important}#app .st4 b{color:'+tx+'!important}'
  +(dark?'#app [style*="background:#fff"],#app [style*="background:#f"],#app [style*="background: #f"]{background:'+pn+'!important;color:'+tx+'!important}#app [style*="color:#3"],#app [style*="color:#4"],#app [style*="color:#5"],#app [style*="color:#222"]{color:'+tx+'!important}':'')
  +(dark?'#app .panel a{color:'+hd+'!important}':'')}
-function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t)}
+/* the falling decoration for each theme: one of the game's own pixel sprites that fits that place */
+const TH_DECOR={henesys:'mushroom',ellinia:'leaf',perion:'ore',kerning:'bat',lith:'shell',sleepy:'stump',orbis:'wing',elnath:'crystal',ludi:'star',aqua:'slime'};
+function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t);
+ /* falling leaves use the game's own leaf sprite, in this theme's accent colour */
+ try{const col=t[0]==='classic'?'#e58a2e':t[11];document.querySelectorAll('#site .ws-lf').forEach(e=>{e.innerHTML=icoSvg(TH_DECOR[t[0]]||'leaf',col)})}catch(e){}}
 let thCur='classic';try{thCur=LS.getItem('ml_theme')||'classic'}catch(e){}thApply(thCur);
 function themePanel(){return '<div class="panel" id="themepanel"><h2>🎨 Theme</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Colors for the game and the website.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
  +THEMES.map(t=>{const sw=t[0]==='classic'?'linear-gradient(90deg,#8fbde3,#eef1f7,#f0a030)':'linear-gradient(90deg,'+t[6]+' 0 25%,'+t[3]+' 25% 60%,'+t[11]+' 60%)';
