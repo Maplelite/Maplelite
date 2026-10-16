@@ -3790,24 +3790,28 @@ document.addEventListener('click',e=>{const t=e.target;if(t.id==='mapdetbtn'){ma
 /* v3.5: every block with a title bar can be collapsed with a +/- button on the right of the title bar. The state is
    saved with the character (P.ui.col), so it is the same the next time you log in. Quickslots get a title bar. */
 const _qp=quickPanel;quickPanel=function(){const h=_qp.apply(this,arguments);return h.replace('<div class="panel">','<div class="panel"><h2>Quickslots</h2>')};
+const FULLK=['chat','combat'];
 const colKey=t=>String(t||'').replace(/[^A-Za-z ]/g,'').trim().toLowerCase().replace(/\s+/g,'_').slice(0,24);
 function decorateCollapse(){try{if(!P)return;P.ui=P.ui||{};const col=P.ui.col=P.ui.col||{};
  document.querySelectorAll('#app .panel, #livebox, #livechatbox').forEach(pn=>{if(pn.closest('.dlginline'))return;const hd=pn.querySelector(':scope > h2:first-child, :scope > .row:first-child, :scope > .title:first-child');
   if(!hd||hd.querySelector('.colbtn'))return;const txt=(hd.querySelector('h2')||hd).textContent;const k=colKey(txt);if(!k)return;
-  const b=document.createElement('button');b.className='colbtn';b.dataset.col=k;const ch=pn.id==='livechatbox';b.textContent=col[k]?'+':ch?(window.__chatFull?'−':'⤢'):'−';b.title=col[k]?'Show':ch&&!window.__chatFull?'Full screen':'Hide';hd.appendChild(b);
+  const b=document.createElement('button');b.className='colbtn';b.dataset.col=k;const ch=FULLK.includes(k),fu=window.__fullK===k;b.textContent=col[k]?'+':ch?(fu?'−':'⤢'):'−';b.title=col[k]?'Show':ch&&!fu?'Full screen':'Hide';hd.appendChild(b);pn.classList.toggle('full',fu&&!col[k]);if(fu)document.body.classList.add('chatfull');
   pn.classList.toggle('collapsed',!!col[k])})}catch(e){}}
 {const _r=render;render=function(){const out=_r.apply(this,arguments);decorateCollapse();return out}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.colbtn');if(!b||!P)return;e.stopPropagation();P.ui=P.ui||{};P.ui.col=P.ui.col||{};
  const k=b.dataset.col;const pn=b.closest('.panel,#livebox,#livechatbox');
- if(pn&&pn.id==='livechatbox'){/* chat: expanded -> full screen -> collapsed -> expanded */
-  if(P.ui.col[k]){P.ui.col[k]=false;window.__chatFull=false}else if(!window.__chatFull){window.__chatFull=true}else{window.__chatFull=false;P.ui.col[k]=true}
-  pn.classList.toggle('collapsed',!!P.ui.col[k]);pn.classList.toggle('full',!!window.__chatFull);document.body.classList.toggle('chatfull',!!window.__chatFull);
-  b.textContent=P.ui.col[k]?'+':window.__chatFull?'−':'⤢';b.title=P.ui.col[k]?'Show':window.__chatFull?'Hide':'Full screen';const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight;save();return}
+ if(FULLK.includes(k)){/* chat and combat: open -> full screen -> closed -> open */
+  const fu=window.__fullK===k;if(P.ui.col[k]){P.ui.col[k]=false;window.__fullK=null}else if(!fu){window.__fullK=k}else{window.__fullK=null;P.ui.col[k]=true}
+  window.__chatFull=window.__fullK==='chat';document.querySelectorAll('.full').forEach(x=>x.classList.remove('full'));document.body.classList.toggle('chatfull',!!window.__fullK);save();render();
+  const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight;return}
  P.ui.col[k]=!P.ui.col[k];if(pn)pn.classList.toggle('collapsed',P.ui.col[k]);b.textContent=P.ui.col[k]?'+':'−';save()},true);
 (()=>{const st=document.createElement('style');st.textContent='.colbtn{margin-left:auto;float:right;min-height:0!important;height:22px;width:26px;padding:0!important;font-size:16px;line-height:18px;border-radius:6px}'
  +'#app .panel>h2:first-child,#app .panel>.row:first-child{display:flex;align-items:center;gap:6px}'
  +'.collapsed>*:not(h2:first-child):not(.row:first-child):not(.title:first-child){display:none!important}'
  +'.collapsed>h2:first-child,.collapsed>.row:first-child,.collapsed>.title:first-child{margin-bottom:-10px!important}';document.head.appendChild(st)})();
+/* v3.5: the combat block gets a title bar (and full screen through its +/- button, like chat). */
+{const _bp=battlePanel;battlePanel=function(){const h=_bp.apply(this,arguments);return h.replace(/^(\s*<div class="panel"[^>]*>)/,'$1<h2>⚔️ Combat</h2>')}}
+(()=>{const st=document.createElement('style');st.textContent='#app .panel.full,#livechatbox.full{position:fixed!important;inset:0;z-index:2147483000;margin:0!important;border-radius:0!important;overflow:auto;padding-top:env(safe-area-inset-top,0px)}body.chatfull{overflow:hidden}';document.head.appendChild(st)})();
 
 /* v3.5: game font setting (Menu tab). Changes the game/body text only; titles and the logo keep their font.
    Henesys (Boiled Pasta, default) and Kerning Arcade (Arcade Byte) are built in; the others load from fonts/ when
