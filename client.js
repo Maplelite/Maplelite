@@ -3784,10 +3784,12 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
      map browse the shops and buy part or all of a stack; the server checks the stock.
    - Buddies and whispers: add a player as a buddy (they accept); the buddy list shows who is online and in which
      channel. Whisper anyone online in any channel (Whisper button, or type /w Name message).
+   - Emotes: the 7 basic expressions (F1-F7) as buttons under the chat box; everyone on your map sees them in chat and
+     next to your name. One emote every 15 seconds. Emote skins (NX) can later swap the pictures via P.emoteSkin.
    - Reconnects by itself (after 3 s, then slower) if the connection drops. ===== */
 (function(){
  const API=(window.MAPLE_API||'').replace(/\/$/,'');
- const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map',trade:null,treq:null,shops:[],myShop:null,draft:[],buds:[],breq:null,wTo:null};
+ const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map',trade:null,treq:null,shops:[],myShop:null,draft:[],buds:[],breq:null,wTo:null,emo:{},emoAt:0};
  window.liveState=L;
  const wsUrl=()=>{const base=API||location.origin;let t='';try{t=localStorage.getItem('ml_token')||''}catch(e){}
   return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')};
@@ -3813,6 +3815,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
    else if(m.t==='w'){L.chat.push({from:m.from,text:m.text,w:'from'});if(L.chat.length>30)L.chat.shift()}
    else if(m.t==='wsent'){L.chat.push({from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
+   else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({from:m.from,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
    else if(m.t==='whois')L.buds=m.list||[];
    else if(m.t==='breq')L.breq={from:m.from,until:Date.now()+60000};
    else if(m.t==='badd'){if(P){P.buddies=P.buddies||[];if(!P.buddies.some(n=>n.toLowerCase()===m.name.toLowerCase())){P.buddies.push(m.name);log(m.name+' is now your buddy.','good','social');save()}askWho()}}
@@ -3826,6 +3829,12 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function retry(){clearTimeout(L.timer);if(!want())return;L.tries++;L.timer=setTimeout(connect,Math.min(30000,3000*L.tries))}
  function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=L.chat.filter(m=>m.party)}}
  const out=o=>{if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
+ /* the 7 basic expressions (v62 F1-F7). A skin (later an NX item) maps 1-7 to other pictures. */
+ const EMO=[null,['😊','Happy'],['😟','Troubled'],['😢','Cry'],['😠','Angry'],['😵','Bewildered'],['😳','Stunned'],['😍','Love']];
+ window.EMOTE_SKINS={basic:EMO.map(x=>x&&x[0])};
+ const emoPic=(e,skin)=>{const S=(skin&&EMOTE_SKINS[skin])||EMOTE_SKINS.basic;return (S&&S[e])||EMO[e][0]};
+ window.liveEmote=function(e){e=e|0;if(!(e>=1&&e<=7))return false;const left=15000-(Date.now()-L.emoAt);if(left>0){L.err='Emotes have a 15 second cooldown ('+Math.ceil(left/1000)+'s).';paint();return false}
+  if(!out({t:'emote',e,skin:(P&&P.emoteSkin)||null}))return false;L.emoAt=Date.now();paint();return true};
  function askWho(){if(P&&(P.buddies||[]).length)out({t:'who',names:P.buddies});else L.buds=[]}
  window.liveBuddy={add:name=>{name=String(name||'').trim();if(!name)return;if((P.buddies||[]).length>=50){L.err='Your buddy list is full (50).';return paint()}out({t:'breq',to:name})},
   accept:()=>{const r=L.breq;L.breq=null;if(r)out({t:'bacc',to:r.from});paint()},decline:()=>{const r=L.breq;L.breq=null;if(r)out({t:'bno',to:r.from});paint()},
@@ -3849,6 +3858,9 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    if(P.mesos<o.price*n){L.err='You do not have enough mesos.';return paint()}out({t:'sbuy',owner,i,k,n,have:P.mesos})}};
  function addDraft(k,n,price){if(!k||!(P.inv[k]>0))return;n=Math.max(1,Math.min(P.inv[k],n|0||1));price=Math.max(1,Math.floor(+price||0));if(!(price>0)){L.err='Set a price.';return paint()}
   L.draft=L.draft.filter(o=>o.k!==k);if(L.draft.length>=9){L.err='A shop holds 9 items.';return paint()}L.draft.push({k,n,price,name:ITEMS[k].n});L.err='';paint()}
+ function emoRow(){const left=Math.max(0,15000-(Date.now()-L.emoAt));if(left>0)setTimeout(()=>{if(Date.now()-L.emoAt>=15000)paint()},left+50);
+  return '<div style="display:flex;gap:4px;margin-top:6px">'+[1,2,3,4,5,6,7].map(e=>'<button data-le="'+e+'" title="F'+e+' '+EMO[e][1]+'"'+(left>0?' disabled':'')+' style="flex:1;min-width:0;min-height:34px;padding:0;font-size:20px;line-height:1">'+emoPic(e,P&&P.emoteSkin)+'</button>').join('')+'</div>'
+   +(left>0?'<div class="mute" style="font-size:12px;text-align:center">Emotes ready in '+Math.ceil(left/1000)+'s</div>':'')}
  function budHtml(){const B=(P&&P.buddies)||[];const on=n=>L.buds.find(x=>x.name.toLowerCase()===n.toLowerCase());
   return '<div class="mute" style="margin:8px 0 2px"><b>Buddies</b> ('+B.length+'/50)</div>'
    +(L.breq&&L.breq.until>Date.now()?'<div class="mrow" style="background:rgba(170,120,255,.18);border-radius:8px"><span class="av">💌</span><div style="flex:1"><b>'+esc(L.breq.from)+'</b> wants to be your buddy.</div><button data-lb="accept">Accept</button><button data-lb="decline">No</button></div>':'')
@@ -3883,6 +3895,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  window.liveChannel=function(n){n=+n;if(!(n>=1&&n<=3)||n===L.ch)return;L.ch=n;try{localStorage.setItem('ml_ch',String(n))}catch(e){}L.chat=[];connect();paint()};
  /* keep the connection matched to the character and map */
  setInterval(()=>{if(!want()){if(L.ws||L.state!=='off')close();return}
+  if(L.emoAt&&Date.now()-L.emoAt<16000)paint();/* emote cooldown countdown */
   if(!L.ws&&L.state==='off'&&!L.timer)connect();else if(L.slot!==SLOT)connect();else if(P.map!==L.map)sendMap();
   if(Date.now()-(L.lastCount||0)>30000){L.lastCount=Date.now();askWho();fetch('/api/live/counts').then(r=>r.json()).then(j=>{if(j&&j.counts){L.counts=j.counts;paint()}}).catch(()=>{})}
   if(L.ws&&L.ws.readyState===1&&Date.now()-(L.lastPing||0)>25000){L.lastPing=Date.now();try{L.ws.send('{"t":"ping"}')}catch(e){}}},1000);
@@ -3900,10 +3913,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    +shopHtml()
    +budHtml()
    +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
-   +(others.length?others.map(x=>'<div class="mrow"><span class="av">🧑</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+((P.buddies||[]).some(n=>n.toLowerCase()===String(x.name).toLowerCase())?'':'<button data-lb="addn:'+esc(x.name)+'">Buddy</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
-   +'<div class="cbox" id="live-chat" style="max-height:140px;overflow:auto;margin-top:8px">'+(L.chat.length?L.chat.map(m=>m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):esc(m.from)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':'')+'><b>'+(m.party?'[Party] ':'')+esc(m.from)+':</b> '+esc(m.text)+'</div>').join(''):'<div class="mute">Map chat: say hi to players on this map.</div>')+'</div>'
+   +(others.length?others.map(x=>'<div class="mrow"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+((P.buddies||[]).some(n=>n.toLowerCase()===String(x.name).toLowerCase())?'':'<button data-lb="addn:'+esc(x.name)+'">Buddy</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
+   +'<div class="cbox" id="live-chat" style="max-height:140px;overflow:auto;margin-top:8px">'+(L.chat.length?L.chat.map(m=>m.emote?'<div><b>'+esc(m.from)+'</b> <span style="font-size:20px">'+m.emote+'</span></div>':m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):esc(m.from)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':'')+'><b>'+(m.party?'[Party] ':'')+esc(m.from)+':</b> '+esc(m.text)+'</div>').join(''):'<div class="mute">Map chat: say hi to players on this map.</div>')+'</div>'
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')
-   +'<div style="display:flex;gap:6px;margin-top:6px">'+(L.chatTo==='w'&&L.wTo?'<button data-lb="wx" style="min-width:64px" title="Stop whispering">To '+esc(L.wTo)+' ✕</button>':(L.party?'<button data-lp="to" style="min-width:64px">'+(L.chatTo==='party'?'Party':'Map')+'</button>':''))+'<input id="live-in" maxlength="120" placeholder="Say something (/w Name to whisper)" style="flex:1;min-width:0"><button id="live-say">Send</button></div></div>'}
+   +'<div style="display:flex;gap:6px;margin-top:6px">'+(L.chatTo==='w'&&L.wTo?'<button data-lb="wx" style="min-width:64px" title="Stop whispering">To '+esc(L.wTo)+' ✕</button>':(L.party?'<button data-lp="to" style="min-width:64px">'+(L.chatTo==='party'?'Party':'Map')+'</button>':''))+'<input id="live-in" maxlength="120" placeholder="Say something (/w Name to whisper)" style="flex:1;min-width:0"><button id="live-say">Send</button></div>'+emoRow()+'</div>'}
  function paint(){const el=document.getElementById('livebox');if(!el)return;const inp=document.getElementById('live-in'),val=inp?inp.value:'',foc=document.activeElement===inp;
   el.innerHTML=panelHtml();const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
  {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(want()&&tab==='play'&&!(MAPS[P.map]||{}).jobtest){const app=document.getElementById('app');
@@ -3914,6 +3927,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    if(a3==='ask'){L.myOffer={items:[],mesos:0};liveTrade.ask(arg3)}else if(a3==='accept'){L.myOffer={items:[],mesos:0};liveTrade.accept()}else if(a3==='add'){offerItem((document.getElementById('lt-item')||{}).value,+(document.getElementById('lt-n')||{}).value)}
    else if(a3==='rm'){L.myOffer.items=L.myOffer.items.filter(o=>o.k!==arg3);liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}else if(a3==='mesos'){L.myOffer.mesos=Math.max(0,Math.min(P.mesos,Math.floor(+(document.getElementById('lt-m')||{}).value||0)));liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}
    else liveTrade[a3]();return}
+  const le=t.closest&&t.closest('[data-le]');if(le){liveEmote(+le.dataset.le);return}
   const lb=t.closest&&t.closest('[data-lb]');if(lb){const [a,...r]=lb.dataset.lb.split(':');const arg=r.join(':');
    if(a==='add')liveBuddy.add((document.getElementById('lb-name')||{}).value);else if(a==='addn')liveBuddy.add(arg);else if(a==='w')liveBuddy.whisper(arg);else if(a==='rm')liveBuddy.remove(arg);
    else if(a==='wx'){L.chatTo='map';L.wTo=null;paint()}else liveBuddy[a]();return}
@@ -3924,7 +3938,8 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(a[0]==='open')liveShop.open((document.getElementById('ls-title')||{}).value||'');else if(a[0]==='close')liveShop.close();return}
   const lp=t.closest&&t.closest('[data-lp]');if(lp){const [a2,arg]=lp.dataset.lp.split(':');if(a2==='invite')liveParty.invite(arg);else if(a2==='kick')liveParty.kick(arg);else if(a2==='to'){L.chatTo=L.chatTo==='party'?'map':'party';paint()}else liveParty[a2]();return}
   if(t.id==='live-say'){const i=document.getElementById('live-in');if(i&&liveSay(i.value)){i.value=''}}});
- document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='live-in'){if(liveSay(e.target.value))e.target.value=''}});
+ document.addEventListener('keydown',e=>{const fk=/^F([1-7])$/.exec(e.key);if(fk&&L.state==='on'&&!(e.target&&/INPUT|TEXTAREA/.test(e.target.tagName))){e.preventDefault();liveEmote(+fk[1]);return}
+ if(e.key==='Enter'&&e.target&&e.target.id==='live-in'){if(liveSay(e.target.value))e.target.value=''}});
 })();
 
 /* ===== v1.1: auto-hunt button, no tips, lines message ===== */
