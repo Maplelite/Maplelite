@@ -1,4 +1,4 @@
-window.__BUILD='3.5-2177d669c2';
+window.__BUILD='3.5-1d1c774d5c';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3845,8 +3845,8 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 /* v3.5: game font setting (Menu tab). Changes the game/body text only; titles and the logo keep their font.
    Henesys (Boiled Pasta, default) and Kerning Arcade (Arcade Byte) are built in; the others load from fonts/ when
    picked (online version). The choice is remembered in this browser. */
-const GFONTS=[['henesys','Henesys',null,"'Maplestory'"],['kerning','Kerning Arcade',null,"'MLTitle'"],['ellinia','Ellinia Fizz','fonts/ellinia-fizz.ttf'],
- ['lith','Lith Harbor','fonts/lith-harbor.ttf'],['perion','Perion Toon','fonts/perion-toon.ttf'],['sleepy','Sleepywood Bloom','fonts/sleepywood-bloom.ttf']];
+const GFONTS=[['henesys','Henesys',null,"'Maplestory'"],['kerning','Kerning',null,"'MLTitle'"],['ellinia','Ellinia','fonts/ellinia-fizz.ttf'],
+ ['lith','Lith Harbor','fonts/lith-harbor.ttf'],['perion','Perion','fonts/perion.ttf'],['sleepy','Sleepywood','fonts/sleepywood.ttf']];
 const gfFam=f=>f[3]||("'GF_"+f[0]+"'");
 function gfLoad(f){if(!f[2]||document.getElementById('gf_'+f[0]))return;const st=document.createElement('style');st.id='gf_'+f[0];st.textContent="@font-face{font-family:'GF_"+f[0]+"';src:url("+f[2]+");font-display:swap}";document.head.appendChild(st)}
 function gfApply(id){const f=GFONTS.find(x=>x[0]===id)||GFONTS[0];gfLoad(f);let st=document.getElementById('gfrule');if(!st){st=document.createElement('style');st.id='gfrule';document.head.appendChild(st)}
