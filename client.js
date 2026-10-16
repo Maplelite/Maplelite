@@ -3660,6 +3660,80 @@ const EQ_ANY_MAX=0.004;
  const eq=D.i.filter(e=>ITEMS[e[0]]&&(ITEMS[e[0]].w||ITEMS[e[0]].s));if(!eq.length)continue;
  const pAny=1-eq.reduce((q,e)=>q*(1-e[1]),1);if(pAny<=EQ_ANY_MAX)continue;const f=EQ_ANY_MAX/pAny;for(const e of eq)e[1]=e[1]*f}}catch(e){}})();
 
+/* v3.5: Pets (on the Character screen). Bought in the Cash Shop; one pet out at a time.
+   - Fullness (0-100) drops slowly while you play (1 every 90 seconds). At 0 the pet stops helping until you feed it Pet
+     Food (Doofus, Henesys Market): +30 fullness, and +1 closeness when it was hungry (fullness 70 or less).
+   - Closeness raises the pet's level (v62 table, levels 1-30).
+   - Pet skills come from pet equipment, as in v62 (no bigger pickup range):
+       Item Pouch   - picks up every drop after each kill (auto pickup)
+       Auto HP Pouch / Auto MP Pouch - drink your best HP / MP potion when you fall below the set percentage
+     plus a cosmetic accessory slot (pet hats from the data). Pet equipment is bought in the Cash Shop. */
+const PET_TYPES=[['brown_kitty','🐱','Brown Kitty'],['black_kitty','🐈‍⬛','Black Kitty'],['brown_puppy','🐶','Brown Puppy'],['husky','🐺','Husky'],
+ ['white_bunny','🐰','White Bunny'],['pink_bunny','🐇','Pink Bunny'],['black_pig','🐷','Black Pig'],['panda','🐼','Panda'],['dino_boy','🦖','Dino Boy'],['dino_girl','🦕','Dino Girl'],['monkey','🐵','Monkey']];
+const PET_EQ={pe_pouch:['👝','Item Pouch','pouch','Your pet picks up every drop after each kill.'],pe_autohp:['❤️','Auto HP Pouch','hp','Your pet makes you drink an HP potion when your HP falls below the set percentage.'],
+ pe_automp:['💙','Auto MP Pouch','mp','Your pet makes you drink an MP potion when your MP falls below the set percentage.']};
+const PET_HATS=[['ph_red_ribbon','🎀','Red Ribbon'],['ph_yellow_hat','👒','Yellow Hat'],['ph_red_hat','🧢','Red Hat'],['ph_black_hat','🎩','Black Hat'],['ph_blue_top','🎩','Blue Top Hat'],['ph_mushroom','🍄','Mushroom Suit']];
+const PET_CLOSE=[0,1,3,6,14,31,60,108,181,287,434,632,891,1224,1642,2161,2793,3557,4467,5542,6801,8263,9950,11882,14084,16578,19391,22547,26074,30000];
+const PET_FOOD='i2120000';
+/* Cash Shop entries (6th field: Cash Shop tab) */
+for(const [k,i,n] of PET_TYPES)CASH.push(['pet_'+k,i,n,4000,'A pet that follows you. Feed it Pet Food. Give it pet equipment for auto pickup and auto potions.','pets']);
+for(const k in PET_EQ)CASH.push([k,PET_EQ[k][0],PET_EQ[k][1],k==='pe_pouch'?2000:2500,PET_EQ[k][3]+' Equip it on your pet (Character screen).','peteq']);
+for(const [k,i,n] of PET_HATS)CASH.push([k,i,n,800,'A cosmetic accessory for your pet.','peteq']);
+const petType=t=>PET_TYPES.find(x=>x[0]===t)||PET_TYPES[0];
+const pet=()=>P&&Array.isArray(P.pets)&&P.petOn>=0?P.pets[P.petOn]||null:null;
+const petLvl=c=>{let l=1;for(let i=1;i<PET_CLOSE.length;i++)if(c>=PET_CLOSE[i])l=i+1;return Math.min(30,l)};
+const petSkill=s=>{const p=pet();if(!p||p.full<=0)return false;return Object.values(p.eq||{}).some(k=>PET_EQ[k]&&PET_EQ[k][2]===s)};
+/* buying a pet adds it to your pets (not the cash inventory) */
+{const _cb=cashBuy;cashBuy=function(id){if(!String(id).startsWith('pet_'))return _cb(id);const c=CASH.find(x=>x[0]===id);if(!c||!P)return;if((P.nx||0)<c[3]){log('Not enough NX.','bad','items');return render()}
+  P.nx-=c[3];P.pets=P.pets||[];const t=id.slice(4);P.pets.push({t,name:petType(t)[2],close:0,full:100,eq:{}});if(!(P.petOn>=0))P.petOn=P.pets.length-1;
+  log('You got a '+c[2]+'! It is on your Character screen.','good','items');save();render()}}
+function petFeed(){const p=pet();if(!p)return;if(!(P.inv[PET_FOOD]>0)){log('You have no Pet Food. Doofus sells it in the Henesys Market.','bad','items');return render()}
+ P.inv[PET_FOOD]--;if(P.inv[PET_FOOD]<=0)delete P.inv[PET_FOOD];const hungry=p.full<=70;p.full=Math.min(100,p.full+30);
+ if(hungry){const before=petLvl(p.close);p.close++;const after=petLvl(p.close);log(p.name+' enjoyed the food. Closeness +1.'+(after>before?' '+p.name+' is now level '+after+'!':''),'good','self')}else log(p.name+' is not very hungry.','','self');save();render()}
+function petEquip(k){const p=pet();if(!p||!(P.cinv&&P.cinv[k]>0))return;const slot=PET_EQ[k]?PET_EQ[k][2]:'hat';p.eq=p.eq||{};if(p.eq[slot])P.cinv[p.eq[slot]]=(P.cinv[p.eq[slot]]||0)+1;
+ P.cinv[k]--;if(P.cinv[k]<=0)delete P.cinv[k];p.eq[slot]=k;save();render()}
+function petUnequip(slot){const p=pet();if(!p||!p.eq||!p.eq[slot])return;P.cinv=P.cinv||{};P.cinv[p.eq[slot]]=(P.cinv[p.eq[slot]]||0)+1;delete p.eq[slot];save();render()}
+/* hunger */
+setInterval(()=>{try{if(!P||typeof scr==='undefined'||scr!=='game')return;const p=pet();if(!p||p.full<=0)return;p.lastTick=p.lastTick||Date.now();
+ if(Date.now()-p.lastTick>=90000){p.lastTick=Date.now();p.full=Math.max(0,p.full-1);if(p.full===0)log(p.name+' is too hungry to help. Feed it Pet Food.','bad','self');if(p.full===20)log(p.name+' is getting hungry.','','self')}}catch(e){}},5000);
+/* auto potions */
+const potBest=kind=>{const ok=k=>P.inv[k]>0&&ITEMS[k]&&(kind==='hp'?(ITEMS[k].heal||ITEMS[k].hpp):(ITEMS[k].mpheal||ITEMS[k].mpp))&&!(kind==='hp'&&ITEMS[k].mpheal&&!ITEMS[k].heal&&!ITEMS[k].hpp);
+ const val=k=>{const it=ITEMS[k];return kind==='hp'?(it.heal||0)+(it.hpp||0)*P.maxHp/100:(it.mpheal||0)+(it.mpp||0)*P.maxMp/100};return Object.keys(P.inv).filter(ok).sort((a,b)=>val(b)-val(a))[0]};
+setInterval(()=>{try{if(!P||typeof scr==='undefined'||scr!=='game'||P.dead||P.hp<=0)return;
+ if(petSkill('hp')&&P.hp<P.maxHp*((P.petHp||50)/100)){const k=potBest('hp');if(k)useItem(k)}
+ else if(petSkill('mp')&&P.mp<P.maxMp*((P.petMp||30)/100)){const k=potBest('mp');if(k)useItem(k)}}catch(e){}},700);
+/* auto pickup after each kill */
+{const _w=win;win=function(){const r=_w.apply(this,arguments);try{if(petSkill('pouch')&&typeof dropsHere==='function'&&dropsHere().length)lootAll()}catch(e){}return r}}
+/* the Character screen pet panel */
+function petPanel(){const L=P.pets||[];let h='<div class="panel" id="petpanel"><h2>🐾 Pet</h2>';
+ if(!L.length)return h+'<div class="mute">You have no pet yet. Pets are sold in the Cash Shop (💎). With pet equipment they pick up your loot and drink potions for you.</div></div>';
+ const p=pet(),T=p?petType(p.t):null;
+ if(p){const lv=petLvl(p.close),nx=PET_CLOSE[lv]||PET_CLOSE[29],pv=PET_CLOSE[lv-1]||0;
+  h+='<div class="mrow"><span class="av" style="font-size:30px">'+T[1]+'</span><div style="flex:1"><b>'+esc2(p.name)+'</b> <span class="mute">Lv '+lv+'</span>'
+   +'<div class="mute" style="font-size:12px">Closeness '+p.close+(lv<30?' / '+nx:'')+'</div><div class="xpi" style="height:8px;margin:2px 0"><i style="width:'+(lv<30?Math.min(100,(p.close-pv)/(nx-pv)*100):100)+'%"></i></div>'
+   +'<div class="mute" style="font-size:12px">Fullness '+p.full+'/100'+(p.full<=0?' · too hungry to help':'')+'</div><div class="xpi" style="height:8px;margin:2px 0"><i style="width:'+p.full+'%;background:'+(p.full>30?'#5aae3e':'#d0451b')+'"></i></div></div>'
+   +'<button data-pet="feed">Feed'+(P.inv[PET_FOOD]>0?' ('+P.inv[PET_FOOD]+')':'')+'</button></div>';
+  const slots=[['hat','Accessory'],['pouch','Item Pouch'],['hp','Auto HP'],['mp','Auto MP']];
+  const nameOf=k=>{const c=CASH.find(x=>x[0]===k);return c?c[1]+' '+c[2]:k};
+  h+='<div class="mute" style="margin-top:6px">Pet equipment</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start">'+slots.map(([s,lab])=>{const k=p.eq&&p.eq[s];
+   const have=Object.keys(P.cinv||{}).filter(c=>P.cinv[c]>0&&(s==='hat'?PET_HATS.some(x=>x[0]===c):PET_EQ[c]&&PET_EQ[c][2]===s));
+   return '<div class="cbox" style="padding:6px;min-height:0;height:auto;max-height:none"><div class="mute" style="font-size:12px">'+lab+'</div>'+(k?'<div>'+nameOf(k)+'</div><button data-pet="un:'+s+'" style="min-height:26px;padding:0 8px;font-size:12px">Remove</button>':(have.length?'<button data-pet="eq:'+have[0]+'" style="min-height:26px;padding:0 8px;font-size:12px">Equip '+nameOf(have[0])+'</button>':'<div class="mute" style="font-size:12px">Empty (Cash Shop)</div>'))+'</div>'}).join('')+'</div>';
+  if(p.eq&&(p.eq.hp||p.eq.mp))h+='<div style="display:flex;gap:10px;margin-top:6px;flex-wrap:wrap">'+(p.eq.hp?'<label class="mute">Auto HP below <select data-petset="petHp">'+[30,40,50,60,70,80].map(v=>'<option'+((P.petHp||50)===v?' selected':'')+'>'+v+'</option>').join('')+'</select>%</label>':'')+(p.eq.mp?'<label class="mute">Auto MP below <select data-petset="petMp">'+[10,20,30,40,50,60].map(v=>'<option'+((P.petMp||30)===v?' selected':'')+'>'+v+'</option>').join('')+'</select>%</label>':'')+'</div>';
+  h+='<div style="display:flex;gap:6px;margin-top:6px"><input id="petname" maxlength="12" placeholder="Rename your pet" style="flex:1;min-width:0"><button data-pet="name">Rename</button><button data-pet="away">Put away</button></div>'}
+ else h+='<div class="mute">Your pets are resting.</div>';
+ if(L.length>1||!p)h+='<div class="mute" style="margin-top:8px">Your pets</div>'+L.map((x,i)=>'<button data-pet="out:'+i+'" '+(i===P.petOn?'disabled':'')+' style="margin:2px">'+petType(x.t)[1]+' '+esc2(x.name)+'</button>').join('');
+ return h+'</div>'}
+{const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(P&&typeof scr!=='undefined'&&scr==='game'&&tab==='stats'&&!document.getElementById('petpanel')){const app=document.getElementById('app');
+  const panels=[...app.querySelectorAll(':scope > .panel')].filter(x=>x.id!=='log');const after=panels[panels.length-1];const d=document.createElement('div');d.innerHTML=petPanel();if(after)after.insertAdjacentElement('afterend',d.firstChild);else app.appendChild(d.firstChild)}}catch(e){}return out}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-pet]');if(!b||!P)return;const [a,x]=b.dataset.pet.split(':');
+ if(a==='feed')petFeed();else if(a==='eq')petEquip(x);else if(a==='un')petUnequip(x);else if(a==='away'){P.petOn=-1;save();render()}else if(a==='out'){P.petOn=+x;save();render()}
+ else if(a==='name'){const v=((document.getElementById('petname')||{}).value||'').trim().slice(0,12);const p=pet();if(p&&v){p.name=v;save();render()}}});
+document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closest('[data-petset]');if(!s||!P)return;P[s.dataset.petset]=+s.value;save()});
+/* Pet Food is sold by Doofus (Henesys Market) */
+try{const d=NPCS.n1012004;if(d&&d.shopList&&!d.shopList.includes(PET_FOOD))d.shopList.unshift(PET_FOOD)}catch(e){}
+/* Pet Food used from the bag feeds the pet */
+{const _u=useItem;useItem=function(id){if(id===PET_FOOD&&pet())return petFeed();return _u.apply(this,arguments)}}
+
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
    once instead of waiting for a confirmation code. ===== */
