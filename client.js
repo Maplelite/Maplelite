@@ -1,4 +1,4 @@
-window.__BUILD='3.5-a3effb5002';
+window.__BUILD='3.5-acbade812e';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3714,8 +3714,10 @@ setInterval(()=>{try{if(!P||typeof scr==='undefined'||scr!=='game'||P.dead||P.hp
  if(petSkill('hp')&&P.hp<P.maxHp*((P.petHp||50)/100)){const k=potBest('hp');if(k)useItem(k)}
  else if(petSkill('mp')&&P.mp<P.maxMp*((P.petMp||30)/100)){const k=potBest('mp');if(k)useItem(k)}}catch(e){}},700);
 /* auto pickup after each kill */
-{const _w=win;win=function(){const r=_w.apply(this,arguments);try{const mz=petSkill('meso'),pz=petSkill('pouch');if((mz||pz)&&typeof dropsHere==='function'){
-  const take=dropsHere().filter(g=>g.id==='meso'?mz:pz);if(take.length){P.gd=P.gd.filter(g=>!take.includes(g));take.forEach(lootTake);save();render()}}}catch(e){}return r}}
+function petAutoLoot(){try{const mz=petSkill('meso'),pz=petSkill('pouch');if((mz||pz)&&typeof dropsHere==='function'){
+  const take=dropsHere().filter(g=>g.id==='meso'?mz:pz);if(take.length){P.gd=P.gd.filter(g=>!take.includes(g));take.forEach(lootTake);save();render()}}}catch(e){}}
+window.__petAutoLoot=petAutoLoot;
+{const _w=win;win=function(){const r=_w.apply(this,arguments);petAutoLoot();return r}}
 /* the Character screen pet panel */
 function petPanel(){const L=P.pets||[];let h='<div class="panel" id="petpanel"><h2>🐾 Pet</h2>';
  if(!L.length)return h+'<div class="mute">You have no pet yet. Pets are sold in the Cash Shop (💎). With pet equipment they pick up your loot and drink potions for you.</div></div>';
@@ -4048,7 +4050,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='tdone'){L.trade=null;applyTrade(m)}
    else if(m.t==='party'){L.party=m.id;L.members=m.members||[];if(m.note)L.err=m.note;if(!m.id)L.chatTo='map'}
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
-   else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
+   else if(m.t==='pgain'){if(P&&typeof gain==='function'){if(window.__auth&&window.__auth.on&&m.mon)window.__authPshare(m.mon);else gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
    else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,fx:m.fx,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
    else if(m.t==='wsent'){L.chat.push({ts:Date.now(),from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
@@ -4203,7 +4205,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function offerItem(k,n){if(!k||!(P.inv[k]>0))return;n=Math.max(1,Math.min(P.inv[k],n|0||1));const it=ITEMS[k];const ex=L.myOffer.items.find(o=>o.k===k);if(ex)ex.n=n;else if(L.myOffer.items.length<9)L.myOffer.items.push({k,n,name:it.n,inst:P.inst&&P.inst[k]?Object.assign({},P.inst[k]):null});liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}
  window.liveParty={invite:id=>out({t:'pinvite',to:id}),accept:()=>{L.invite=null;out({t:'paccept'});paint()},decline:()=>{L.invite=null;out({t:'pdecline'});paint()},leave:()=>out({t:'pleave'}),kick:id=>out({t:'pkick',id})};
  /* party EXP: tell the server about each kill so party members on this map get their share */
- {const _w=win;win=function(){const k=enc&&enc.k;const r=_w.apply(this,arguments);try{if(k&&L.party&&MON[k])out({t:'pexp',exp:MON[k].exp|0})}catch(e){}return r}}
+ {const _w=win;win=function(){const k=enc&&enc.k;const r=_w.apply(this,arguments);try{if(k&&L.party&&MON[k])out({t:'pexp',exp:MON[k].exp|0,mon:k})}catch(e){}return r}}
  /* party board size: rows = the lowest party member's rows (on this map) + 1 per extra member there, at most 10 rows
     (2 monsters per row). Solo: the normal rows for your level. */
  const capAt=l=>{l=l||1;if(l<=10)return 6;if(l<=71)return Math.round(6+(l-10)*9/61);return Math.min(20,Math.round(15+(l-71)*5/79))};
@@ -4347,6 +4349,55 @@ body.chatfull{overflow:hidden}
  const check=()=>fetch('/api/ping').then(r=>r.json()).then(j=>{if(j&&j.build&&window.__BUILD&&j.build!==window.__BUILD)window.__outdated()}).catch(()=>{});
  setTimeout(check,1500);setInterval(check,120000);
  const st=document.createElement('style');st.textContent='#ml-outdated{position:fixed;inset:0;z-index:2147483646;background:rgba(10,15,30,.82);display:flex;align-items:center;justify-content:center;padding:16px}#ml-outdated .box{background:#f7f4ea;color:#243552;max-width:340px;width:100%;border-radius:14px;border:3px solid #18223d;padding:18px;text-align:center}#ml-outdated h2{margin:6px 0}#ml-outdated button{margin-top:10px;min-height:44px;width:100%}';document.head.appendChild(st)})();
+
+/* ===== Server authority (online version): when the server runs in authority mode, the game sends every action that
+   changes your numbers to the server (/api/g) and shows what the server answers. The browser still draws the fight
+   and moves you around, but EXP, mesos, items, equipment, stats, skills and quests come from the server:
+   - buying/selling, equipping, AP/SP, potions, quests, map moves: sent as actions; the answer replaces your numbers
+   - defeating a monster: the server checks it and rolls the EXP, mesos and drops; drops are picked up from the server
+   - your save still carries everything else (look, settings, quickslots...), and the server keeps its own numbers.
+   Actions go one at a time, in order. While some are still on the way, the newest answer waits until the queue is
+   empty, so a slow answer never undoes a newer action. ===== */
+(function(){
+ const G={on:false,q:[],busy:false,last:null,slot:null};window.__auth=G;
+ const AUTH=['lvl','exp','mesos','nx','ap','sp','str','dex','int','luk','maxHp','maxMp','inv','inst','eq','weapon','sk','q','qp','kills','ic','job'];
+ function apply(st){if(!st||!P||st.name!==P.name)return;for(const k of AUTH)if(k in st)P[k]=st[k];if(P.hp>P.maxHp)P.hp=P.maxHp;if(P.mp>P.maxMp)P.mp=P.maxMp;try{if(typeof instReg==='function')instReg()}catch(e){}}
+ function pump(){if(G.busy||!G.q.length)return;const job=G.q.shift();G.busy=true;
+  fetch('/api/g',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({slot:SLOT},job.b))}).then(r=>r.json()).then(j=>{
+   G.busy=false;if(j&&j.state){G.last=j.state;if(!G.q.length){apply(j.state);try{save()}catch(e){}}}
+   if(j&&j.ok===false&&j.error&&!job.quiet){try{log(j.error,'bad','self')}catch(e){}}
+   try{job.cb&&job.cb(j)}catch(e){}if(!G.q.length)try{render()}catch(e){}pump()})
+  .catch(()=>{G.busy=false;G.q.unshift(job);setTimeout(pump,3000)})}
+ const send=(b,cb,quiet)=>{if(!G.on||!P)return false;G.q.push({b,cb,quiet});pump();return true};window.gAct=send;
+ /* start: ask the server for this character (imports it the first time) and whether authority mode is on */
+ function start(){if(!window.__KV||!window.__KV.me||!P||G.slot===SLOT+':'+P.name||Date.now()<(G.retry||0))return;G.slot=SLOT+':'+P.name;
+  fetch('/api/g',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({slot:SLOT})}).then(r=>r.json()).then(j=>{if(!j||!j.state){G.slot=null;G.retry=Date.now()+3000;setTimeout(()=>{try{render()}catch(e){}},3100);return}G.on=!!j.authority;if(G.on){apply(j.state);render()}}).catch(()=>{G.slot=null;G.retry=Date.now()+3000})}
+ {const _r=render;render=function(){const o=_r.apply(this,arguments);try{if(typeof scr!=='undefined'&&scr==='game'&&P)start();else if(!P)G.slot=null}catch(e){}return o}}
+ const wrap=(name,fn)=>{const f=window[name];if(typeof f!=='function')return;window[name]=fn(f)};
+ /* shops: remember which NPC's shop is open */
+ wrap('dlgDo',f=>function(k){if(k==='shop'&&typeof talk!=='undefined'&&talk)G.npc=talk.npc;return f.apply(this,arguments)});
+ wrap('shopDo',f=>function(){const id=shopSel,n=Math.max(1,shopQty|0),t=shopTab,inv0=P&&P.inv[id]|0,m0=P&&P.mesos;const r=f.apply(this,arguments);
+  if(G.on&&P&&id){const changed=t==='buy'?P.mesos!==m0:(P.inv[id]|0)!==inv0;if(changed)send(t==='buy'?{a:'buy',item:id,n,npc:G.npc}:{a:'sell',item:id,n})}return r});
+ wrap('equipItem',f=>function(id){const w0=P&&JSON.stringify([P.eq,P.weapon]);const r=f.apply(this,arguments);if(G.on&&P&&JSON.stringify([P.eq,P.weapon])!==w0)send({a:'equip',item:id});return r});
+ wrap('unequipItem',f=>function(sl){const had=P&&(sl==='Weapon'?P.weapon:P.eq[sl]);const r=f.apply(this,arguments);if(G.on&&had)send({a:'unequip',slot:sl});return r});
+ wrap('spend',f=>function(s){const a0=P&&P.ap;const r=f.apply(this,arguments);if(G.on&&P&&P.ap<a0)send({a:'ap',stat:s,n:a0-P.ap});return r});
+ wrap('spendSk',f=>function(k){const s0=P&&P.sp;const r=f.apply(this,arguments);if(G.on&&P&&P.sp<s0){let mx=30;try{const d=(typeof SKJ!=='undefined'&&SKJ[k])||(typeof skDef==='function'&&skDef(k));if(d&&d.max)mx=d.max}catch(e){}send({a:'sp',skill:k,max:mx})}return r});
+ wrap('useItem',f=>function(id){const n0=P&&P.inv[id]|0;const r=f.apply(this,arguments);if(G.on&&P&&(P.inv[id]|0)<n0)send({a:'use',item:id},null,true);return r});
+ wrap('go',f=>function(to){const m0=P&&P.map;const r=f.apply(this,arguments);if(G.on&&P&&P.map!==m0)send({a:'move',to:P.map,via:'walk'},null,true);return r});
+ wrap('qAccept',f=>function(id){const r=f.apply(this,arguments);if(G.on&&P&&P.q[id]==='active')send({a:'qaccept',quest:id});return r});
+ wrap('qTurn',f=>function(id){const s0=P&&P.q[id];const r=f.apply(this,arguments);if(G.on&&P&&s0==='active'&&P.q[id]!=='active')send({a:'qdone',quest:id});return r});
+ wrap('qGiveUp',f=>function(id){const s0=P&&P.q[id];const r=f.apply(this,arguments);if(G.on&&s0==='active')send({a:'qgiveup',quest:id});return r});
+ wrap('die',f=>function(){const r=f.apply(this,arguments);if(G.on)send({a:'die'},null,true);return r});
+ /* monsters: the server rolls the rewards; the browser's own drop roll is switched off while authority is on */
+ wrap('win',f=>function(){const k=typeof enc!=='undefined'&&enc&&enc.k;if(!G.on||!k)return f.apply(this,arguments);
+  const ad=window.addDrop,dl=window.dropLoot;window.addDrop=function(){};if(typeof dl==='function')window.dropLoot=function(){};
+  let r;try{r=f.apply(this,arguments)}finally{window.addDrop=ad;if(typeof dl==='function')window.dropLoot=dl}
+  send({a:'kill',mon:k},j=>{if(!j||!j.ok||!P)return;for(const d of j.drops||[]){ad(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}
+   try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}},true);return r});
+ wrap('lootTake',f=>function(g){if(G.on&&g&&g.sid){send({a:'pickup',id:g.sid},null,true);try{log(g.id==='meso'?'You pick up '+g.q+' mesos.':'You pick up '+((ITEMS[g.id]||{}).n||g.id)+(g.q>1?' x'+g.q:'')+'.','good','items')}catch(e){}return}return f.apply(this,arguments)});
+ /* party EXP share from the live world */
+ window.__authPshare=function(mon){if(G.on&&mon)send({a:'pshare',mon},null,true)};
+})();
 
 /* ===== v1.1: auto-hunt button, no tips, lines message ===== */
 rollTips=function(){return ''};
