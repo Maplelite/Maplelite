@@ -3572,7 +3572,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 })();
 /* v3.4: no Free Market menu tile. In v62 the Free Market is a place you walk into from town maps (Free Market
    Entrance); it comes back as a map when player shops are built. */
-for(let i=FEAT.length-1;i>=0;i--)if(FEAT[i][0]==='market'||FEAT[i][0]==='pets')FEAT.splice(i,1);/* pets come back on the Character screen when they are built */
+for(let i=FEAT.length-1;i>=0;i--)if(FEAT[i][0]==='market'||FEAT[i][0]==='pets'||FEAT[i][0]==='trade')FEAT.splice(i,1);/* pets come back on the Character screen when they are built */
 /* v3.4: Shanks (Vasily) takes you to Victoria Island from level 7 for 150 mesos, as in v62. (The free ride with
    Lucas's Recommendation Letter belongs to a later version's quest chain, which this game does not have.) */
 QD.ferry.goal='Pay Shanks 150 mesos for the ride to Victoria Island (from level 7). You can never come back.';
@@ -3716,10 +3716,12 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    - Parties (up to 6, in your channel): invite players from the list; the leader can remove members; party chat;
      members on the same map get 20% of each kill's EXP. The map's monsters are shared with the other players on the
      map, and the first to arrive gets priority (a 1.5x share).
+   - Trading: Trade with a player on your map (never in event maps): both offer items and mesos, the trade happens
+     when both confirm (changing an offer clears both confirmations). Equipment keeps its own stats.
    - Reconnects by itself (after 3 s, then slower) if the connection drops. ===== */
 (function(){
  const API=(window.MAPLE_API||'').replace(/\/$/,'');
- const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map'};
+ const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map',trade:null,treq:null};
  window.liveState=L;
  const wsUrl=()=>{const base=API||location.origin;let t='';try{t=localStorage.getItem('ml_token')||''}catch(e){}
   return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')};
@@ -3735,6 +3737,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
    else if(m.t==='chat'){L.chat.push(m);if(L.chat.length>30)L.chat.shift()}
    else if(m.t==='share')L.share=m;
+   else if(m.t==='treq')L.treq={from:m.from,name:m.name,until:Date.now()+60000};
+   else if(m.t==='tstate')L.trade=m;
+   else if(m.t==='tend'){L.trade=null;L.err=m.why||''}
+   else if(m.t==='tdone'){L.trade=null;applyTrade(m)}
    else if(m.t==='party'){L.party=m.id;L.members=m.members||[];if(m.note)L.err=m.note;if(!m.id)L.chatTo='map'}
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
@@ -3745,6 +3751,18 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=L.chat.filter(m=>m.party)}}
  const out=o=>{if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
  window.liveSay=function(text,party){text=String(text||'').trim();if(!text)return false;return out({t:(party||L.chatTo==='party')&&L.party?'pchat':'chat',text})};
+/* trading */
+ function applyTrade(m){if(!P)return;const g=m.give||{},r=m.get||{};
+  P.mesos=Math.max(0,P.mesos-(g.mesos|0))+(r.mesos|0);
+  for(const o of g.items||[]){if(P.inv[o.k]>0){P.inv[o.k]-=o.n;if(P.inv[o.k]<=0)delete P.inv[o.k];if(P.inst&&P.inst[o.k]&&!(P.inv[o.k]>0)&&!Object.values(P.eq||{}).includes(o.k)&&P.weapon!==o.k)delete P.inst[o.k]}}
+  for(const o of r.items||[]){if(o.inst&&o.inst.b&&ITEMS[o.inst.b]){P.inst=P.inst||{};const id=o.inst.b+'#'+(P.ic=(P.ic|0)+1);P.inst[id]={b:o.inst.b,sl:o.inst.sl|0,ok:o.inst.ok|0,lost:o.inst.lost|0,st:o.inst.st||{}};instBuild(id);P.inv[id]=1}
+   else if(ITEMS[o.k])P.inv[o.k]=(P.inv[o.k]||0)+o.n}
+  log('Trade with '+m.with+' complete.','good','items');save();render()}
+ const tradeable=()=>Object.keys(P.inv).filter(k=>P.inv[k]>0&&ITEMS[k]&&!(typeof CASH!=='undefined'&&CASH.some(c=>c[0]===k)));
+ window.liveTrade={ask:id=>{if((MAPS[P.map]||{}).noTrade){L.err='No trading in event maps.';return paint()}out({t:'treq',to:id})},accept:()=>{L.treq=null;out({t:'tacc'});paint()},decline:()=>{L.treq=null;out({t:'tno'});paint()},
+  offer:(items,mesos)=>out({t:'toffer',items,mesos}),ok:()=>out({t:'tok'}),cancel:()=>out({t:'tcancel'})};
+ L.myOffer={items:[],mesos:0};
+ function offerItem(k,n){if(!k||!(P.inv[k]>0))return;n=Math.max(1,Math.min(P.inv[k],n|0||1));const it=ITEMS[k];const ex=L.myOffer.items.find(o=>o.k===k);if(ex)ex.n=n;else if(L.myOffer.items.length<9)L.myOffer.items.push({k,n,name:it.n,inst:P.inst&&P.inst[k]?Object.assign({},P.inst[k]):null});liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}
  window.liveParty={invite:id=>out({t:'pinvite',to:id}),accept:()=>{L.invite=null;out({t:'paccept'});paint()},decline:()=>{L.invite=null;out({t:'pdecline'});paint()},leave:()=>out({t:'pleave'}),kick:id=>out({t:'pkick',id})};
  /* party EXP: tell the server about each kill so party members on this map get their share */
  {const _w=win;win=function(){const k=enc&&enc.k;const r=_w.apply(this,arguments);try{if(k&&L.party&&MON[k])out({t:'pexp',exp:MON[k].exp|0})}catch(e){}return r}}
@@ -3762,8 +3780,13 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   return '<div class="pad"><div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div>'
    +'<div style="display:flex;gap:6px;margin:6px 0">'+[1,2,3].map(n=>'<button data-live-ch="'+n+'" class="'+(n===L.ch?'main':'')+'" style="flex:1;min-height:30px">Ch '+n+(L.counts&&L.counts[n-1]!=null?' ('+L.counts[n-1]+')':'')+'</button>').join('')+'</div>'
    +(L.invite&&L.invite.until>Date.now()?'<div class="mrow" style="background:rgba(242,193,78,.2);border-radius:8px"><span class="av">🎉</span><div style="flex:1"><b>'+esc(L.invite.name)+'</b> invites you to a party.</div><button data-lp="accept">Join</button><button data-lp="decline">No</button></div>':'')
+   +(L.treq&&L.treq.until>Date.now()?'<div class="mrow" style="background:rgba(120,200,255,.2);border-radius:8px"><span class="av">🔁</span><div style="flex:1"><b>'+esc(L.treq.name)+'</b> wants to trade.</div><button data-lt="accept">Trade</button><button data-lt="decline">No</button></div>':'')
+   +(L.trade?'<div class="panel" style="margin:8px 0;padding:8px"><b>🔁 Trading with '+esc(L.trade.name)+'</b><div style="display:flex;gap:8px;margin-top:6px"><div style="flex:1"><div class="mute">You give'+(L.trade.ok[0]?' ✅':'')+'</div>'+(L.trade.mine.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+' <button data-lt="rm:'+esc(o.k)+'" style="min-height:0;padding:0 6px">✕</button></div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.mine.mesos|0).toLocaleString()+' mesos</div></div><div style="flex:1"><div class="mute">You get'+(L.trade.ok[1]?' ✅':'')+'</div>'+(L.trade.theirs.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+'</div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.theirs.mesos|0).toLocaleString()+' mesos</div></div></div>'
+     +'<div style="display:flex;gap:6px;margin-top:6px"><select id="lt-item" style="flex:2;min-width:0">'+tradeable().map(k=>'<option value="'+esc(k)+'">'+esc(ITEMS[k].n)+' ('+P.inv[k]+')</option>').join('')+'</select><input id="lt-n" type="number" min="1" value="1" style="flex:1;min-width:0"><button data-lt="add">Add</button></div>'
+     +'<div style="display:flex;gap:6px;margin-top:6px"><input id="lt-m" type="number" min="0" placeholder="Mesos" value="'+(L.myOffer.mesos||'')+'" style="flex:1;min-width:0"><button data-lt="mesos">Set mesos</button></div>'
+     +'<div style="display:flex;gap:6px;margin-top:6px"><button class="main" data-lt="ok" style="flex:1">Confirm</button><button data-lt="cancel" style="flex:1">Cancel</button></div><div class="mute" style="font-size:12px">Changing an offer clears both confirmations. The trade happens when you both confirm.</div></div>':'')
    +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
-   +(others.length?others.map(x=>'<div class="mrow"><span class="av">🧑</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+'</div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
+   +(others.length?others.map(x=>'<div class="mrow"><span class="av">🧑</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
    +'<div class="cbox" id="live-chat" style="max-height:140px;overflow:auto;margin-top:8px">'+(L.chat.length?L.chat.map(m=>'<div'+(m.party?' style="color:#2e7d5b"':'')+'><b>'+(m.party?'[Party] ':'')+esc(m.from)+':</b> '+esc(m.text)+'</div>').join(''):'<div class="mute">Map chat: say hi to players on this map.</div>')+'</div>'
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')
    +'<div style="display:flex;gap:6px;margin-top:6px">'+(L.party?'<button data-lp="to" style="min-width:64px">'+(L.chatTo==='party'?'Party':'Map')+'</button>':'')+'<input id="live-in" maxlength="120" placeholder="Say something on this map" style="flex:1;min-width:0"><button id="live-say">Send</button></div></div>'}
@@ -3773,6 +3796,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
     const people=[...app.querySelectorAll(':scope > .panel')].find(p=>p.querySelector('.npc'))||[...app.querySelectorAll(':scope > .panel')].find(p=>/PEOPLE/i.test((p.querySelector('h2')||{}).textContent||''));
     if(!document.getElementById('livebox')){const d=document.createElement('div');d.id='livebox';d.className='panel';if(people)people.insertAdjacentElement('afterend',d);else{const log=document.getElementById('log');if(log)log.insertAdjacentElement('beforebegin',d);else app.appendChild(d)}paint()}}}catch(e){}return out}}
  document.addEventListener('click',e=>{const t=e.target;if(t.closest&&t.closest('[data-live-ch]')){liveChannel(t.closest('[data-live-ch]').dataset.liveCh);return}
+  const lt=t.closest&&t.closest('[data-lt]');if(lt){const [a3,arg3]=lt.dataset.lt.split(/:(.*)/);
+   if(a3==='ask'){L.myOffer={items:[],mesos:0};liveTrade.ask(arg3)}else if(a3==='accept'){L.myOffer={items:[],mesos:0};liveTrade.accept()}else if(a3==='add'){offerItem((document.getElementById('lt-item')||{}).value,+(document.getElementById('lt-n')||{}).value)}
+   else if(a3==='rm'){L.myOffer.items=L.myOffer.items.filter(o=>o.k!==arg3);liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}else if(a3==='mesos'){L.myOffer.mesos=Math.max(0,Math.min(P.mesos,Math.floor(+(document.getElementById('lt-m')||{}).value||0)));liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}
+   else liveTrade[a3]();return}
   const lp=t.closest&&t.closest('[data-lp]');if(lp){const [a2,arg]=lp.dataset.lp.split(':');if(a2==='invite')liveParty.invite(arg);else if(a2==='kick')liveParty.kick(arg);else if(a2==='to'){L.chatTo=L.chatTo==='party'?'map':'party';paint()}else liveParty[a2]();return}
   if(t.id==='live-say'){const i=document.getElementById('live-in');if(i&&liveSay(i.value)){i.value=''}}});
  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='live-in'){if(liveSay(e.target.value))e.target.value=''}});
