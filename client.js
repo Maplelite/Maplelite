@@ -1,4 +1,4 @@
-window.__BUILD='3.5-9623d84de5';
+window.__BUILD='3.5-d209848add';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3886,6 +3886,11 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  return '@keyframes thDrift{to{background-position:200px 160px}}'
  +'body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.8;background:'+deco+';animation:thDrift '+spd+' linear infinite}'
  +'#app,#site{position:relative;z-index:1}'
+ +'#site{background:'+sky+'!important;color:'+tx+'!important;--d:'+bd+';--wd:'+ton+';--wl:'+s1+';--pp:'+pn+';--o:'+hd+'}'
+ +'#site .ws-sun{background:radial-gradient(circle,'+s1+'66 0,transparent 68%)!important}'
+ +'#site .ws-cl{background:'+pn+'!important;opacity:.85!important}'
+ +'#site .ws-cl:before,#site .ws-cl:after{background:'+pn+'!important}'
+ +'#site .ws-lf{font-size:0!important;width:16px;height:16px;background:'+ton+';clip-path:polygon(50% 0,64% 30%,100% 40%,74% 62%,80% 100%,50% 82%,20% 100%,26% 62%,0 40%,36% 30%);opacity:.85}'
  +'.logo{color:'+hd+'!important;text-shadow:2px 2px 0 '+s2+'!important}.logo small{color:'+mu+'!important}'
  +'html{background:'+sky+' fixed!important}'
  +'#app .panel,#site .panel,#app .win,.ws-card{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
