@@ -882,10 +882,10 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  let h=SB;/* v3.5: the character box is always at the top */
  h+='<div class="tabs icontabs">'+['play','stats','pack','quests','social','cash','menu'].map(t=>/* v3.5: icon tabs, all the same size; the name shows on hover and to screen readers */'<button class="'+(tab===t?'on':'')+'" data-t="'+t+'" title="'+TABN[t]+'" aria-label="'+TABN[t]+'"><span class="tbi">'+TABI[t]+'</span>'+({stats:tbd(P.ap+P.sp),quests:tbd(qReadyN()),social:tbd(dmUnread())}[t]||'')+'</button>').join('')+'</div>';
  if(tab==='play'&&P.dead){h+=tombHtml()}else if(tab==='play'){
-  if(!(talk&&!enc))h+='<div class="panel">'+townArt(P.map)+'<div class="row"><h2 class="mapname">'+m.i+' '+m.n+'</h2>'+(m.town?'':'<span class="mute">'+(P.cleared[P.map]?'Cleared':freeMove(m)?'Free passage':P.kills+'/'+needFor(m))+'</span>')+'</div><div class="mute">'+m.d+'</div>'+buffLine()+'</div>'
+  h+='<div class="panel">'+townArt(P.map)+'<div class="row"><h2 class="mapname">'+m.i+' '+m.n+'</h2>'+(m.town?'':'<span class="mute">'+(P.cleared[P.map]?'Cleared':freeMove(m)?'Free passage':P.kills+'/'+needFor(m))+'</span>')+'</div><div class="mute">'+m.d+'</div>'+buffLine()+'</div>'
   ;const lp=(!inShop&&!talk)?lootPanel():'';
   if(enc)h+=battlePanel('fight')+lp;
-  else if(seeking){h+=battlePanel('seek')+lp}else if(talk){h+=dlgPanel()}else if(m.shop&&inShop){h+=shopPanel()}else{h+=(m.town?quickPanel():battlePanel('idle'))+lp;if(m.npcs){h+=peoplePanel()}}
+  else if(seeking){h+=battlePanel('seek')+lp}else if(talk){/* v3.5: the dialogue opens right under the NPC, inside the People block */h+=(m.town?quickPanel():battlePanel('idle'))+lp;const dp=dlgPanel(),pp=m.npcs?peoplePanel():'',mk='data-n="'+talk.npc+'"',at=pp.indexOf(mk);if(at>=0){const end=pp.indexOf('</button>',at)+9;h+=pp.slice(0,end)+'<div class="dlginline">'+dp+'</div>'+pp.slice(end)}else h+=dp+pp}else if(m.shop&&inShop){h+=shopPanel()}else{h+=(m.town?quickPanel():battlePanel('idle'))+lp;if(m.npcs){h+=peoplePanel()}}
   h+=trackerHtml();
   if(!enc&&!inShop&&!talk){if(!seeking)h+=worldMap();h+=playersPanel()}
  }
@@ -3774,6 +3774,8 @@ function profileHtml(n){const L=window.liveState||{},p=((L.here||[]).concat(L.me
 {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(!P||typeof scr==='undefined'||scr!=='game'||tab!=='play')return out;
   const name=document.querySelector('#app h2.mapname');if(name&&!document.getElementById('mapdetbtn')){const b=document.createElement('button');b.id='mapdetbtn';b.textContent=mapDet?'Details ▴':'Details ▾';
    b.style.cssText='min-height:26px;padding:0 8px;font-size:12px;margin-left:auto';name.parentNode.appendChild(b);{const row=name.parentNode,d=row.nextElementSibling;if(d&&d.textContent&&MAPS[P.map]&&MAPS[P.map].d&&d.textContent.trim()===String(MAPS[P.map].d).trim())d.style.display='none'}if(mapDet)name.closest('.panel').insertAdjacentHTML('beforeend',mapDetailsHtml())}
+  /* in a fight the map picture hides (the name stays) so the fight and loot fit on small phones */
+  if(name&&typeof enc!=='undefined'){const row=name.parentNode,art=row.previousElementSibling;if(art&&art!==row)art.style.display=enc?'none':''}
   if(profileOf&&!document.getElementById('profilebox')){const card=name&&name.closest('.panel');if(card)card.insertAdjacentHTML('afterend',profileHtml(profileOf))}}catch(e){}return out}}
 document.addEventListener('click',e=>{const t=e.target;if(t.id==='mapdetbtn'){mapDet=!mapDet;render();return}
  const pr=t.closest&&t.closest('[data-prof]');if(pr){profileOf=pr.dataset.prof||null;render()}});
@@ -3783,7 +3785,7 @@ document.addEventListener('click',e=>{const t=e.target;if(t.id==='mapdetbtn'){ma
 const _qp=quickPanel;quickPanel=function(){const h=_qp.apply(this,arguments);return h.replace('<div class="panel">','<div class="panel"><h2>Quickslots</h2>')};
 const colKey=t=>String(t||'').replace(/[^A-Za-z ]/g,'').trim().toLowerCase().replace(/\s+/g,'_').slice(0,24);
 function decorateCollapse(){try{if(!P)return;P.ui=P.ui||{};const col=P.ui.col=P.ui.col||{};
- document.querySelectorAll('#app .panel, #livebox, #livechatbox').forEach(pn=>{const hd=pn.querySelector(':scope > h2:first-child, :scope > .row:first-child, :scope > .title:first-child');
+ document.querySelectorAll('#app .panel, #livebox, #livechatbox').forEach(pn=>{if(pn.closest('.dlginline'))return;const hd=pn.querySelector(':scope > h2:first-child, :scope > .row:first-child, :scope > .title:first-child');
   if(!hd||hd.querySelector('.colbtn'))return;const txt=(hd.querySelector('h2')||hd).textContent;const k=colKey(txt);if(!k)return;
   const b=document.createElement('button');b.className='colbtn';b.dataset.col=k;b.textContent=col[k]?'+':'−';b.title=col[k]?'Show':'Hide';hd.appendChild(b);
   pn.classList.toggle('collapsed',!!col[k])})}catch(e){}}
@@ -3802,7 +3804,7 @@ const api=async(method,url,body)=>{try{const r=await fetch(url,{method,credentia
  const j=await r.json().catch(()=>({}));return Object.assign({status:r.status},j)}catch(e){return{error:'Cannot reach the server.'}}};
 window.__serverNote=t=>{try{if(typeof log==='function'&&P)log(t,'bad','system');else console.warn(t)}catch(e){console.warn(t)}
  /* v3.5: problems with saving show as a red bar under the top bar until saving works again (they used to go only to the log) */
- try{let b=document.getElementById('savebar');if(!b){b=document.createElement('div');b.id='savebar';b.style.cssText='position:sticky;top:0;z-index:50;margin:4px 8px;padding:8px 10px;border-radius:8px;background:#b3261e;color:#fff;font-size:14px;display:flex;gap:8px;align-items:center';const app=document.getElementById('app');(app&&app.parentNode||document.body).insertBefore(b,app||null)}
+ try{let b=document.getElementById('savebar');if(!b){b=document.createElement('div');b.id='savebar';b.style.cssText='margin:6px 0;padding:8px 10px;border-radius:8px;background:#b3261e;color:#fff;font-size:14px;display:flex;gap:8px;align-items:center';const tb=document.querySelector('#app .tabs');if(tb)tb.insertAdjacentElement('afterend',b);else{const app=document.getElementById('app');(app&&app.parentNode||document.body).insertBefore(b,app||null)}}
   b.innerHTML='<span style="flex:1">⚠️ '+String(t).replace(/</g,'&lt;')+'</span><button style="min-height:26px;padding:0 8px" onclick="this.parentNode.remove()">OK</button>'}catch(e){}};
 window.__saveOk=()=>{const b=document.getElementById('savebar');if(b)b.remove()};
 const keepToken=r=>{try{if(r&&r.token)localStorage.setItem('ml_token',r.token)}catch(e){}};
@@ -3990,7 +3992,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='myshop'){L.myShop=m.shop;if(m.note)L.err=m.note;if(P){if(m.shop)P.shopHold=m.shop.items.map(o=>Object.assign({},o));else returnHold();save()}}
    else if(m.t==='ssold'){if(P){P.mesos+=m.mesos|0;log(m.buyer+' bought '+m.name+(m.n>1?' x'+m.n:'')+' from your shop for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save()}}
    else if(m.t==='sgot'){if(P){P.mesos=Math.max(0,P.mesos-(m.mesos|0));recvItem(m);log('You bought '+m.name+(m.n>1?' x'+m.n:'')+' from '+m.from+' for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save();render()}}
-   else if(m.t==='err'){L.err=m.error}
+   else if(m.t==='err'){L.err=m.error;liveNote(m.error)}
    paint()};
   ws.onclose=()=>{if(L.ws===ws){L.ws=null;L.state='off';L.here=[];paint();retry()}}}
  function retry(){clearTimeout(L.timer);if(!want())return;L.tries++;L.timer=setTimeout(connect,Math.min(30000,3000*L.tries))}
@@ -4002,6 +4004,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  const emoPic=(e,skin)=>{const S=(skin&&EMOTE_SKINS[skin])||EMOTE_SKINS.basic;return (S&&S[e])||EMO[e][0]};
  window.liveEmote=function(e){e=e|0;if(!(e>=1&&e<=7))return false;const left=15000-(Date.now()-L.emoAt);if(left>0){L.err='Emotes have a 15 second cooldown ('+Math.ceil(left/1000)+'s).';paint();return false}
   if(!out({t:'emote',e,skin:(P&&P.emoteSkin)||null}))return false;L.emoAt=Date.now();paint();return true};
+ /* notices under the tab row */
+ function liveNote(t){try{let n=document.getElementById('livenote');const tb=document.querySelector('#app .tabs');if(!tb)return;if(!n){n=document.createElement('div');n.id='livenote';n.style.cssText='margin:6px 0;padding:8px 10px;border-radius:8px;background:#26365a;color:#fff;font-size:14px'}
+  if(n.previousElementSibling!==tb)tb.insertAdjacentElement('afterend',n);n.textContent='ℹ️ '+t;clearTimeout(L.noteT);L.noteT=setTimeout(()=>{const x=document.getElementById('livenote');if(x)x.remove()},5000)}catch(e){}}
+ window.liveNote=liveNote;
  function askWho(){if(P&&(P.buddies||[]).length)out({t:'who',names:P.buddies});else L.buds=[]}
  window.liveBuddy={add:name=>{name=String(name||'').trim();if(!name)return;if((P.buddies||[]).length>=50){L.err='Your buddy list is full (50).';return paint()}out({t:'breq',to:name})},
   accept:()=>{const r=L.breq;L.breq=null;if(r)out({t:'bacc',to:r.from});paint()},decline:()=>{const r=L.breq;L.breq=null;if(r)out({t:'bno',to:r.from});paint()},
@@ -4061,7 +4067,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
     +'<div style="display:flex;gap:6px;margin-top:8px"><button data-lg="leave" style="flex:1">Leave guild</button>'+(r===1?'<button data-lg="disband" style="flex:1">Disband</button>':'')+'</div>'}
   return h+(L.gerr?'<div class="mute" style="color:#b0562f;margin-top:6px">'+esc(L.gerr)+'</div>':'')+'</div>'}
  /* the online version's Social tab is the real guild screen (the old one only lived in this browser) */
- {const _sp=socialPanel;socialPanel=function(){if(!want())return _sp.apply(this,arguments);return guildHtml()+'<div class="panel"><div class="mute">Buddies, whispers, party and chat are on the Play tab (Players here and Chat).</div></div>'}}
+ {const _sp=socialPanel;socialPanel=function(){if(!want())return _sp.apply(this,arguments);return guildHtml()+'<div class="panel" id="budpanel"><h2>🤝 Buddies</h2>'+budHtml()+'</div>'}}
  /* ===== Mailbox: System (from the game and staff only) and Messages (from players only). Kept on the server, so it
     arrives while you are offline. A mailbox button on the Play screen shows how many are unread. ===== */
  L.mail=[];L.unreadMail=0;L.mview=null;/* null closed | {f:'system'|'player', open:id, compose:{to,subject,body}} */
@@ -4140,15 +4146,15 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   return '<div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div><div class="pad">'
    +(L.invite&&L.invite.until>Date.now()?'<div class="mrow" style="background:rgba(242,193,78,.2);border-radius:8px"><span class="av">🎉</span><div style="flex:1"><b>'+esc(L.invite.name)+'</b> invites you to a party.</div><button data-lp="accept">Join</button><button data-lp="decline">No</button></div>':'')
    +(L.ginv&&L.ginv.until>Date.now()?'<div class="mrow" style="background:rgba(240,170,60,.2);border-radius:8px"><span class="av">🛡️</span><div style="flex:1"><b>'+esc(L.ginv.from)+'</b> invites you to the guild <b>'+esc(L.ginv.guild)+'</b>.</div><button data-lg="accept">Join</button><button data-lg="decline">No</button></div>':'')
+   +(L.breq&&L.breq.until>Date.now()?'<div class="mrow" style="background:rgba(170,120,255,.18);border-radius:8px"><span class="av">💌</span><div style="flex:1"><b>'+esc(L.breq.from)+'</b> wants to be your buddy.</div><button data-lb="accept">Accept</button><button data-lb="decline">No</button></div>':'')
    +(L.treq&&L.treq.until>Date.now()?'<div class="mrow" style="background:rgba(120,200,255,.2);border-radius:8px"><span class="av">🔁</span><div style="flex:1"><b>'+esc(L.treq.name)+'</b> wants to trade.</div><button data-lt="accept">Trade</button><button data-lt="decline">No</button></div>':'')
    +(L.trade?'<div class="panel" style="margin:8px 0;padding:8px"><b>🔁 Trading with '+esc(L.trade.name)+'</b><div style="display:flex;gap:8px;margin-top:6px"><div style="flex:1"><div class="mute">You give'+(L.trade.ok[0]?' ✅':'')+'</div>'+(L.trade.mine.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+' <button data-lt="rm:'+esc(o.k)+'" style="min-height:0;padding:0 6px">✕</button></div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.mine.mesos|0).toLocaleString()+' mesos</div></div><div style="flex:1"><div class="mute">You get'+(L.trade.ok[1]?' ✅':'')+'</div>'+(L.trade.theirs.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+'</div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.theirs.mesos|0).toLocaleString()+' mesos</div></div></div>'
      +'<div style="display:flex;gap:6px;margin-top:6px"><select id="lt-item" style="flex:2;min-width:0">'+tradeable().map(k=>'<option value="'+esc(k)+'">'+esc(ITEMS[k].n)+' ('+P.inv[k]+')</option>').join('')+'</select><input id="lt-n" type="number" min="1" value="1" style="flex:1;min-width:0"><button data-lt="add">Add</button></div>'
      +'<div style="display:flex;gap:6px;margin-top:6px"><input id="lt-m" type="number" min="0" placeholder="Mesos" value="'+(L.myOffer.mesos||'')+'" style="flex:1;min-width:0"><button data-lt="mesos">Set mesos</button></div>'
      +'<div style="display:flex;gap:6px;margin-top:6px"><button class="main" data-lt="ok" style="flex:1">Confirm</button><button data-lt="cancel" style="flex:1">Cancel</button></div><div class="mute" style="font-size:12px">Changing an offer clears both confirmations. The trade happens when you both confirm.</div></div>':'')
    +shopHtml()
-   +budHtml()
    +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
-   +(others.length?others.map(x=>'<div class="mrow" data-prof="'+esc(x.name)+'" style="cursor:pointer"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+((P.buddies||[]).some(n=>n.toLowerCase()===String(x.name).toLowerCase())?'':'<button data-lb="addn:'+esc(x.name)+'">Buddy</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
+   +(others.length?others.map(x=>'<button class="npc" data-prof="'+esc(x.name)+'"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><span style="flex:1;text-align:left">'+esc(x.name)+' <span class="mute">Lv '+(x.lvl|0)+'</span><br><span class="mute">'+(x.job?esc(x.job):'Beginner')+(L.members.some(y=>y.id===x.id)?' · Party':'')+'</span></span></button>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')+'</div>'}
  /* the chat panel: tabs Map / Friends (whispers) / Party / Guild / Activity log (read-only game log) */
  L.ctab=L.ctab||'map';L.unread={all:0,map:0,friends:0,party:0,guild:0};L.spyOn={map:false,friends:false,guild:false};
