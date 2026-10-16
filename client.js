@@ -1,4 +1,4 @@
-window.__BUILD='3.5-0a1060614f';
+window.__BUILD='3.5-c0ff45929a';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -933,7 +933,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  {const e=$('sq');if(e){e.oninput=()=>{const mx=Math.max(1,shopMax());let v=parseInt(e.value,10);if(isNaN(v)||v<1)v=1;if(v>mx){v=mx;e.value=mx}shopQty=v;const pr=shopTab==='buy'?buyPrice(shopSel):sellVal(shopSel),t=$('stot');if(t)t.textContent=(shopTab==='buy'?'Total: ':'You get: ')+pr*v+' mesos'};e.onblur=()=>{e.value=shopQty}}}
  q0('smax',()=>{shopQty=Math.max(1,shopMax());render()});q0('sdo',()=>{shopConfirm=true;render()});q0('scf',()=>{shopConfirm=false;shopDo()});q0('scn',()=>{shopConfirm=false;render()});q0('sx',()=>{shopSel=null;shopConfirm=false;render()});
  app.querySelectorAll('[data-pl]').forEach(b=>b.onclick=()=>{viewPlayer=viewPlayer===b.dataset.pl?null:b.dataset.pl;viewPEq=false;render()});
- {const wt=!!talk&&tab==='play';if(wt&&!window._wt)window.scrollTo(0,0);window._wt=wt}
+ {const wt=!!talk&&tab==='play';window._wt=wt}/* v3.5: no jump to the top when talking (the dialogue is shown under the NPC) */
  {const lk=introOpen?'hidden':'';document.documentElement.style.overflow=lk;document.body.style.overflow=lk}
  q0('introgo',()=>{introOpen=false;render()});q0('brkbox',breakBox);
  q0('plx',()=>{viewPlayer=null;viewMe=false;viewPEq=false;render()});q0('meview',()=>{viewMe=!viewMe;viewPEq=false;render()});
@@ -2039,9 +2039,12 @@ function rankList(){const L=[{n:KICHI.n,lvl:KICHI.lvl,x:0,job:'Beginner'}];
 let scrollLockPref=lsGet('mapleish_slock')!=='0';
 const combatOn=()=>!!P&&!MAPS[P.map].town&&!!(enc||autoSeek||seeking);
 function applyLock(){const on=!!P&&scr==='game'&&tab==='play'&&combatOn()&&scrollLockPref,h=document.documentElement,b=document.body;
- if(on){h.style.overflow='hidden';b.style.overflow='hidden';h.style.overscrollBehavior='none';const el=document.getElementById('cpanel');if(el){const y=el.getBoundingClientRect().top+window.scrollY-6;if(Math.abs(window.scrollY-y)>2)window.scrollTo(0,Math.max(0,y))}}
- else{h.style.overflow='';b.style.overflow='';h.style.overscrollBehavior=''}}
-{const _r=render;render=function(){const r=_r.apply(this,arguments);try{applyLock()}catch(e){}return r}}
+ /* v3.5: the fight is pinned to the top of the screen when it fits; when it is taller than the screen (for example
+    with the loot list open) the page can still scroll, and the bottom of the fight is kept in view */
+ const el=on&&document.getElementById('cpanel'),xb=document.querySelector('.xpb'),vh=(xb?xb.getBoundingClientRect().top:innerHeight);
+ if(el&&el.getBoundingClientRect().height<=vh-10){h.style.overflow='hidden';b.style.overflow='hidden';h.style.overscrollBehavior='none';const t=el.getBoundingClientRect().top;if(t<8||t>22){el.style.scrollMarginTop='14px';el.scrollIntoView({block:'start',behavior:'instant'})}}
+ else{h.style.overflow='';b.style.overflow='';h.style.overscrollBehavior='';if(el){const r=el.getBoundingClientRect();if(r.bottom>vh||r.bottom<vh-40)window.scrollBy({top:r.bottom-vh+8,behavior:'instant'})}}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);/* after every other redraw step (some restore the old scroll position) */queueMicrotask(()=>{try{applyLock()}catch(e){}});return r}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-act="slk"]');if(!b)return;scrollLockPref=!scrollLockPref;lsSet('mapleish_slock',scrollLockPref?'1':'0');render()});
 {const _bp=battlePanel;battlePanel=function(mode){if(mode==='idle'&&autoSeek)mode='wait';let h=_bp(mode==='wait'?'seek':mode);const m=MAPS[P.map];
   if(m.town)return h;
@@ -3396,15 +3399,16 @@ const facing=()=>{const t=enc&&enc.hp>0?enc:closestMob(null);return t?(t.side<0?
 function stepTo(nc){const cols=fld.map(m=>[m,colOf(m)]);PC=nc;for(const [m,c] of cols){m.side=c<PC?-1:1;m.gap=Math.abs(c-PC)-1;if(m.gap<0){m.gap=0}}fixPos()}
 function leaveFight(){const a=WORLD[P.map];if(a)a.forEach(s=>{if(s.by&&fld.some(m=>m.eid===s.by))s.by=0});fld=[];enc=null;autoSeek=false;seeking=false;inFight=false;log('You leave the fight.','','combat')}
 stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;fixPos();const now=Date.now(),mc=moveCd();if(now-lastAtk<mc||now-lastMv<mc)return;
- const f=facing(),nc=PC+(dir<0?f:-f);
- if((nc<0||nc>=COLS)&&dir>0){/* v3.5: Back step at the edge backs you away by pushing the monsters one step back; when none can move (they are all against the far wall), it leaves the fight as before */
-  let n=0;for(const m of fld.filter(m=>m.hp>0).sort((a,b)=>b.gap-a.gap))if(window.__pushMob(m,1))n++;
+ /* v3.5: fixed directions: ▶ (dir<0) always steps right, ◀ (dir>0) always steps left */
+ const mvR=dir<0,nc=PC+(mvR?1:-1);
+ if(nc<0||nc>=COLS){/* at the edge: push the monsters on the other side one step back; when none can move, stepping off leaves the fight as before */
+  let n=0;for(const m of fld.filter(m=>m.hp>0&&(mvR?m.side<0:m.side>0)).sort((a,b)=>b.gap-a.gap))if(window.__pushMob(m,1))n++;
   if(n){lastMv=now;for(const m of fld)if(m.hp>0)m.mv=Math.max(m.mv||0,now+mc);log('You back away.','','combat');return render()}}
  if(nc<0||nc>=COLS){if(now-Math.max(lastAtk,lastHit)<mc){log('You are still in the thick of it. You can\'t leave the fight yet.','bad','combat');return render()}
   lastMv=now;leaveFight();return render()}
  if(fld.some(m=>m.hp>0&&m.row===PRf()&&colOf(m)===nc)){log('A monster blocks the way.','','combat');return render()}
  lastMv=now;stepTo(nc);for(const m of fld)if(m.gap<=0&&m.hp>0&&now>m.next-200)m.next=Math.max(m.next,now+Math.round(MON[m.k].iv/2));
- log(dir<0?'You advance.':'You back away.','','combat');render()};
+ log(mvR?'You step right.':'You step left.','','combat');render()};
 /* the skill engine's moves: d=-1 a step toward your target, d=+1 a step away; returns 1 if you moved */
 shiftMobs=function(d){if(!fld.length)return 0;fixPos();const f=facing(),nc=PC+(d<0?f:-f);
  if(nc>=0&&nc<COLS&&!fld.some(m=>m.hp>0&&m.row===PRf()&&colOf(m)===nc)){stepTo(nc);return 1}
@@ -3427,6 +3431,12 @@ laneHtml=function(){fixPos();const LH=Math.max(20,Math.min(30,Math.floor(210/NRf
   return out}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#spawnbtn');if(!b||!P)return;e.stopPropagation();const i=SPAWN_SIDES.findIndex(x=>x[0]===(P.spawn||'left'));P.spawn=SPAWN_SIDES[(i+1)%3][0];
  log('Spawn side: '+SPAWN_SIDES[(i+1)%3][2]+'. You will appear there when your next fight starts.','','combat');save();render()},true);
+/* v3.5: the move buttons are just arrows (right and left) */
+{const _r=render;render=function(){const o=_r.apply(this,arguments);try{const a=document.getElementById('adv'),b=document.getElementById('bk');
+ if(a&&a.dataset.arw!=='1'){a.textContent='';a.title='Step right';a.dataset.arw='1'}if(b&&b.dataset.arw!=='1'){b.textContent='';b.title='Step left';b.dataset.arw='1'}}catch(e){}return o}}
+/* v3.5: Slash Blast is a melee sweep: your normal reach (no extra column) and only your line and the lines right next
+   to it. Before, it reached one column further and hit monsters on every line. */
+{const _sb=skSlash;skSlash=function(){const tf=targetsFor;targetsFor=function(reach,n){const pr=PRf();return tf(Math.max(0,reach-SB_EXTRA),99).filter(m=>Math.abs(m.row-pr)<=1).slice(0,n)};try{return _sb.apply(this,arguments)}finally{targetsFor=tf}}}
 
 /* ===== v3.3: the Maze event (a scheduled event, separate from hot-time and from the website's Events page)
    - When: every 4 hours on the hour, California time (12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM), plus any extra start an
@@ -3669,6 +3679,18 @@ const EQ_ANY_MAX=0.004;
 (function scaleEquipDrops(){try{for(const k in DROPS){const D=DROPS[k];if(!D||!Array.isArray(D.i))continue;
  const eq=D.i.filter(e=>ITEMS[e[0]]&&(ITEMS[e[0]].w||ITEMS[e[0]].s));if(!eq.length)continue;
  const pAny=1-eq.reduce((q,e)=>q*(1-e[1]),1);if(pAny<=EQ_ANY_MAX)continue;const f=EQ_ANY_MAX/pAny;for(const e of eq)e[1]=e[1]*f}}catch(e){}})();
+/* v3.5: taxis. Regular Cabs drive between the Victoria Island towns (1,000 mesos; 100 for beginners), the VIP Cab goes
+   to Ant Tunnel Park (10,000 mesos; 1,000 for beginners), as in v62. */
+const CAB_TOWNS=['lith_harbor','henesys','ellinia','perion','kerning_city'],VIP_CAB='v105070001';
+const cabKind=n=>{const N=NPCS[n];return N&&/VIP Cab/i.test(N.n)?'vip':N&&/Regular Cab/i.test(N.n)?'reg':null};
+const cabPrice=(k)=>(k==='vip'?10000:1000)/((!P||!P.job)?10:1);
+{const _dl=dlg;dlg=function(){const d=_dl();try{const k=talk&&cabKind(talk.npc);if(k&&(!talk.page||talk.page==='main')){const pr=cabPrice(k),last=d.ch.length-1;
+  const to=k==='vip'?[VIP_CAB]:CAB_TOWNS.filter(t=>t!==P.map&&MAPS[t]);d.t=(k==='vip'?'The VIP Cab takes you straight to Ant Tunnel Park, deep in the dungeon.':'Where to? I can take you to any town on Victoria Island.')+' The fare is '+pr.toLocaleString()+' mesos'+(P.job?'':' (beginner price)')+'.';
+  d.ch.splice(last,0,...to.map(t=>['🚕 '+MAPS[t].n+' ('+pr.toLocaleString()+' mesos)','taxi:'+t]))}}catch(e){}return d}}
+{const _dd=dlgDo;dlgDo=function(k){if(typeof k==='string'&&k.startsWith('taxi:')&&talk){const to=k.slice(5),kind=cabKind(talk.npc),pr=cabPrice(kind);
+  if(!kind||!MAPS[to]||(kind==='vip'?to!==VIP_CAB:!CAB_TOWNS.includes(to)))return;if(P.mesos<pr){log('You need '+pr.toLocaleString()+' mesos for the cab.','bad','self');return render()}
+  P.mesos-=pr;talk=null;selNpc=null;go_tp(to);log('The cab drops you off in '+MAPS[to].n+'. (-'+pr.toLocaleString()+' mesos)','good','self');save();return render()}return _dd(k)}}
+function go_tp(to){P.map=to;P.kills=0;try{enc=null;fld=[];autoSeek=false;seeking=false}catch(e){}}
 
 /* v3.5: Pets (on the Character screen). Bought in the Cash Shop; one pet out at a time.
    - Fullness (0-100) drops slowly while you play (1 every 90 seconds). At 0 the pet stops helping until you feed it Pet
@@ -3937,7 +3959,7 @@ function paintStats(){const st=$('ws-stats');if(!st)return;
  const r=(i,a,b,w)=>'<div class="ws-st'+(w?' w':'')+'"><em>'+i+'</em><b>'+b+'</b>'+a+'</div>';
  if(!stats||stats.error)st.innerHTML='<div class="ws-grid">'+r('🔴','Status',stats?'Unreachable':'Checking…',1)+'</div>';
  else st.innerHTML='<div class="ws-grid">'+r('🟢','Status','<span class="ws-dot"></span>Online',1)+r('🧑‍🤝‍🧑','Players online',stats.online)+r('👥','Accounts',stats.accounts.toLocaleString())+r('🧙','Characters',stats.characters.toLocaleString())
-  +r('🏆','Top player',stats.top?esc(stats.top.name)+' <small>Lv '+stats.top.lvl+'</small>':'-')+r('📜','Version','v62')+'</div>'
+  +r('🏆','Top player',stats.top?esc(stats.top.name)+' <small>Lv '+stats.top.lvl+'</small>':'-')+r('📜','Version',(window.__BUILD||'').split('-')[0]||'-')+'</div>'
   +'<div class="ws-note">'+(stats.newest?'Newest adventurer: <b>'+esc(stats.newest)+'</b>. ':'')+'<a href="#rankings" id="ws-st-rank">See the rankings</a></div>';
  lastHtml=st.innerHTML;const a=$('ws-st-rank');if(a)a.onclick=e=>{e.preventDefault();showRank()}}
 async function loadStats(){stats=await get('/api/stats');paintStats()}
@@ -4269,7 +4291,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   el.innerHTML=panelHtml();const cx=document.getElementById('livechatbox');if(cx){cx.classList.toggle('full',!!window.__chatFull);document.body.classList.toggle('chatfull',!!window.__chatFull);if(L.unread[L.ctab])L.unread[L.ctab]=0;cx.innerHTML=chatHtml()}const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
  {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(want()&&tab==='play'&&!(MAPS[P.map]||{}).jobtest){const app=document.getElementById('app');
     const people=[...app.querySelectorAll(':scope > .panel')].find(p=>p.querySelector('.npc'))||[...app.querySelectorAll(':scope > .panel')].find(p=>/PEOPLE/i.test((p.querySelector('h2')||{}).textContent||''));
-    if(!document.getElementById('livebox')){const d=document.createElement('div');d.id='livebox';d.className='panel';if(people)people.insertAdjacentElement('afterend',d);else{const log=document.getElementById('log');if(log)log.insertAdjacentElement('beforebegin',d);else app.appendChild(d)}const c=document.createElement('div');c.id='livechatbox';c.className='panel';d.insertAdjacentElement('afterend',c);paint()}
+    if(!document.getElementById('livebox')){const d=document.createElement('div');d.id='livebox';d.className='panel';const nx=people&&people.nextElementSibling,anchor=(nx&&nx.querySelector&&nx.querySelector('.bldgrid'))?nx:people;/* Buildings stay right under People */if(anchor)anchor.insertAdjacentElement('afterend',d);else{const log=document.getElementById('log');if(log)log.insertAdjacentElement('beforebegin',d);else app.appendChild(d)}const c=document.createElement('div');c.id='livechatbox';c.className='panel';d.insertAdjacentElement('afterend',c);paint()}
     {const lg=document.getElementById('log');if(lg&&lg!==app.lastElementChild)app.appendChild(lg)}/* the Activity log sits at the bottom of the Play page */}}catch(e){}return out}}
  /* Menu tab: a button with your channel and how many players are in it; pressing it opens the channel menu */
  function chHtml(){const n=c=>L.counts&&L.counts[c-1]!=null?(c===L.ch&&L.state==='on'?Math.max(1,L.counts[c-1]|0):L.counts[c-1]|0):'?';
@@ -4425,6 +4447,7 @@ body.chatfull{overflow:hidden}
  /* small reward sources */
  wrap('breakBox',f=>function(){const inv0=P&&JSON.stringify(P.inv);const r=f.apply(this,arguments);if(G.on&&P&&JSON.stringify(P.inv)!==inv0)send({a:'box'},null,true);return r});
  wrap('dlgDo',f=>function(k){const rain=P&&P.qp&&P.qp.rain,got=P&&P.evt&&P.evt.got;const r=f.apply(this,arguments);if(!G.on||!P||typeof k!=='string')return r;
+  if(/^taxi:/.test(k)&&P.map===k.slice(5)){G.map=P.map;send({a:'taxi',to:P.map})}
   if(/^ans:/.test(k)&&(P.qp.rain|0)>(rain|0))send({a:'quiz'},null,true);
   if(k==='ev:prize'&&!got&&P.evt&&P.evt.got)send({a:'prize',ev:String(P.evt.id)},null,true);return r});
  wrap('gmDo',f=>function(a){const inv0=P&&JSON.stringify(P.inv),m0=P&&P.mesos,l0=P&&P.lvl;const r=f.apply(this,arguments);if(!G.on||!P)return r;
