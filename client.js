@@ -687,11 +687,11 @@ SM('snail_field',{n:'Small Field of Flowers',ret:AM,mons:['slime','snail'],ex:[[
 SM('field_east_of_amherst',{ret:AM,mons:['pig','red_snail','orange_mushroom'],ex:[[AM,'Back to Amherst'],['inside_small_forest_2','On to Inside the Small Forest 2']]});
 SM('inside_small_forest_2',{n:'Inside the Small Forest 2',i:'🌳',d:'Orange Mushrooms bounce along a shady trail toward the port.',need:8,mons:['orange_mushroom'],ret:AM,ex:[['field_east_of_amherst','Back to the Field East of Amherst'],['field_west_of_southperry','On to the Field West of Southperry']],art:['#6fb552','#3f8f3a']});
 SM('field_west_of_southperry',{n:'The Field West of Southperry',i:'🌾',d:'An open field above the harbor, full of Orange Mushrooms and Pigs.',need:8,mons:['orange_mushroom','pig'],ret:AM,ex:[['inside_small_forest_2','Back to Inside the Small Forest 2'],['southperry','East to Southperry']],art:['#8fd06a','#5b97d1']});
-SM('southperry',{npcs:['biggs','vasily','artale_admin'],ret:AM,ex:[['field_west_of_southperry','West to the Field West of Southperry']]});
+SM('southperry',{npcs:['biggs','vasily','maplelite_admin'],ret:AM,ex:[['field_west_of_southperry','West to the Field West of Southperry']]});
 SM('atc_entrance',{ret:AM,npcs:['mai'],mons:['shroom','blue_snail','orange_mushroom'],ex:[[AM,'Back to Amherst'],['atc_1','Training Center 1'],['atc_2','Training Center 2'],['atc_3','Training Center 3'],['atc_4','Training Center 4']]});
 Object.assign(NAV,{mushroom_west:[8,10,'West Gate'],mushroom_town:[25,10,'Town'],training_camp:[42,10,'Town 2'],mushroom_east:[59,10,'East Gate'],snail_hunting_ground_1:[76,10,'Sm. Forest'],snail_hunting_ground_2:[93,10,'Snails II'],snail_hunting_ground_3:[93,27,'Snails III'],inside_dangerous_forest:[76,27,'In. Dang.'],field_west_of_amherst:[59,27,'West Field'],mushroom_garden:[42,27,'Garden 2'],dangerous_forest:[25,27,'Dang. Forest'],amherst:[59,44,'Amherst'],snail_garden:[42,44,'Snail Garden'],tomato_field:[25,44,'Tomatoes'],middle_forest_1:[42,61,'Forest I'],middle_forest_2:[25,61,'Forest II'],snail_field:[76,44,'Flowers'],field_east_of_amherst:[76,61,'East Field'],inside_small_forest_2:[93,61,'Sm. For. 2'],field_west_of_southperry:[93,78,'SP Field'],southperry:[76,78,'Southperry'],atc_entrance:[59,61,'Training Ctr'],atc_1:[42,78,'ATC 1'],atc_2:[25,78,'ATC 2'],atc_3:[8,78,'ATC 3'],atc_4:[8,61,'ATC 4']});
 const _t2=townArt;townArt=function(id){if(id==='mushroom_west'||id==='mushroom_east')id=TN;return _t2(id)||''};
-Object.assign(NPCS,{jr_sentinel:{n:'Jr. Sentinel',i:'💂',role:'Gate guard',hi:'Halt! ...Oh, a new explorer. Mind the Snails out there.'},pio:{n:'Pio',i:'🧑‍🔧',role:'Recycler',hi:'Nothing goes to waste around here!'},mai:{n:'Mai',i:'🥋',role:'Training Center instructor',hi:'Welcome to the Adventurer Training Center. Four rooms, four challenges.'},artale_admin:{n:'Artale Administrator',i:'🛡️',role:'Administrator',hi:'Welcome to Southperry. Enjoy your stay on Maple Island!'}});
+Object.assign(NPCS,{jr_sentinel:{n:'Jr. Sentinel',i:'💂',role:'Gate guard',hi:'Halt! ...Oh, a new explorer. Mind the Snails out there.'},pio:{n:'Pio',i:'🧑‍🔧',role:'Recycler',hi:'Nothing goes to waste around here!'},mai:{n:'Mai',i:'🥋',role:'Training Center instructor',hi:'Welcome to the Adventurer Training Center. Four rooms, four challenges.'},maplelite_admin:{n:'Maplelite Administrator',i:'🛡️',role:'Administrator',hi:'Welcome to Southperry. Enjoy your stay on Maple Island!'}});
 
 /* ===== v62 Maple Island: Mai, Pio, Sen, Peter, hats, boxes ===== */
 Object.assign(ITEMS,{jr_sentinel_shellpiece:{n:'Jr. Sentinel Shellpiece',i:'\uD83D\uDEE1\uFE0F',sell:1},rusty_screw:{n:'Rusty Screw',i:'\uD83D\uDD29',sell:1},old_wooden_board:{n:'Old Wooden Board',i:'\uD83E\uDEB5',sell:1},green_relaxer:{n:'The Relaxer',i:'\uD83E\uDE91',sell:1},
@@ -3425,7 +3425,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
    - When: every 4 hours on the hour, California time (12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM), plus any extra start an
      admin schedules (Admin menu -> Maze event). An admin can turn the 4-hour schedule off.
    - How: at the start time entries open and a 5-minute countdown runs; then the maze starts and runs for 10 minutes.
-     Entries stay open the whole 15 minutes: talk to the Artale Administrator in any town to join (once per event).
+     Entries stay open the whole 15 minutes: talk to the Maplelite Administrator in any town to join (once per event).
      Before the start you wait in the Event Waiting Room; after it you go straight into the maze.
    - The maze: the same grid as combat, no skills, no monsters. Move Up, Down, Back and Forward (one step per your
      movement time, from Speed) and reach the flag at the far end. Everyone in one event gets the same maze.
@@ -3433,10 +3433,10 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
      Trophy, and takes everyone back to the town they joined from.
    - No trading in event maps (trading only ever works between players on the same map).
    - While an event is open, a timer block at the top of the Play screen shows the time left and the nearest town with
-     an Artale Administrator; the notice bar announces it too. ===== */
+     an Maplelite Administrator; the notice bar announces it too. ===== */
 (function(){
  const EV_WAIT=5*60e3,EV_RUN=10*60e3,EV_LEN=EV_WAIT+EV_RUN,SLOT=4*3600e3;
- const EVNPC='artale_admin',EVTOWNS=['amherst','southperry','lith_harbor','henesys','ellinia','perion','kerning_city'];
+ const EVNPC='maplelite_admin',EVTOWNS=['amherst','southperry','lith_harbor','henesys','ellinia','perion','kerning_city'];
  /* the schedule */
  if(typeof gmOpen!=='undefined')gmOpen.evt=true;
  const evCfg=()=>{const c=worldCfg();return c.ev&&typeof c.ev==='object'?c.ev:{}};
@@ -3453,8 +3453,8 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   evt_maze:{n:'The Maze',i:'🌀',d:'Find the way to the flag before time runs out.',town:1,hidden:1,noTrade:1,ret:'henesys',mons:[],npcs:[],ex:[],art:['#9fd27a','#5fa84a']},
   evt_prize:{n:'Event Prize Room',i:'🏆',d:'Where every contestant ends up. Collect your prize, then head home.',town:1,hidden:1,noTrade:1,ret:'henesys',mons:[],npcs:['evt_prize'],ex:[],art:['#f2d27a','#d9a640']}});
  for(const k of EVMAPS){delete NAV[k];if(typeof WPOS!=='undefined')delete WPOS[k]}
- NPCS[EVNPC]=Object.assign(NPCS[EVNPC]||{},{n:'Artale Administrator',i:'🛡️',role:'Events',hi:NPCS[EVNPC]&&NPCS[EVNPC].hi||'Welcome! Events are held here every 4 hours.'});
- NPCS.evt_prize={n:'Artale Administrator',i:'🏆',role:'Event prizes',hi:'Well done, everyone! Talk to me for your prize and a ride home.'};
+ NPCS[EVNPC]=Object.assign(NPCS[EVNPC]||{},{n:'Maplelite Administrator',i:'🛡️',role:'Events',hi:NPCS[EVNPC]&&NPCS[EVNPC].hi||'Welcome! Events are held here every 4 hours.'});
+ NPCS.evt_prize={n:'Maplelite Administrator',i:'🏆',role:'Event prizes',hi:'Well done, everyone! Talk to me for your prize and a ride home.'};
  for(const t of EVTOWNS)if(MAPS[t]&&!(MAPS[t].npcs||[]).includes(EVNPC))(MAPS[t].npcs=MAPS[t].npcs||[]).push(EVNPC);
  if(!ITEMS.i4000038)ITEMS.i4000038={n:'Event Trophy',i:'🏆',sell:30000,d:'A souvenir for entering the event. Made out of gold, so you can sell it for a high price.'};
  /* the maze: 5 rows x 21 columns of tiles, carved from 3 x 11 rooms; the same for everyone in one event */
@@ -3475,7 +3475,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   else{P.map='evt_maze';mz=null;mzFor(s.id);log('You enter the maze. Find the flag!','good','quest')}
   tab='play';save();render()}
  function toPrize(won){if(!P.evt)P.evt={id:0,from:'henesys'};P.evt.done=!!won;P.map='evt_prize';mz=null;
-  log(won?'You reached the flag! Collect your Event Trophy from the Artale Administrator.':'Time is up. The Artale Administrator will take you home.',won?'good':'','quest');save();render()}
+  log(won?'You reached the flag! Collect your Event Trophy from the Maplelite Administrator.':'Time is up. The Maplelite Administrator will take you home.',won?'good':'','quest');save();render()}
  function goHome(){const to=P.evt&&MAPS[P.evt.from]&&!inEventMap(P.evt.from)?P.evt.from:'henesys';P.map=to;talk=null;log('You are back in '+MAPS[to].n+'.','','quest');save();render()}
  const fmtLeft=ms=>{ms=Math.max(0,ms);const m=Math.floor(ms/60e3),s=Math.floor(ms%60e3/1000);return m+':'+String(s).padStart(2,'0')};
  /* talking */
@@ -3506,12 +3506,12 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   return h+'</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">'+'<div></div>'+b('mzU','▲','Up')+'<div></div>'+b('mzB','◀','Back')+b('mzD','▼','Down')+b('mzF','▶','Forward')+'</div><div class="mute" style="margin-top:6px">No skills or items here, just your feet. Arrow keys work too.</div></div>'}
  document.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('#mzU,#mzD,#mzB,#mzF');if(!t)return;e.preventDefault();({mzU:()=>mazeMove(-1,0),mzD:()=>mazeMove(1,0),mzB:()=>mazeMove(0,-1),mzF:()=>mazeMove(0,1)})[t.id]()},true);
  document.addEventListener('keydown',e=>{if(!P||P.map!=='evt_maze'||/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||''))return;const k={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[e.key];if(k){e.preventDefault();mazeMove(k[0],k[1])}});
- /* nearest town with an Artale Administrator, by walking distance */
+ /* nearest town with an Maplelite Administrator, by walking distance */
  function nearestEvTown(){const start=P.map,seen=new Set([start]),q=[start];while(q.length){const k=q.shift();if(EVTOWNS.includes(k)&&MAPS[k])return k;for(const e of (MAPS[k]&&MAPS[k].ex)||[])if(MAPS[e[0]]&&!seen.has(e[0])){seen.add(e[0]);q.push(e[0])}}return 'henesys'}
  /* the timer block, maze panel and event map clean-up on every redraw */
  {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(typeof scr!=='undefined'&&scr==='game'&&P&&tab==='play'){const app=document.getElementById('app'),tabs=app&&app.querySelector('.tabs');const s=evState();
    if(s.phase&&tabs&&!document.getElementById('evtimer')){const inEv=inEventMap(),joined=P.evt&&P.evt.id===s.id;const d=document.createElement('div');d.id='evtimer';d.className='panel';
-    const near=nearestEvTown();d.innerHTML='<div class="pad" style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🎉</span><div style="flex:1"><b>Maze event '+(s.phase==='wait'?'starts in':'ends in')+' <span id="ev-left">'+fmtLeft((s.phase==='wait'?s.runAt:s.end)-Date.now())+'</span></b><div class="mute">'+(inEv?(P.map==='evt_lobby'?'Waiting for the maze to open.':P.map==='evt_maze'?'Find the flag!':'Collect your prize from the Artale Administrator.'):joined?'You already took part in this one.':'Join at the Artale Administrator. Nearest: '+MAPS[near].n+'.')+'</div></div></div>';
+    const near=nearestEvTown();d.innerHTML='<div class="pad" style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🎉</span><div style="flex:1"><b>Maze event '+(s.phase==='wait'?'starts in':'ends in')+' <span id="ev-left">'+fmtLeft((s.phase==='wait'?s.runAt:s.end)-Date.now())+'</span></b><div class="mute">'+(inEv?(P.map==='evt_lobby'?'Waiting for the maze to open.':P.map==='evt_maze'?'Find the flag!':'Collect your prize from the Maplelite Administrator.'):joined?'You already took part in this one.':'Join at the Maplelite Administrator. Nearest: '+MAPS[near].n+'.')+'</div></div></div>';
     tabs.insertAdjacentElement('afterend',d)}
    if(P.map==='evt_maze'&&s.phase==='run'){const first=app.querySelector(':scope > .panel:not(#evtimer)');if(first)first.innerHTML=mazeHtml();
     app.querySelectorAll(':scope > .panel').forEach(p=>{if(p.querySelector('.qgrid,.tiles,.wm'))p.style.display='none'})}}}catch(e){}return out}}
@@ -3523,7 +3523,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
    if(P.map==='evt_lobby'&&s.phase==='run'){P.map='evt_maze';mz=null;mzFor(s.id);log('The maze is open. Go!','good','quest');save();return render()}}
   if(ph!==lastPhase){lastPhase=ph;render()}},1000);
  /* for the notice bar */
- window.evTickerText=()=>{const s=evState();return s.phase?(s.phase==='wait'?'🎉 Maze event: entries are open, it starts in '+fmtLeft(s.runAt-Date.now()).replace(/:\d\d$/,' min')+'. Talk to the Artale Administrator in any town.':'🎉 Maze event running now. Join at the Artale Administrator in any town.'):''};
+ window.evTickerText=()=>{const s=evState();return s.phase?(s.phase==='wait'?'🎉 Maze event: entries are open, it starts in '+fmtLeft(s.runAt-Date.now()).replace(/:\d\d$/,' min')+'. Talk to the Maplelite Administrator in any town.':'🎉 Maze event running now. Join at the Maplelite Administrator in any town.'):''};
  /* admin: Maze event schedule */
  {const _gp=gmPanel;gmPanel=function(role){let h=_gp(role);if(role!=='admin')return h;const c=evCfg(),s=evState(),ex=(Array.isArray(c.extra)?c.extra:[]).filter(t=>t+EV_LEN>Date.now()).sort((a,b)=>a-b);
    const lt=t=>new Date(t).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
