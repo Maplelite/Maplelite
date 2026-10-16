@@ -1,4 +1,4 @@
-window.__BUILD='3.5-43834fdea3';
+window.__BUILD='3.5-c6113525e7';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3911,7 +3911,7 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +(dark?'#app [style*="background:#fff"],#app [style*="background:#f"],#app [style*="background: #f"]{background:'+pn+'!important;color:'+tx+'!important}#app [style*="color:#3"],#app [style*="color:#4"],#app [style*="color:#5"],#app [style*="color:#222"]{color:'+tx+'!important}':'')
  +(dark?'#app .panel a{color:'+hd+'!important}':'')}
 /* the falling decoration for each theme: one of the game's own pixel sprites that fits that place */
-const TH_DECOR={henesys:'mushroom',ellinia:'leaf',perion:'ore',kerning:'octopus',lith:'shell',sleepy:'stump',orbis:'star',elnath:'crystal',ludi:'doll',aqua:'slime'};
+const TH_DECOR={henesys:'mushroom',ellinia:'leaf',perion:'boar',kerning:'octopus',lith:'shell',sleepy:'stump',orbis:'star',elnath:'crystal',ludi:'doll',aqua:'slime'};
 function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t);
  /* falling leaves use the game's own leaf sprite, in this theme's accent colour */
  try{const col=t[0]==='classic'?'#e58a2e':t[11];document.querySelectorAll('#site .ws-lf').forEach(e=>{e.innerHTML=icoSvg(TH_DECOR[t[0]]||'leaf',col)})}catch(e){}}
