@@ -1,4 +1,4 @@
-window.__BUILD='3.5-97329bdfff';
+window.__BUILD='3.5-2177d669c2';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4217,6 +4217,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
    else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,fx:m.fx,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
    else if(m.t==='wsent'){L.chat.push({ts:Date.now(),from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
+   else if(m.t==='gsnap'){if(window.__onGsnap)window.__onGsnap(m)}
    else if(m.t==='fres'||m.t==='fspawned'){if(window.__onFight)window.__onFight(m)}
    else if(m.t==='plog'){if(typeof log==='function'&&m.from!==(P&&P.name)){logs.push(['['+m.from+'] '+m.text,'','plog']);if(typeof refreshLog==='function')refreshLog()}}
    else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
@@ -4533,6 +4534,7 @@ body.chatfull{overflow:hidden}
    if(j&&j.ok===false&&j.error&&!job.quiet){try{log(j.error,'bad','self')}catch(e){}}
    try{job.cb&&job.cb(j)}catch(e){}if(!G.q.length)try{render()}catch(e){}pump()})
   .catch(()=>{G.busy=false;G.q.unshift(job);setTimeout(pump,3000)})}
+ window.__authApplyState=st=>{G.last=st;if(!G.q.length)apply(st)};
  const send=(b,cb,quiet)=>{if(!G.on||!P)return false;G.q.push({b,cb,quiet});pump();return true};window.gAct=send;
  /* start: ask the server for this character (imports it the first time) and whether authority mode is on */
  function start(){if(!window.__KV||!window.__KV.me||!P||G.slot===SLOT+':'+P.name||Date.now()<(G.retry||0))return;G.slot=SLOT+':'+P.name;
@@ -4573,7 +4575,7 @@ body.chatfull{overflow:hidden}
    try{log('Enchanting '+(nm.n||'')+': '+msg.replace(/^\S+\s/,''),j.success?'good':'bad','items')}catch(_){}
    ench={st:4,res:'<div style="font-size:15px">'+(nm.i||'')+' <b>'+(nm.n||'')+'</b></div><div style="margin-top:6px">'+msg+'</div>'}})});
  /* monsters: the server rolls the rewards; the browser's own drop roll is switched off while authority is on */
- wrap('win',f=>function(){const k=typeof enc!=='undefined'&&enc&&enc.k;if(!G.on||!k)return f.apply(this,arguments);const m2=window.__authM2&&window.__authM2()&&enc.sreg;if(k==='training_snail'){send({a:'tut'},null,true);return f.apply(this,arguments)}
+ wrap('win',f=>function(){const k=typeof enc!=='undefined'&&enc&&enc.k;if(!G.on||!k)return f.apply(this,arguments);const m2=(window.__authM2&&window.__authM2()&&enc.sreg)||(window.__fight3&&window.__fight3.on);if(k==='training_snail'){send({a:'tut'},null,true);return f.apply(this,arguments)}
   const ad=window.addDrop,dl=window.dropLoot;window.addDrop=function(){};if(typeof dl==='function')window.dropLoot=function(){};
   let r;try{r=f.apply(this,arguments)}finally{window.addDrop=ad;if(typeof dl==='function')window.dropLoot=dl}
   if(m2)return r;
@@ -4596,7 +4598,7 @@ body.chatfull{overflow:hidden}
   if(P.mesos!==m0)send({a:'admin',mesos:P.mesos-m0});if(P.lvl!==l0)send({a:'admin',lvl:P.lvl});return r});
  /* ---- server combat (milestone 2): while connected to the live world, monsters are registered with the channel
     server, every attack is reported there, and the server's HP is the real HP. Rewards come with the server's kill. ---- */
- const M2=()=>G.on&&window.__liveOn&&window.__liveOn();window.__authM2=M2;
+ const M2=()=>G.on&&window.__liveOn&&window.__liveOn()&&!(window.__m3on&&window.__m3on());/* milestone 3 (server-run fights) replaces the reporting path */window.__authM2=M2;
  const lout=o=>{try{return window.__liveOut&&window.__liveOut(o)}catch(e){return false}};
  function regMobs(){if(!M2()||typeof fld==='undefined')return;const L=[];for(const m of fld)if(m&&m.hp>0&&!m.sreg&&m.eid!=null&&m.k!=='training_snail'){m.sreg=1;L.push({eid:String(m.eid),k:m.k,g:m.gap})}if(L.length)lout({t:'fspawn',list:L})}
  const snap=()=>{const o={};G.gap={};if(typeof fld!=='undefined')for(const m of fld)if(m&&m.sreg){o[m.eid]=m.hp;G.gap[m.eid]=m.gap}return o};
@@ -4622,6 +4624,60 @@ body.chatfull{overflow:hidden}
    try{render()}catch(e){}}};
  /* party EXP share from the live world */
  window.__authPshare=function(mon){if(G.on&&mon)send({a:'pshare',mon},null,true)};
+})();
+
+/* ===== Server-run fights (online, server authority): the channel server plays every fight. This file turns the
+   game's fight into a view of the server's fight: starting a fight, stepping, attacking, skills, buffs and potions
+   are sent to the server, and the board (where you and the monsters stand, their HP, your HP and MP) is drawn from
+   the snapshots it sends back, about three times a second. The browser's own monster movement and attacks are off.
+   ===== */
+(function(){
+ const S={on:false,want:false,last:0,seq:0};window.__fight3=S;
+ const live=()=>window.__auth&&window.__auth.on&&window.__liveOn&&window.__liveOn();
+ const out=o=>{try{return window.__liveOut&&window.__liveOut(o)}catch(e){return false}};
+ /* which skills attack and which are buffs (the server checks again) */
+ const ATK1=['powerstrike','slashblast','arrowblow','doubleshot','dstab','lucky7','ebolt','mclaw','flashfist','somersault','pdshot','three'],BUF1=['ironbody','feet','focus','dash'];
+ const isAtk=k=>ATK1.includes(k)||(typeof SE!=='undefined'&&SE[k]&&['phys','magic'].includes(SE[k].k));
+ const isBuf=k=>BUF1.includes(k)||(typeof SE!=='undefined'&&SE[k]&&!['phys','magic','final','mastery','passive'].includes(SE[k].k));
+ const wrap=(name,fn)=>{const f=window[name];if(typeof f!=='function')return;window[name]=fn(f)};
+ window.__m3on=()=>live();
+ /* starting: ask the server for a fight on this map */
+ wrap('seek',f=>function(){if(!live())return f.apply(this,arguments);const m=MAPS[P.map];if(!m||m.town||enc)return false;
+  S.on=true;S.want=true;out({t:'gstart',spawn:P.spawn||'left'});
+  const k=(m.mons||[])[0];if(!k||!MON[k])return false;enc={k,hp:MON[k].hp,max:MON[k].hp,gap:9,side:1,row:0,eid:-1,mv:1e15,next:1e15,ghost:1};fld=[enc];return true});
+ /* the browser's own monsters stand still while the server runs the fight */
+ wrap('mobsTick',f=>function(){if(S.on&&live())return;return f.apply(this,arguments)});
+ wrap('trickle',f=>function(){if(S.on&&live())return false;return f.apply(this,arguments)});
+ /* actions */
+ wrap('stand',f=>function(dir){if(!(S.on&&live()))return f.apply(this,arguments);out({t:'gmove',dir:dir<0?1:-1});return});
+ wrap('attack',f=>function(){if(!(S.on&&live()))return f.apply(this,arguments);out({t:'gatk',sk:'basic'});return});
+ wrap('qsUse',f=>function(k){if(!(S.on&&live()))return f.apply(this,arguments);k=k||'basic';
+  if(k==='basic'||isAtk(k)){out({t:'gatk',sk:k});return}
+  if(isBuf(k)){const r=f.apply(this,arguments);out({t:'gbuff',k});return r}
+  return f.apply(this,arguments)});
+ wrap('useItem',f=>function(id){if(!(S.on&&live()))return f.apply(this,arguments);const it=ITEMS[id];if(!it||!(it.heal||it.mpheal||it.hpp||it.mpp)||!(P.inv[id]>0))return;out({t:'guse',item:id});P.inv[id]--;if(P.inv[id]<=0)delete P.inv[id];render()});
+ wrap('flee',f=>function(){if(!(S.on&&live()))return f.apply(this,arguments);out({t:'gleave'})});
+ /* ticks: the server plays the fight forward when it hears from us */
+ setInterval(()=>{if(S.on&&live()&&Date.now()-S.last>280)out({t:'gtick'})},300);
+ const name=k=>(MON[k]||{}).n||k;
+ /* snapshots from the server */
+ window.__onGsnap=function(m){if(!P)return;S.last=Date.now();const s=m.snap;
+  if(m.err&&m.err!=='wait'){try{log(m.err,'bad','combat')}catch(e){}}
+  if(!s){S.on=false;if(enc&&enc.ghost){enc=null;fld=[]}try{render()}catch(e){}return}
+  S.on=true;PC=s.pc;P.hp=s.hp;P.mp=s.mp;
+  const old={};for(const o of fld)old[o.eid]=o;
+  fld=s.mobs.map(o=>{const x=old[o.eid]||{eid:o.eid,k:o.k,sm:P.map,si:undefined,mv:1e15,next:1e15};return Object.assign(x,{k:o.k,hp:o.hp,max:o.max,row:o.row,side:o.side,gap:o.gap,ag:o.hot,prov:o.hot})});
+  for(const e of s.ev||[]){const n=e.eid!=null&&old[e.eid]?name(old[e.eid].k):(e.k?name(e.k):'monster');
+   if(e.t==='hurt')log('The '+n+' hits you for '+e.d+'.','bad','combat');else if(e.t==='miss')log('The '+n+' misses.','','combat');
+   else if(e.t==='dmg')log('You hit the '+n+' for '+e.d+'.','hit','combat');else if(e.t==='whiff')log('You miss the '+n+'.','','combat');
+   else if(e.t==='kill')log('You defeated the '+name(e.k)+'.','good','combat');else if(e.t==='appear')log(e.n===1?'A monster appears.':e.n+' monsters appear.','','combat');
+   else if(e.t==='left')log('You leave the fight.','','combat')}
+  for(const k of m.kills||[]){if(k.state&&window.__authApplyState)window.__authApplyState(k.state);for(const d of k.drops||[]){window.addDrop(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}}
+  if((m.kills||[]).length){try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}}
+  enc=fld.length?(typeof closestMob==='function'?closestMob(typeof wReach==='function'?wReach():0):fld[0]):null;
+  if(s.dead){S.on=false;fld=[];enc=null;try{die()}catch(e){}}
+  else if(s.over){S.on=false;fld=[];enc=null;if(!autoSeek){seeking=false}}
+  try{render()}catch(e){}};
 })();
 
 /* ===== v1.1: auto-hunt button, no tips, lines message ===== */
