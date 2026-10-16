@@ -882,7 +882,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  let h=(tab==='play'&&!P.dead)?'':SB;
  h+='<div class="tabs icontabs">'+['play','stats','pack','quests','social','cash','menu'].map(t=>/* v3.5: icon tabs, all the same size; the name shows on hover and to screen readers */'<button class="'+(tab===t?'on':'')+'" data-t="'+t+'" title="'+TABN[t]+'" aria-label="'+TABN[t]+'"><span class="tbi">'+TABI[t]+'</span>'+({stats:tbd(P.ap+P.sp),quests:tbd(qReadyN()),social:tbd(dmUnread())}[t]||'')+'</button>').join('')+'</div>';
  if(tab==='play'&&P.dead){h+=tombHtml()}else if(tab==='play'){
-  if(!(talk&&!enc))h+='<div class="panel">'+townArt(P.map)+'<div class="row"><h2>'+m.i+' '+m.n+'</h2>'+(m.town?'':'<span class="mute">'+(P.cleared[P.map]?'Cleared':freeMove(m)?'Free passage':P.kills+'/'+needFor(m))+'</span>')+'</div><div class="mute">'+m.d+'</div>'+buffLine()+'</div>'
+  if(!(talk&&!enc))h+='<div class="panel">'+townArt(P.map)+'<div class="row"><h2 class="mapname">'+m.i+' '+m.n+'</h2>'+(m.town?'':'<span class="mute">'+(P.cleared[P.map]?'Cleared':freeMove(m)?'Free passage':P.kills+'/'+needFor(m))+'</span>')+'</div><div class="mute">'+m.d+'</div>'+buffLine()+'</div>'
   ;h+=SB;const lp=(!inShop&&!talk)?lootPanel():'';
   if(enc)h+=battlePanel('fight')+lp;
   else if(seeking){h+=battlePanel('seek')+lp}else if(talk){h+=dlgPanel()}else if(m.shop&&inShop){h+=shopPanel()}else{h+=(m.town?quickPanel():battlePanel('idle'))+lp;if(m.npcs){h+=peoplePanel()}}
