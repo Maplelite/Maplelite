@@ -1,4 +1,4 @@
-window.__BUILD='3.5-aa46a041ae';
+window.__BUILD='3.5-8717f69293';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3908,6 +3908,7 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#app button:not(.tabs button):not(.sk):not(.slot),#site button{background:linear-gradient('+b1+','+b2+')!important;border-color:'+bd+'!important;color:'+tx+'!important}'
  +'#app button.main,#app button.on,#app button.sel{background:'+ton+'!important;color:#fff!important}'
  +'#app button.npc{background:'+b2+'!important}'
+ +'#app .abtn b{background:'+s1+'!important;color:#fff!important}#app #ab.abtn.on{background:linear-gradient('+ton+'cc,'+ton+')!important;border-color:'+bd+'!important;color:#fff!important;text-shadow:0 2px 0 '+bd+'!important}#app .abtn.on b{background:'+s2+'!important}#app .abtn .kn{border-color:'+bd+'!important}'
  +'.tabs button{background:'+tb+'!important;border-color:'+bd+'!important}.tabs button.on{background:'+ton+'!important}'
  +'#app .panel>h2:first-child,#app .panel>.row:first-child:has(>h2),#app .mcard>h2:first-child,#app .title{background-color:'+s1+'!important;border-color:'+bd+'!important;color:#fff!important}'
  +'#app .panel>.row:first-child:has(>h2)>h2{color:#fff!important}'
