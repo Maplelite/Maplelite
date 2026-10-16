@@ -3580,7 +3580,7 @@ QD.ferry.goal='Pay Shanks 150 mesos for the ride to Victoria Island (from level 
   const r=_dd(k);if(P.q.ferry){P.mesos-=150;log('You pay Shanks 150 mesos.','','quest');save()}return r}return _dd(k)}}
 
 /* v3.5: class symbol on equipment icons (inventory and shop slots).
-   Warrior sword, Bowman bow, Magician wand, Thief throwing star, Pirate gun, Beginner snail. Common gear: one maple leaf (all classes). */
+   Warrior sword, Bowman bow, Magician wand, Thief throwing star, Pirate gun, Beginner snail. Common gear: a small "ALL" tag. Also on worn gear (Character screen). */
 /* v3.5: classes for every equipment item come from the raw data by name (V83.eqjobs), so multi-class gear such as
    Eloon (Warrior/Thief) is wearable by each of its classes. Before, only the first class was kept. */
 const CLS_PJ={Warrior:'swordsman',Magician:'magician',Bowman:'archer',Thief:'rogue',Pirate:'pirate',Beginner:'beginner'};
@@ -3597,21 +3597,25 @@ const CLS_BADGE=(()=>{const s=(p)=>'<svg viewBox="0 0 16 16" width="100%" height
   Thief:s('<path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5Z" fill="#b8c2cc" '+k+'/><circle cx="8" cy="8" r="1.5" fill="#222"/>'),
   Pirate:s('<path d="M2 5 H14 V8 H8 L7 13 H4 L5 8 H2Z" fill="#555" '+k+'/>'),
   Beginner:s('<circle cx="9" cy="8" r="4.5" fill="#e8a04a" '+k+'/><path d="M9 8 m-2 0 a2 2 0 1 0 2-2" fill="none" '+k+'/><path d="M1 13 H13 Q11 11 6 12 L4 9 M3 9 L4 6 M5 9 L6 6" fill="#a7d36f" '+k+'/>')}})();
-/* Several classes: one symbol each. Common (or all five classes): one "all classes" maple leaf. */
-CLS_BADGE.All='<svg viewBox="0 0 16 16" width="100%" height="100%"><path d="M8 1 L9.5 4.5 L12 3.5 L11.3 7 L15 7.5 L12.5 10 L13.5 12 L9 11.5 L8.6 15 H7.4 L7 11.5 L2.5 12 L3.5 10 L1 7.5 L4.7 7 L4 3.5 L6.5 4.5Z" fill="#e8743b" stroke="#222" stroke-width="1"/></svg>';
+/* Several classes: one symbol each. Common (or all five classes): a small "ALL" tag. */
+CLS_BADGE.All='<b class="clsall">ALL</b>';
 const PJ_CLS={swordsman:'Warrior',warrior:'Warrior',archer:'Bowman',bowman:'Bowman',magician:'Magician',mage:'Magician',rogue:'Thief',thief:'Thief',pirate:'Pirate',beginner:'Beginner'};
-function itemClasses(b){if(!b||(!b.jb&&!b.pj))return [];
+function itemClasses(b){if(!b)return [];
+ if(!b.jb&&!b.pj){if(!(b.w||b.s))return [];   // hand-made gear with no class in the data: by weapon type, otherwise every class
+  if(b.w){if(b.rng==='claw'||b.ty==='claw')return ['Thief'];if(b.rng==='bow'||b.rng==='xbow'||b.ty==='bow'||b.ty==='crossbow')return ['Bowman'];
+   if(b.mw||b.ty==='wand'||b.ty==='staff')return ['Magician'];if(b.rng==='gun'||b.ty==='gun'||b.ty==='knuckle')return ['Pirate']}
+  return ['All']}
  let L=(b.pj&&b.pj.length?b.pj.map(j=>PJ_CLS[j]||j):String(b.jb).split(/[,\/&]| and /)).map(x=>String(x).trim()).filter(Boolean);
  L=[...new Set(L.map(x=>PJ_CLS[x.toLowerCase()]||x))];
  if(L.includes('Common')||['Warrior','Bowman','Magician','Thief','Pirate'].every(c=>L.includes(c)))return ['All'];
  return L.filter(c=>CLS_BADGE[c])}
-function clsBadge(id){try{const b=ITEMS[(typeof baseOf==='function'&&P)?baseOf(id):id]||ITEMS[id];if(!b||!(b.w||b.ty||b.sl||b.slot||b.eq||b.jb))return '';
+function clsBadge(id){try{const b=ITEMS[(typeof baseOf==='function'&&P)?baseOf(id):id]||ITEMS[id];if(!b||!(b.w||b.s||b.ty||b.jb))return '';
  const L=itemClasses(b);if(!L.length)return '';const t=L[0]==='All'?'All classes':L.join(', ');
  return '<span class="clsb" title="'+t+'">'+L.map(c=>'<i>'+CLS_BADGE[c]+'</i>').join('')+'</span>'}catch(e){return ''}}
-function decorateBadges(){try{document.querySelectorAll('.slot[data-i],.slot[data-sh]').forEach(el=>{if(el.querySelector('.clsb'))return;
- const h=clsBadge(el.dataset.i||el.dataset.sh);if(h)el.insertAdjacentHTML('beforeend',h)})}catch(e){}}
+function decorateBadges(){try{document.querySelectorAll('.slot[data-i],.slot[data-sh],.eqs[data-eqs]').forEach(el=>{if(el.querySelector('.clsb'))return;
+ const id=el.dataset.eqs?(typeof eqOf==='function'?eqOf(el.dataset.eqs):null):(el.dataset.i||el.dataset.sh);const h=id?clsBadge(id):'';if(h)el.insertAdjacentHTML('beforeend',h)})}catch(e){}}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);decorateBadges();return r}}
-(()=>{const st=document.createElement('style');st.textContent='.clsb{position:absolute;left:2px;top:2px;right:2px;display:flex;gap:1px;flex-wrap:wrap;pointer-events:none;line-height:0;filter:drop-shadow(0 0 1px #fff)}.clsb i{display:block;width:30%;max-width:20px;aspect-ratio:1}';document.head.appendChild(st)})();
+(()=>{const st=document.createElement('style');st.textContent='.eqs{position:relative}.clsb{position:absolute;left:2px;top:2px;right:2px;display:flex;gap:1px;flex-wrap:wrap;pointer-events:none;line-height:0;filter:drop-shadow(0 0 1px #fff)}.clsb i{display:block;width:30%;max-width:20px;aspect-ratio:1}.clsall{display:flex;align-items:center;justify-content:center;width:100%;height:100%;box-sizing:border-box;font:bold 8px/1 sans-serif;letter-spacing:-.3px;color:#fff;background:#4a6fa5;border:1px solid #223;border-radius:3px}';document.head.appendChild(st)})();
 /* v3.5: the level 10 starter bow and claw (War Bow, Garnier) can also be equipped by beginners. */
 const BEG_OK=['wp1452002','garnier'];
 for(const k of BEG_OK){const it=ITEMS[k];if(it){it.pj=[...new Set([...(it.pj||[]),'beginner'])];it.beg=1;if(!/Beginner/.test(it.jb||''))it.jb=(it.jb?it.jb+', ':'')+'Beginner'}}
@@ -3623,6 +3627,18 @@ if(typeof DESC!=='undefined'){DESC.garnier='A claw for throwing Throwing-Stars. 
 /* v3.5: hand-made weapons set to their v62 values (level, attack, magic attack, shop price). */
 const V62_WFIX={"broad_sword": {"req": 25, "watk": 45, "buy": 22000}, "iron_axe": {"req": 20, "watk": 42, "buy": 10000}, "iron_mace": {"req": 20, "watk": 39, "buy": 10000}, "war_hammer": {"req": 30, "watk": 49, "buy": 40000}, "fruit_knife": {"req": 8, "watk": 22, "buy": 1000}, "razor": {"req": 5, "watk": 20, "buy": 500}, "battle_bow": {"req": 25, "watk": 40, "buy": 20000}, "crossbow": {"req": 12, "watk": 29, "buy": 4000}, "gladius": {"req": 30, "watk": 47, "buy": 40000}, "steel_titans": {"req": 15, "watk": 12, "buy": 20000}, "wooden_wand": {"req": 8, "watk": 15, "matk": 23, "buy": 2000}, "hardwood_wand": {"req": 13, "watk": 18, "matk": 28, "buy": 5000}, "wooden_staff": {"req": 10, "watk": 20, "matk": 25, "buy": 3000}, "w_astaroth_one_handed_sword": {"req": 25, "watk": 42}, "w_astaroth_two_handed_sword": {"req": 25, "watk": 45}, "w_astaroth_axe": {"req": 25, "watk": 46}, "w_astaroth_crossbow": {"req": 25, "watk": 46}, "w_astaroth_claw": {"req": 25, "watk": 18}, "w_astaroth_short_sword": {"req": 25, "watk": 40}, "w_astaroth_spear": {"req": 25, "watk": 46}, "w_astaroth_knuckles": {"req": 25, "watk": 32}, "w_astaroth_gun": {"req": 25, "watk": 28}};
 for(const k in V62_WFIX)if(ITEMS[k])Object.assign(ITEMS[k],V62_WFIX[k]);
+
+/* v3.5: the Free Market, as in v62 a place you walk into from town maps (Free Market Entrance), with player shops.
+   You come back out to the town you entered from. No monsters. The shops themselves need the server (online version):
+   they are drawn by the live-world client. */
+const FM_TOWNS=['henesys','ellinia','perion','kerning_city','lith_harbor'];
+MAPS.free_market={n:'Free Market Entrance',i:'🏪',d:'Players set up shops here to sell their items. Walk around and see what is for sale.',
+ town:1,mons:[],npcs:[],ex:[['henesys','Henesys']],ret:'henesys',art:['#f3c98b','#d99a4e']};
+for(const t of FM_TOWNS){const m=MAPS[t];if(m&&m.ex&&!m.ex.some(x=>x[0]==='free_market'))m.ex.push(['free_market','Free Market Entrance'])}
+function fmBack(){const r=(P&&MAPS[P.fmRet])?P.fmRet:'henesys';const m=MAPS.free_market;m.ex=[[r,MAPS[r].n]];m.ret=r}
+{const _go=go;go=function(to){if(P&&to==='free_market'&&P.map!=='free_market')P.fmRet=P.map;if(P&&P.map==='free_market'&&to==='free_market')return;
+  fmBack();return _go.apply(this,arguments)}}
+{const _r=render;render=function(){try{if(P)fmBack()}catch(e){}return _r.apply(this,arguments)}}
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
@@ -3763,10 +3779,13 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
      map, and the first to arrive gets priority (a 1.5x share).
    - Trading: Trade with a player on your map (never in event maps): both offer items and mesos, the trade happens
      when both confirm (changing an offer clears both confirmations). Equipment keeps its own stats.
+   - Free Market (the Free Market Entrance map, reached from the main towns): open a shop with up to 9 items and
+     prices; the items are held out of your bag while it is open and come back when it closes. Other players on the
+     map browse the shops and buy part or all of a stack; the server checks the stock.
    - Reconnects by itself (after 3 s, then slower) if the connection drops. ===== */
 (function(){
  const API=(window.MAPLE_API||'').replace(/\/$/,'');
- const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map',trade:null,treq:null};
+ const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map',trade:null,treq:null,shops:[],myShop:null,draft:[]};
  window.liveState=L;
  const wsUrl=()=>{const base=API||location.origin;let t='';try{t=localStorage.getItem('ml_token')||''}catch(e){}
   return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')};
@@ -3776,7 +3795,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
-   if(m.t==='welcome'){L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
+   if(m.t==='welcome'){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold();L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
    else if(m.t==='here')L.here=m.players||[];
    else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
@@ -3789,6 +3808,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='party'){L.party=m.id;L.members=m.members||[];if(m.note)L.err=m.note;if(!m.id)L.chatTo='map'}
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
+   else if(m.t==='shops')L.shops=m.shops||[];
+   else if(m.t==='myshop'){L.myShop=m.shop;if(m.note)L.err=m.note;if(P){if(m.shop)P.shopHold=m.shop.items.map(o=>Object.assign({},o));else returnHold();save()}}
+   else if(m.t==='ssold'){if(P){P.mesos+=m.mesos|0;log(m.buyer+' bought '+m.name+(m.n>1?' x'+m.n:'')+' from your shop for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save()}}
+   else if(m.t==='sgot'){if(P){P.mesos=Math.max(0,P.mesos-(m.mesos|0));recvItem(m);log('You bought '+m.name+(m.n>1?' x'+m.n:'')+' from '+m.from+' for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save();render()}}
    else if(m.t==='err'){L.err=m.error}
    paint()};
   ws.onclose=()=>{if(L.ws===ws){L.ws=null;L.state='off';L.here=[];paint();retry()}}}
@@ -3796,12 +3819,37 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=L.chat.filter(m=>m.party)}}
  const out=o=>{if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
  window.liveSay=function(text,party){text=String(text||'').trim();if(!text)return false;return out({t:(party||L.chatTo==='party')&&L.party?'pchat':'chat',text})};
+/* receiving an item (trade or shop): equipment keeps its own stats */
+ function recvItem(o){if(o.inst&&o.inst.b&&ITEMS[o.inst.b]){P.inst=P.inst||{};const id=o.inst.b+'#'+(P.ic=(P.ic|0)+1);P.inst[id]={b:o.inst.b,sl:o.inst.sl|0,ok:o.inst.ok|0,lost:o.inst.lost|0,st:o.inst.st||{}};instBuild(id);P.inv[id]=1}
+  else if(ITEMS[o.k])P.inv[o.k]=(P.inv[o.k]||0)+(o.n|0)}
+ function takeItem(k,n){if(!(P.inv[k]>0))return;P.inv[k]-=n;if(P.inv[k]<=0)delete P.inv[k];if(P.inst&&P.inst[k]&&!(P.inv[k]>0)&&!Object.values(P.eq||{}).includes(k)&&P.weapon!==k)delete P.inst[k]}
+ /* Free Market: items in your open shop are held out of your bag; whatever is left comes back when it closes */
+ function returnHold(){if(!P||!P.shopHold)return;const h=P.shopHold;P.shopHold=null;for(const o of h)recvItem(o);if(h.length)log('Your shop closed. Unsold items are back in your bag.','','items');save();if(typeof render==='function')render()}
+ window.liveShop={open:title=>{if(!L.draft.length){L.err='Add at least one item.';return paint()}
+   const items=L.draft.filter(o=>P.inv[o.k]>=o.n).map(o=>({k:o.k,n:o.n,price:o.price,name:o.name,inst:P.inst&&P.inst[o.k]?Object.assign({},P.inst[o.k]):null}));
+   if(!items.length){L.err='Those items are no longer in your bag.';return paint()}
+   if(!out({t:'sopen',title,items})){L.err='Not connected.';return paint()}
+   for(const o of items)takeItem(o.k,o.n);P.shopHold=items;L.draft=[];save();render()},
+  close:()=>out({t:'sclose'}),
+  buy:(owner,i,k,n)=>{const sh=L.shops.find(x=>x.id===owner),o=sh&&sh.items[i];if(!o)return;n=Math.max(1,Math.min(o.n,n|0||1));
+   if(P.mesos<o.price*n){L.err='You do not have enough mesos.';return paint()}out({t:'sbuy',owner,i,k,n,have:P.mesos})}};
+ function addDraft(k,n,price){if(!k||!(P.inv[k]>0))return;n=Math.max(1,Math.min(P.inv[k],n|0||1));price=Math.max(1,Math.floor(+price||0));if(!(price>0)){L.err='Set a price.';return paint()}
+  L.draft=L.draft.filter(o=>o.k!==k);if(L.draft.length>=9){L.err='A shop holds 9 items.';return paint()}L.draft.push({k,n,price,name:ITEMS[k].n});L.err='';paint()}
+ function shopHtml(){if(!P||P.map!=='free_market')return '';const me=L.me&&L.me.id;let h='<div class="panel" style="margin:8px 0;padding:8px"><b>🏪 Free Market shops</b>';
+  const others=L.shops.filter(x=>x.id!==me);
+  h+=others.length?others.map(sh=>'<div style="margin-top:6px"><div><b>'+esc(sh.title)+'</b> <span class="mute">('+esc(sh.owner)+')</span></div>'+sh.items.map((o,i)=>'<div class="row" style="align-items:center;gap:6px"><span style="flex:1">'+esc(o.name)+' x'+o.n+' · <b>'+(o.price|0).toLocaleString()+'</b> each</span>'+(o.n>1?'<input data-sn="'+esc(sh.id)+':'+i+'" type="number" min="1" max="'+o.n+'" value="1" style="width:56px">':'')+'<button data-ls="buy:'+esc(sh.id)+':'+i+':'+esc(o.k)+'">Buy</button></div>').join('')+'</div>').join(''):'<div class="mute">No shops open in this channel right now.</div>';
+  h+='<div style="margin-top:10px;border-top:1px solid var(--line);padding-top:6px"><b>Your shop</b>';
+  if(L.myShop){h+='<div class="mute">'+esc(L.myShop.title)+' — open while you stay on this map.</div>'+L.myShop.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+' · '+(o.price|0).toLocaleString()+' each</div>').join('')+'<button data-ls="close" style="margin-top:6px">Close shop</button>'}
+  else{const keys=Object.keys(P.inv).filter(k=>P.inv[k]>0&&ITEMS[k]&&!(typeof CASH!=='undefined'&&CASH.some(c=>c[0]===k))&&!Object.values(P.eq||{}).includes(k)&&P.weapon!==k);
+   h+=(L.draft.length?L.draft.map(o=>'<div>'+esc(o.name)+' x'+o.n+' · '+o.price.toLocaleString()+' each <button data-ls="rm:'+esc(o.k)+'" style="min-height:0;padding:0 6px">✕</button></div>').join(''):'<div class="mute">Pick items and prices, then open your shop.</div>')
+    +'<div style="display:flex;gap:6px;margin-top:6px"><select id="ls-item" style="flex:2;min-width:0">'+keys.map(k=>'<option value="'+esc(k)+'">'+esc(ITEMS[k].n)+' ('+P.inv[k]+')</option>').join('')+'</select><input id="ls-n" type="number" min="1" value="1" style="width:52px"><input id="ls-p" type="number" min="1" placeholder="Price" style="width:80px"><button data-ls="add">Add</button></div>'
+    +'<div style="display:flex;gap:6px;margin-top:6px"><input id="ls-title" maxlength="30" placeholder="Shop name" style="flex:1;min-width:0"><button class="main" data-ls="open">Open shop</button></div>'}
+  return h+'</div></div>'}
 /* trading */
  function applyTrade(m){if(!P)return;const g=m.give||{},r=m.get||{};
   P.mesos=Math.max(0,P.mesos-(g.mesos|0))+(r.mesos|0);
-  for(const o of g.items||[]){if(P.inv[o.k]>0){P.inv[o.k]-=o.n;if(P.inv[o.k]<=0)delete P.inv[o.k];if(P.inst&&P.inst[o.k]&&!(P.inv[o.k]>0)&&!Object.values(P.eq||{}).includes(o.k)&&P.weapon!==o.k)delete P.inst[o.k]}}
-  for(const o of r.items||[]){if(o.inst&&o.inst.b&&ITEMS[o.inst.b]){P.inst=P.inst||{};const id=o.inst.b+'#'+(P.ic=(P.ic|0)+1);P.inst[id]={b:o.inst.b,sl:o.inst.sl|0,ok:o.inst.ok|0,lost:o.inst.lost|0,st:o.inst.st||{}};instBuild(id);P.inv[id]=1}
-   else if(ITEMS[o.k])P.inv[o.k]=(P.inv[o.k]||0)+o.n}
+  for(const o of g.items||[])takeItem(o.k,o.n);
+  for(const o of r.items||[])recvItem(o);
   log('Trade with '+m.with+' complete.','good','items');save();render()}
  const tradeable=()=>Object.keys(P.inv).filter(k=>P.inv[k]>0&&ITEMS[k]&&!(typeof CASH!=='undefined'&&CASH.some(c=>c[0]===k)));
  window.liveTrade={ask:id=>{if((MAPS[P.map]||{}).noTrade){L.err='No trading in event maps.';return paint()}out({t:'treq',to:id})},accept:()=>{L.treq=null;out({t:'tacc'});paint()},decline:()=>{L.treq=null;out({t:'tno'});paint()},
@@ -3830,6 +3878,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
      +'<div style="display:flex;gap:6px;margin-top:6px"><select id="lt-item" style="flex:2;min-width:0">'+tradeable().map(k=>'<option value="'+esc(k)+'">'+esc(ITEMS[k].n)+' ('+P.inv[k]+')</option>').join('')+'</select><input id="lt-n" type="number" min="1" value="1" style="flex:1;min-width:0"><button data-lt="add">Add</button></div>'
      +'<div style="display:flex;gap:6px;margin-top:6px"><input id="lt-m" type="number" min="0" placeholder="Mesos" value="'+(L.myOffer.mesos||'')+'" style="flex:1;min-width:0"><button data-lt="mesos">Set mesos</button></div>'
      +'<div style="display:flex;gap:6px;margin-top:6px"><button class="main" data-lt="ok" style="flex:1">Confirm</button><button data-lt="cancel" style="flex:1">Cancel</button></div><div class="mute" style="font-size:12px">Changing an offer clears both confirmations. The trade happens when you both confirm.</div></div>':'')
+   +shopHtml()
    +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
    +(others.length?others.map(x=>'<div class="mrow"><span class="av">🧑</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
    +'<div class="cbox" id="live-chat" style="max-height:140px;overflow:auto;margin-top:8px">'+(L.chat.length?L.chat.map(m=>'<div'+(m.party?' style="color:#2e7d5b"':'')+'><b>'+(m.party?'[Party] ':'')+esc(m.from)+':</b> '+esc(m.text)+'</div>').join(''):'<div class="mute">Map chat: say hi to players on this map.</div>')+'</div>'
@@ -3845,6 +3894,11 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    if(a3==='ask'){L.myOffer={items:[],mesos:0};liveTrade.ask(arg3)}else if(a3==='accept'){L.myOffer={items:[],mesos:0};liveTrade.accept()}else if(a3==='add'){offerItem((document.getElementById('lt-item')||{}).value,+(document.getElementById('lt-n')||{}).value)}
    else if(a3==='rm'){L.myOffer.items=L.myOffer.items.filter(o=>o.k!==arg3);liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}else if(a3==='mesos'){L.myOffer.mesos=Math.max(0,Math.min(P.mesos,Math.floor(+(document.getElementById('lt-m')||{}).value||0)));liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}
    else liveTrade[a3]();return}
+  const ls=t.closest&&t.closest('[data-ls]');if(ls){const a=ls.dataset.ls.split(':');
+   if(a[0]==='buy'){const inp=document.querySelector('[data-sn="'+a[1]+':'+a[2]+'"]');liveShop.buy(a[1],+a[2],a.slice(3).join(':'),inp?+inp.value:1)}
+   else if(a[0]==='add')addDraft((document.getElementById('ls-item')||{}).value,+(document.getElementById('ls-n')||{}).value,(document.getElementById('ls-p')||{}).value);
+   else if(a[0]==='rm'){L.draft=L.draft.filter(o=>o.k!==a.slice(1).join(':'));paint()}
+   else if(a[0]==='open')liveShop.open((document.getElementById('ls-title')||{}).value||'');else if(a[0]==='close')liveShop.close();return}
   const lp=t.closest&&t.closest('[data-lp]');if(lp){const [a2,arg]=lp.dataset.lp.split(':');if(a2==='invite')liveParty.invite(arg);else if(a2==='kick')liveParty.kick(arg);else if(a2==='to'){L.chatTo=L.chatTo==='party'?'map':'party';paint()}else liveParty[a2]();return}
   if(t.id==='live-say'){const i=document.getElementById('live-in');if(i&&liveSay(i.value)){i.value=''}}});
  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='live-in'){if(liveSay(e.target.value))e.target.value=''}});
