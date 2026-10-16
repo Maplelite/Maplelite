@@ -447,7 +447,7 @@ Object.assign(NPCS,{
  nella:{n:'Nella',i:'🧑',role:'Potion seller',shop:1,hi:'Stock up before you head out to the Outskirts.'}});
 /* Quests */
 Object.assign(QD,{
- ferry:{n:'Passage to Victoria Island',giver:'vasily',lvl:10,type:'talk',rw:{exp:0},goal:'Get a ferry ticket from Vasily.'},
+ ferry:{n:'Passage to Victoria Island',giver:'vasily',lvl:7,type:'talk',rw:{exp:0},goal:'Get a ferry ticket from Vasily.'},
  pigs:{n:'Pigs in the Harbor',giver:'goldstein',lvl:10,type:'kill',mon:'pig',cnt:15,rw:{exp:260,mesos:400},goal:'Defeat 15 Pigs.'},
  target:{n:'Athena\'s Target Practice',giver:'athena',lvl:10,type:'collect',col:[['pig_head',15]],rw:{exp:420,items:{orange_potion:5}},goal:'Collect 15 Pig Heads.'},
  soup:{n:'Grendel\'s Mushroom Soup',giver:'grendel',lvl:11,type:'collect',col:[['green_mushroom_cap',10],['stirge_wing',5]],rw:{exp:650,mesos:600},goal:'Collect 10 Green Mushroom Caps and 5 Stirge Wings.'},
@@ -464,7 +464,7 @@ function syncView(){const r=reg(P.map);if(_lr!==r){_lr=r;if(mapView==='maple'||m
 function ferryStubs(pos,L,B){let ln='',nd='';const ic='\u26F4\uFE0F';
  if((mapView==='maple'||(mapView==='near'&&!pos.lith_harbor))&&pos.southperry){const sy=pos.southperry[1],f=[pos.southperry[0],sy-19>=4?sy-19:sy+19],here=P.map==='southperry',ok=here&&P.q.ferry==='done';
   ln+=L(pos.southperry,f,ok);
-  nd+=ok?B('nd ok','vic',f[0],f[1],ic,'Victoria','Board the ferry to Lith Harbor on Victoria Island.',' data-g="lith_harbor"'):B('nd far','vic',f[0],f[1],ic,'Victoria',here?'Talk to Vasily for passage (level 10). Tap to look at the Victoria Island map.':'The ferry to Victoria Island. Tap to look at its map.',' data-z="victoria"')}
+  nd+=ok?B('nd ok','vic',f[0],f[1],ic,'Victoria','Board the ferry to Lith Harbor on Victoria Island.',' data-g="lith_harbor"'):B('nd far','vic',f[0],f[1],ic,'Victoria',here?'Talk to Vasily for passage (level 7). Tap to look at the Victoria Island map.':'The ferry to Victoria Island. Tap to look at its map.',' data-z="victoria"')}
  if(mapView==='victoria'&&pos.lith_harbor){const a=pos.lith_harbor,f=[a[0],a[1]-19],here=P.map==='lith_harbor';
   ln+=L(a,f,here);
   nd+=here?B('nd ok','mpl',f[0],f[1],ic,'Maple Isl.','Take the ferry back to Southperry on Maple Island.',' data-g="southperry"'):B('nd far','mpl',f[0],f[1],ic,'Maple Isl.','The ferry to Maple Island. Tap to look at its map.',' data-z="maple"')}
@@ -569,7 +569,7 @@ function townArt(id){
 function introHtml(){return '<div class="intro"><div class="mcard"><div class="mh"><span class="mi">\u{1F3DD}\uFE0F</span><div><b>Welcome to Maple Island</b><div class="mute">Your journey begins</div></div></div>'+
  '<p>Like every would-be adventurer in the Maple World, you have come to <b>Maple Island</b>, a small island off the great continent of Victoria Island, to learn the ropes before setting out into the wider world.</p>'+
  '<p>You are in <b>Mushroom Town</b>, a quiet village of mushroom-roofed houses. Heena, Sera and Roger are happy to help newcomers.</p>'+
- '<p><b>Your first steps</b></p><ol style="margin:0 0 8px 18px;padding:0"><li>Talk to <b>Roger</b> to learn about items.</li><li>Talk to <b>Todd</b> to learn how to fight.</li><li>Hunt Snails, take quests, and reach <b>level 10</b>. Then the ferry from Southperry takes you to Victoria Island.</li></ol>'+
+ '<p><b>Your first steps</b></p><ol style="margin:0 0 8px 18px;padding:0"><li>Talk to <b>Roger</b> to learn about items.</li><li>Talk to <b>Todd</b> to learn how to fight.</li><li>Hunt Snails, take quests, and reach <b>level 7</b> (Magicians advance at 8, everyone else at 10). Then the ferry from Southperry takes you to Victoria Island.</li></ol>'+
  '<div class="ex" style="margin-top:10px"><button class="main" id="introgo" style="flex:1">Begin my journey</button></div></div></div>'}
 const SKL={three:['🐌','Three Snails'],rec:['💖','Recovery'],feet:['👟','Nimble Feet']};
 /* Quickslots: 8 skill slots (pages A/B). 'basic' is the normal attack, treated like a skill so it can be moved or swapped. */
@@ -710,7 +710,7 @@ Object.assign(NPCS,{sen:{n:'Sen',i:'\uD83D\uDC66',role:'Nina\'s brother',hi:'Ahh
 Object.assign(NPCS.mai,{role:'Beginner trainer',hi:'You look like someone who needs my guidance. What you need more than anything right now is FOCUS.'});
 Object.assign(NPCS.nina,{role:'Villager',hi:'What would be good for dinner?'});
 Object.assign(NPCS.vasily,{n:'Shanks',role:'Ferry captain'});
-MAPS.southperry.hint='Shanks sells passage to Victoria Island once you reach level 10.';
+MAPS.southperry.hint='Shanks sells passage to Victoria Island once you reach level 7 (Magicians advance at 8, everyone else at 10).';
 MAPS.lith_harbor.npcs=MAPS.lith_harbor.npcs.map(x=>x==='mai'?'mai_store':x);
 /* Maps: A Split Road returns as a town between Snails III and the Dangerous Forest; the east gate holds the Tutorial Jr. Sentinels. */
 SM('a_split_road',{n:'A Split Road',i:'\uD83E\uDEA7',d:'The road forks here. Maria and Mai wait by the signpost. West leads back to the Snail fields, east into the forest and on to Amherst.',hint:'Maria has a letter for Lucas in Amherst. Sam sends beginners to Mai for training.',town:1,need:0,mons:[],npcs:['maria','mai'],ret:TN,ex:[['snail_hunting_ground_3','West to Snail Hunting Ground III'],['inside_dangerous_forest','East to Inside the Dangerous Forest']]});
@@ -3275,7 +3275,9 @@ stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc
   if(!SCR[key])addS(key,it.n.replace(/ 100%$/,'')+' 100%',100,tg[0],{[st]:+m[2]});ITEMS['sc_'+key].buy=it.buy;ITEMS['sc_'+key].sell=it.sell;swap[id]='sc_'+key}
  for(const k in NPCS){const N=NPCS[k];if(!N.shopList)continue;N.shopList=N.shopList.map(id=>{if(!swap[id])return id;if(N.shopPrice){N.shopPrice[swap[id]]=N.shopPrice[id];delete N.shopPrice[id]}return swap[id]})}
  for(const k in DROPS)if(DROPS[k]&&DROPS[k].i)DROPS[k].i.forEach(e=>{if(swap[e[0]])e[0]=swap[e[0]]});
- for(const id in swap)delete ITEMS[id];
+ /* quest rewards too; the old id stays as a pointer to the game scroll so nothing that still names it breaks */
+ for(const q in QD){const w=QD[q].rw;if(!w)continue;if(w.items)for(const id in w.items)if(swap[id]){w.items[swap[id]]=w.items[id];delete w.items[id]}if(w.rand)w.rand=w.rand.map(id=>swap[id]||id)}
+ for(const id in swap)ITEMS[id]=ITEMS[swap[id]];
  /* timed potion bonuses: P.ib = {itemId: until}; the bonus is read from the item */
  const ib=k=>{if(!P||!P.ib)return 0;const now=Date.now();let a=0;for(const id in P.ib){if(P.ib[id]<=now){delete P.ib[id];continue}const b=ITEMS[id]&&ITEMS[id].buff;if(b&&b[k])a+=b[k]}return a};
  window.itemBuff=ib;
