@@ -820,6 +820,7 @@ AF.forEach(f=>f[2].forEach(sd=>{const k=sd[0];[10,60].forEach((r,j)=>{const v=VA
 addS('chaos','Chaos Scroll 60%',60,'any',{},'chaos');addS('goodness','Chaos Scroll of Goodness 50%',50,'any',{},'goodness');addS('white','White Scroll',100,'none',{},'white');
 const baseSl=b=>(typeof TUC!=='undefined'&&TUC[b]!==undefined)?TUC[b]:ITEMS[b].w?7:({Hat:7,Top:7,Bottom:7,Gloves:5,Shoes:5,Cape:5,Shield:5,Earring:3})[ITEMS[b].s]||0;
 const baseOf=id=>(P.inst&&P.inst[id])?P.inst[id].b:id;
+const TABN={play:'Play',stats:'Character',pack:'Inventory',quests:'Quests',social:'Social',cash:'Cash',menu:'Menu'},TABI={play:'🗺️',stats:'🧍',pack:'🎒',quests:'📜',social:'💬',cash:'💎',menu:'☰'};
 function tyOf(id){const b=baseOf(id),it=ITEMS[b];if(it.w){if(b==='great_axe')return'th_axe';if(/axe/i.test(b))return'oh_axe';if(/club|mace|hammer/i.test(b))return'oh_bw';if(it.mw)return it.mw;if(it.dag)return'dagger';if(it.rng==='claw')return'claw';if(/crossbow/i.test(b))return'crossbow';if(/bow/i.test(b))return'bow';return'oh_sword'}return({Hat:'helmet',Top:'top',Bottom:'bottom',Gloves:'gloves',Shoes:'shoes',Cape:'cape',Shield:'shield',Earring:'earring'})[it.s]||null}
 const slotsOf=id=>P.inst&&P.inst[id]?P.inst[id].sl:baseSl(id);
 function instBuild(id){const d=P.inst[id],b=ITEMS[d.b],st=d.st,it=Object.assign({},b),x={};
@@ -879,7 +880,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  const gp=(v,m)=>Math.max(0,Math.min(100,v/m*100)),gg=(l,c,v,m)=>'<div class="g"><b>'+l+'</b><div class="gb"><i style="width:'+gp(v,m)+'%;background:'+c+'"></i><em>['+Math.max(0,v)+'/'+m+']</em></div></div>';
  const SB='<div class="sbar"><div class="lvb"><span class="lv">LV. '+P.lvl+(MODE()?' '+MODES[MODE()][1]:'')+'</span><b id="pn" title="'+MODES[MODE()][0]+'"></b></div><div class="gs">'+gg('HP','linear-gradient(#ff7a6a,#c8281e)',P.hp,P.maxHp)+gg('MP','linear-gradient(#6ab8ff,#1f64cc)',P.mp,P.maxMp)+'</div></div>';
  let h=(tab==='play'&&!P.dead)?'':SB;
- h+='<div class="tabs">'+['play','stats','pack','quests','social','cash','menu'].map(t=>'<button class="'+(tab===t?'on':'')+'" data-t="'+t+'">'+{play:'Play',stats:'Character'+tbd(P.ap+P.sp),pack:'Inventory',quests:'Quests'+tbd(qReadyN()),social:'Social'+tbd(dmUnread()),cash:'Cash',menu:'Menu'}[t]+'</button>').join('')+'</div>';
+ h+='<div class="tabs icontabs">'+['play','stats','pack','quests','social','cash','menu'].map(t=>/* v3.5: icon tabs, all the same size; the name shows on hover and to screen readers */'<button class="'+(tab===t?'on':'')+'" data-t="'+t+'" title="'+TABN[t]+'" aria-label="'+TABN[t]+'"><span class="tbi">'+TABI[t]+'</span>'+({stats:tbd(P.ap+P.sp),quests:tbd(qReadyN()),social:tbd(dmUnread())}[t]||'')+'</button>').join('')+'</div>';
  if(tab==='play'&&P.dead){h+=tombHtml()}else if(tab==='play'){
   if(!(talk&&!enc))h+='<div class="panel">'+townArt(P.map)+'<div class="row"><h2>'+m.i+' '+m.n+'</h2>'+(m.town?'':'<span class="mute">'+(P.cleared[P.map]?'Cleared':freeMove(m)?'Free passage':P.kills+'/'+needFor(m))+'</span>')+'</div><div class="mute">'+m.d+'</div>'+buffLine()+'</div>'
   ;h+=SB;const lp=(!inShop&&!talk)?lootPanel():'';
