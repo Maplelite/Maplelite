@@ -1,4 +1,4 @@
-window.__BUILD='3.5-c0ff45929a';
+window.__BUILD='3.5-e57865dd8f';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -1296,14 +1296,13 @@ function tucReconcile(){P.inst=P.inst||{};for(const id in P.inst){const d=P.inst
 {const _r3=render;render=function(){if(P&&scr==='game'&&P.tucv!==1){try{tucReconcile()}catch(e){}}return _r3.apply(this,arguments)}}
 
 /* ===== Playtest grant: 100 of every scroll, every inventory tab at MapleStory's max of 96 slots ===== */
-const PLAYTEST_GRANT=true;/* set to false to stop new characters getting this on first load */
+const PLAYTEST_GRANT=false;/* v3.5: the playtest scroll grant is over (new characters no longer get it) */
 const INV_MAX=96;
 const invCap=t=>Math.min(INV_MAX,(P.cap&&P.cap[t])||24);
 function playtestGrant(){for(const k in SCR){const id='sc_'+k;if(ITEMS[id])P.inv[id]=(P.inv[id]||0)+100}
  P.cap={equip:INV_MAX,use:INV_MAX,etc:INV_MAX,cash:INV_MAX};P.ptg=1;log('Playtest grant: +100 of every scroll, and all inventory tabs now have '+INV_MAX+' slots.','good','items');save()}
 function playtestTopUp(){for(const k in SCR){const id='sc_'+k;if(ITEMS[id]&&!(P.inv[id]>=100))P.inv[id]=100}P.cap={equip:INV_MAX,use:INV_MAX,etc:INV_MAX,cash:INV_MAX};save();render()}
 {const _r4=render;render=function(){if(P&&scr==='game'&&!P.ptg&&PLAYTEST_GRANT){try{playtestGrant()}catch(e){}}return _r4.apply(this,arguments)}}
-{const _ph2=packHtml;packHtml=function(){return _ph2()+'<div class="ex" style="margin-top:8px"><button onclick="playtestTopUp()">🧪 Playtest: top up every scroll to 100</button></div>'}}
 
 /* ===== Use several scrolls at once: pick 1..max, where max = upgrade slots left (or failed slots for a Clean Slate) and scrolls owned ===== */
 function enchMax(){const e=ench,id=e.tgt.id,d=SCR[e.sk],cap=d.kind==='clean'?(((P.inst||{})[id]||{}).lost|0):slotsOf(id);return Math.max(0,Math.min(cap,P.inv['sc_'+e.sk]|0))}
