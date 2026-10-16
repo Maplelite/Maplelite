@@ -13,7 +13,7 @@ const LS=(()=>{const real=window.localStorage;let kv=window.__KV||{user:{},share
  const put=(scope,k)=>{const v=pending[scope+k];delete pending[scope+k];
   const body=JSON.stringify({value:v});/* keepalive (survives closing the page) only works up to 64 KB: a big save sent with it failed as "Cannot reach the server" */
   return fetch('/api/kv/'+scope+'/'+encodeURIComponent(k),{method:'PUT',credentials:'same-origin',keepalive:body.length<60000,headers:{'Content-Type':'application/json'},body})
-   .then(async r=>{if(r.status===409){const j=await r.json();if(scope==='user'){if(j.kept==null)delete kv.user[k];else kv.user[k]=j.kept}
+   .then(async r=>{if(r.ok&&scope==='user'&&window.__saveOk)window.__saveOk();if(r.status===409){const j=await r.json();if(scope==='user'){if(j.kept==null)delete kv.user[k];else kv.user[k]=j.kept}
      window.__serverNote&&window.__serverNote('The server refused a save: '+j.error+' Your last good save was kept.')}
     else if(r.status===401)window.__serverNote&&window.__serverNote('You are logged out. Log in again to keep saving.')})
    .catch(()=>{window.__serverNote&&window.__serverNote('Cannot reach the server. Progress will save when it is back.');pending[scope+k]=v;setTimeout(()=>queue(scope,k),5000)})};
@@ -429,9 +429,9 @@ TW('kerning_city','Kerning City','🗡️','A dim, crowded city of pipes and roo
 NM('kerning_outskirts','Kerning Outskirts','🌫️','Foggy wasteland past the city walls. Evil Eyes watch from the dead trees.',12,['evil_eye','axe_stump','stirge'],[['kerning_city','Back to Kerning City']],'kerning_city',['#6a6f5a','#33503a','#5a4a8a',4]);
 /* Ferry from Southperry */
 MAPS.southperry.d='The island\'s port. Gulls, crates and a ferry bound for Victoria Island.';
-MAPS.southperry.hint='Vasily sells passage to Victoria Island once you reach level 10.';
+MAPS.southperry.hint='Shanks sells passage to Victoria Island from level 7 (150 mesos).';
 MAPS.southperry.ex.push(['lith_harbor','Ferry to Lith Harbor, Victoria Island','ferry']);
-NPCS.vasily.hi='The ferry to Victoria Island is sailing! Adventurers of level 10 and up can get a ticket from me.';
+NPCS.vasily.hi='The ferry to Victoria Island is sailing! Adventurers of level 7 and up can ride for 150 mesos.';
 /* NPCs */
 Object.assign(NPCS,{
  goldstein:{n:'Mr. Goldstein',i:'🧔',role:'Harbor merchant',hi:'Welcome to Lith Harbor! Every adventurer on Victoria Island starts here.',tip:['Where do I go from here?','Head east along the road to Henesys. From Henesys you can go north to Ellinia or east through Perion to Kerning City. Clear a field to unlock the way onward.']},
@@ -516,7 +516,7 @@ function itemRows(id,st){const it=ITEMS[id];if(it.w){const A=st?st[0]:eS('str'),
  if(it.heal)return [['Type','Consumable'],['Restores',it.heal+' HP']];return [['Type','Etc']]}
 function shopMax(){const it=ITEMS[shopSel];return shopTab==='buy'?Math.floor(P.mesos/buyPrice(shopSel)):(P.inv[shopSel]||0)}
 function shopCard(){const id=shopSel,it=ITEMS[id],bm=shopTab==='buy',pr=bm?buyPrice(id):sellVal(id),mx=shopMax();shopQty=Math.max(1,Math.min(shopQty,Math.max(1,mx)));
- const lv=bm&&it.req&&P.lvl<it.req,can=mx>0&&!lv,rows=itemRows(id).concat([[bm?'Price':'Sells for',pr+' mesos each'],['Owned',P.inv[id]||0]]);
+ const lv=false,can=mx>0&&!lv,rows=itemRows(id).concat([[bm?'Price':'Sells for',pr+' mesos each'],['Owned',P.inv[id]||0]]);
  const mh=240+29*rows.length,box='<div class="mcard" style="display:flex;flex-direction:column;min-height:'+mh+'px">';
  if(shopConfirm){const n=shopQty,tot=pr*n,after=bm?P.mesos-tot:P.mesos+tot,r=(a,b)=>'<div class="mr"><span>'+a+'</span><b>'+b+'</b></div>';
   return box+'<div class="mh"><span class="mi">'+it.i+'</span><div><b>Confirm '+(bm?'purchase':'sale')+'</b><div class="mute">Please review before continuing.</div></div></div>'+r(bm?'Buying':'Selling',n+' \u00D7 '+it.n)+r('Price each',pr+' mesos')+r(bm?'Total cost':'You receive',tot+' mesos')+r('Your mesos',P.mesos+' \u2192 '+after)+'<div class="ex" style="margin-top:auto;padding-top:10px"><button class="main" id="scf">Confirm</button><button id="scn">Cancel</button></div></div>'}
@@ -3739,12 +3739,33 @@ try{const d=NPCS.n1012004;if(d&&d.shopList&&!d.shopList.includes(PET_FOOD))d.sho
 /* mesos lying on the map show like any drop */
 ITEMS.meso=ITEMS.meso||{n:'Mesos',i:'💰'};
 
+/* v3.5: Cash Shop tabs by item type: Use, Etc, Pets, Pet equipment, Equipment, Other. */
+const CASH_TABS=[['use','Use'],['etc','Etc'],['pets','Pets'],['peteq','Pet equipment'],['equip','Equipment'],['other','Other']];
+const cashTabOf=c=>c[5]||(/^sc_/.test(c[0])||['exp2','drop2','charm','wheel','mega','smega'].includes(c[0])?'use':'etc');
+let cashTab='use';
+cashHtml=function(){cashInit();const now=Date.now(),fx=[];if(P.cb.exp2>now)fx.push('2x EXP '+Math.ceil((P.cb.exp2-now)/60000)+' min');if(P.cb.drop2>now)fx.push('2x Drop '+Math.ceil((P.cb.drop2-now)/60000)+' min');
+ const row=(c,r)=>'<div class="row" style="align-items:center;padding:6px 0;gap:8px"><span>'+c[1]+' <b>'+c[2]+'</b><div class="mute">'+c[4]+'</div></span>'+r+'</div>';
+ const owned=c=>String(c[0]).startsWith('pet_')?(P.pets||[]).filter(p=>'pet_'+p.t===c[0]).length:(P.cinv[c[0]]|0);
+ const list=CASH.filter(c=>cashTabOf(c)===cashTab),mine=CASH.filter(c=>!String(c[0]).startsWith('pet_')&&P.cinv[c[0]]>0);
+ const empty={equip:'Cash equipment (outfits and cosmetics) is coming later.',other:'Emote skins and other extras are coming later.'};
+ return '<div class="panel"><div class="row"><h2>Cash Shop</h2><b>'+P.nx.toLocaleString()+' NX</b></div><div class="mute">Earn NX by hunting and questing.'+(fx.length?'<br>Active: '+fx.join(' · '):'')+'</div>'
+  +'<div class="seg ltb" style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px">'+CASH_TABS.map(t=>'<button data-ctab="'+t[0]+'" class="'+(cashTab===t[0]?'on':'')+'" style="flex:1 1 30%;min-width:0;padding:4px 2px">'+t[1]+'</button>').join('')+'</div></div>'
+  +'<div class="panel"><h2>'+CASH_TABS.find(t=>t[0]===cashTab)[1]+'</h2>'+(list.length?list.map(c=>row(c,'<button '+(P.nx>=c[3]&&!(ROCKS[c[0]]&&P.cinv[c[0]]>0)?'class="main"':'disabled')+' onclick="cashBuy(\''+c[0]+'\')">'+(ROCKS[c[0]]&&P.cinv[c[0]]>0?'Owned':c[3].toLocaleString()+' NX')+'</button>'+(owned(c)&&!ROCKS[c[0]]?'<span class="pill b">have '+owned(c)+'</span>':''))).join(''):'<div class="mute">'+(empty[cashTab]||'Nothing here yet.')+'</div>')+'</div>'
+  +'<div class="panel"><h2>My Cash Items</h2>'+(mine.length?mine.map(c=>row(c,ROCKS[c[0]]?'<span class="pill b">owned</span>':['charm','wheel'].includes(c[0])?'<span class="pill b">x'+P.cinv[c[0]]+' auto</span>':cashTabOf(c)==='peteq'?'<span class="pill b">x'+P.cinv[c[0]]+' · equip on your pet (Character)</span>':'<button class="main" onclick="cashUse(\''+c[0]+'\')">Use x'+P.cinv[c[0]]+'</button>')).join(''):'<div class="mute">Nothing yet.</div>')
+  +((P.pets||[]).length?'<div class="mute" style="margin-top:6px">Pets: '+P.pets.map(p=>p.name).join(', ')+' (Character screen)</div>':'')+'</div>'
+  +(P.cinv.rock>0?rockHtml('rock'):'')+(P.cinv.vip>0?rockHtml('vip'):'')};
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-ctab]');if(!b)return;cashTab=b.dataset.ctab;render()});
+
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
    once instead of waiting for a confirmation code. ===== */
 const api=async(method,url,body)=>{try{const r=await fetch(url,{method,credentials:'same-origin',headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
  const j=await r.json().catch(()=>({}));return Object.assign({status:r.status},j)}catch(e){return{error:'Cannot reach the server.'}}};
-window.__serverNote=t=>{try{if(typeof log==='function'&&P)log(t,'bad','system');else console.warn(t)}catch(e){console.warn(t)}};
+window.__serverNote=t=>{try{if(typeof log==='function'&&P)log(t,'bad','system');else console.warn(t)}catch(e){console.warn(t)}
+ /* v3.5: problems with saving show as a red bar under the top bar until saving works again (they used to go only to the log) */
+ try{let b=document.getElementById('savebar');if(!b){b=document.createElement('div');b.id='savebar';b.style.cssText='position:sticky;top:0;z-index:50;margin:4px 8px;padding:8px 10px;border-radius:8px;background:#b3261e;color:#fff;font-size:14px;display:flex;gap:8px;align-items:center';const app=document.getElementById('app');(app&&app.parentNode||document.body).insertBefore(b,app||null)}
+  b.innerHTML='<span style="flex:1">⚠️ '+String(t).replace(/</g,'&lt;')+'</span><button style="min-height:26px;padding:0 8px" onclick="this.parentNode.remove()">OK</button>'}catch(e){}};
+window.__saveOk=()=>{const b=document.getElementById('savebar');if(b)b.remove()};
 const keepToken=r=>{try{if(r&&r.token)localStorage.setItem('ml_token',r.token)}catch(e){}};
 async function afterAuth(v){await LS.reload();curUser=v;lsSet('mapleish_sess',v);if(window.__wsFrom==='site')return window.__wsHome();goTo('chars')}
 {const _ls=loginScreen;loginScreen=function(){_ls();{const sm=app.querySelector('.logo small');if(sm)sm.textContent='A Maple adventure'}const pw=$('apw');if(!pw)return;
