@@ -3579,6 +3579,32 @@ QD.ferry.goal='Pay Shanks 150 mesos for the ride to Victoria Island (from level 
 {const _dd=dlgDo;dlgDo=function(k){if(k==='qa:ferry'&&P){if(P.mesos<150){log('Shanks: The ride costs 150 mesos. Come back when you have them.','bad','quest');talk=null;return render()}
   const r=_dd(k);if(P.q.ferry){P.mesos-=150;log('You pay Shanks 150 mesos.','','quest');save()}return r}return _dd(k)}}
 
+/* v3.5: class symbol on equipment icons (inventory and shop slots).
+   Warrior sword, Bowman bow, Magician wand, Thief throwing star, Pirate gun, Beginner snail. Common gear: one maple leaf (all classes). */
+const CLS_BADGE=(()=>{const s=(p)=>'<svg viewBox="0 0 16 16" width="100%" height="100%">'+p+'</svg>',k='stroke="#222" stroke-width="1" ';
+ return{
+  Warrior:s('<path d="M13 2 L6 9 L7 10 L14 3Z" fill="#cfd6dd" '+k+'/><path d="M4 9 L8 13 M5 12 L3 14" '+k+'fill="none" stroke-linecap="round"/>'),
+  Bowman:s('<path d="M4 2 Q14 8 4 14" fill="none" stroke="#8a5a2b" stroke-width="2"/><path d="M4 2 L4 14 M2 8 L13 8 M11 6 L13 8 L11 10" '+k+'fill="none"/>'),
+  Magician:s('<path d="M3 14 L10 7" stroke="#6b4a2b" stroke-width="2.5" stroke-linecap="round"/><path d="M12 1 L13 4 L16 5 L13 6 L12 9 L11 6 L8 5 L11 4Z" fill="#f4d03f" '+k+'/>'),
+  Thief:s('<path d="M8 1 L9.5 6.5 L15 8 L9.5 9.5 L8 15 L6.5 9.5 L1 8 L6.5 6.5Z" fill="#b8c2cc" '+k+'/><circle cx="8" cy="8" r="1.5" fill="#222"/>'),
+  Pirate:s('<path d="M2 5 H14 V8 H8 L7 13 H4 L5 8 H2Z" fill="#555" '+k+'/>'),
+  Beginner:s('<circle cx="9" cy="8" r="4.5" fill="#e8a04a" '+k+'/><path d="M9 8 m-2 0 a2 2 0 1 0 2-2" fill="none" '+k+'/><path d="M1 13 H13 Q11 11 6 12 L4 9 M3 9 L4 6 M5 9 L6 6" fill="#a7d36f" '+k+'/>')}})();
+/* Several classes: one symbol each. Common (or all five classes): one "all classes" maple leaf. */
+CLS_BADGE.All='<svg viewBox="0 0 16 16" width="100%" height="100%"><path d="M8 1 L9.5 4.5 L12 3.5 L11.3 7 L15 7.5 L12.5 10 L13.5 12 L9 11.5 L8.6 15 H7.4 L7 11.5 L2.5 12 L3.5 10 L1 7.5 L4.7 7 L4 3.5 L6.5 4.5Z" fill="#e8743b" stroke="#222" stroke-width="1"/></svg>';
+const PJ_CLS={swordsman:'Warrior',warrior:'Warrior',archer:'Bowman',bowman:'Bowman',magician:'Magician',mage:'Magician',rogue:'Thief',thief:'Thief',pirate:'Pirate',beginner:'Beginner'};
+function itemClasses(b){if(!b||(!b.jb&&!b.pj))return [];
+ let L=(b.pj&&b.pj.length?b.pj.map(j=>PJ_CLS[j]||j):String(b.jb).split(/[,\/&]| and /)).map(x=>String(x).trim()).filter(Boolean);
+ L=[...new Set(L.map(x=>PJ_CLS[x.toLowerCase()]||x))];
+ if(L.includes('Common')||['Warrior','Bowman','Magician','Thief','Pirate'].every(c=>L.includes(c)))return ['All'];
+ return L.filter(c=>CLS_BADGE[c])}
+function clsBadge(id){try{const b=ITEMS[(typeof baseOf==='function'&&P)?baseOf(id):id]||ITEMS[id];if(!b||!(b.w||b.ty||b.sl||b.slot||b.eq||b.jb))return '';
+ const L=itemClasses(b);if(!L.length)return '';const t=L[0]==='All'?'All classes':L.join(', ');
+ return '<span class="clsb" title="'+t+'">'+L.map(c=>'<i>'+CLS_BADGE[c]+'</i>').join('')+'</span>'}catch(e){return ''}}
+function decorateBadges(){try{document.querySelectorAll('.slot[data-i],.slot[data-sh]').forEach(el=>{if(el.querySelector('.clsb'))return;
+ const h=clsBadge(el.dataset.i||el.dataset.sh);if(h)el.insertAdjacentHTML('beforeend',h)})}catch(e){}}
+{const _r=render;render=function(){const r=_r.apply(this,arguments);decorateBadges();return r}}
+(()=>{const st=document.createElement('style');st.textContent='.clsb{position:absolute;left:2px;top:2px;right:2px;display:flex;gap:1px;flex-wrap:wrap;pointer-events:none;line-height:0;filter:drop-shadow(0 0 1px #fff)}.clsb i{display:block;width:30%;max-width:20px;aspect-ratio:1}';document.head.appendChild(st)})();
+
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
    once instead of waiting for a confirmation code. ===== */
