@@ -1,4 +1,4 @@
-window.__BUILD='3.5-ddfc100a08';
+window.__BUILD='3.5-9623d84de5';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -964,7 +964,7 @@ const lsGet=k=>{try{return LS.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{tr
 async function sha(t){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent(t)))}}
 let notice='',noticeBad=false,vUser='';const goTo=n=>{scr=n;render()},msg=(t,b)=>{notice=t;noticeBad=!!b},newCode=()=>String(Math.floor(100000+Math.random()*900000)),enter=(ids,btn)=>ids.forEach(i=>{const e=$(i);if(e)e.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();$(btn).click()}}}),noteHtml=(n,b)=>n?`<div class='note${b?' bad':''}'>${n}</div>`:'';
 function loginScreen(){const n=notice,nb=noticeBad;notice='';const id=(lsGet('mapleish_id')||'').replace(/[^A-Za-z0-9]/g,''),spw=lsGet('mapleish_spw'),spu=lsGet('mapleish_spwu');
- app.innerHTML=`<div class='scr c'><div class='logo'><span>🍁</span>Maplelite<small>An offline Maple adventure</small></div><div class='panel lg'><h2>Log in</h2>${noteHtml(n,nb)}<label>ID<input id='aid' maxlength='12' autocomplete='username' placeholder='Enter your ID' value='${id}'></label><label>Password<input id='apw' type='password' autocomplete='current-password' placeholder='Enter your password'></label><div class='chk'><label><input type='checkbox' id='sid'${id?' checked':''}> Save ID</label><label><input type='checkbox' id='spwc'${spw&&spu===id?' checked':''}> Save password</label></div><div class='mute' id='lgmsg'></div><button class='wide gbtn' id='goog'><i>G</i> Sign in with Google</button><div class='links'><button class='lnk' id='forgot'>Forgot password?</button></div></div><div class='foot'><button id='reg'>Create account</button><button class='main' id='login'>Log in</button></div></div>`;
+ app.innerHTML=`<div class='scr c'><div class='logo'><span>${leafIcon()}</span>Maplelite<small>An offline Maple adventure</small></div><div class='panel lg'><h2>Log in</h2>${noteHtml(n,nb)}<label>ID<input id='aid' maxlength='12' autocomplete='username' placeholder='Enter your ID' value='${id}'></label><label>Password<input id='apw' type='password' autocomplete='current-password' placeholder='Enter your password'></label><div class='chk'><label><input type='checkbox' id='sid'${id?' checked':''}> Save ID</label><label><input type='checkbox' id='spwc'${spw&&spu===id?' checked':''}> Save password</label></div><div class='mute' id='lgmsg'></div><button class='wide gbtn' id='goog'><i>G</i> Sign in with Google</button><div class='links'><button class='lnk' id='forgot'>Forgot password?</button></div></div><div class='foot'><button id='reg'>Create account</button><button class='main' id='login'>Log in</button></div></div>`;
  const pw=$('apw'),m=t=>{const e=$('lgmsg');e.textContent=t;e.style.color='#d4443f'};
  if(spw&&id&&spu===id){pw.value='••••••••';pw.dataset.saved='1'}
  pw.oninput=()=>{delete pw.dataset.saved};enter(['aid','apw'],'login');
@@ -1194,6 +1194,8 @@ function avatarSvg(p,wd){const lk=p.look||{g:LK.g[0],face:LK.face[0],hair:LK.hai
  return s+'</svg>'}
 /* a small real-time head icon (face, hair, skin, hat, eyewear) cut from the full avatar */
 function headIcon(p,px){try{return avatarSvg(p,px).replace(/<text x="62" y="68"[^>]*>[^<]*<\/text>/,'').replace(/viewBox="[^"]*"/,'viewBox="17 6 48 46"').replace(/style="[^"]*"/,'style="width:'+px+'px;height:'+px+'px;display:inline-block;vertical-align:middle;border-radius:4px"')}catch(e){return '🧍'}}
+/* a pixel maple leaf that takes the theme's heading colour */
+function leafIcon(){const c='currentColor';return '<svg viewBox="0 0 16 16" width="22" height="22" shape-rendering="crispEdges" style="vertical-align:middle"><path d="M7 0h2v2h2v2h2v2h1v3h-2v2h-2v2h-1v2h-1v-2H7v-2H5v-2H3v-2H1v-3h1V4h2V2h2z" fill="'+c+'"/><path d="M7 15h2v1H7z" fill="#5a3a1a"/></svg>'}
 function safeAv(p){try{return avatarSvg(p,110)}catch(e){return '🧙'}}
 function eqOffN(){return [P.weapon].concat(Object.values(P.eq||{})).filter(x=>x&&!eqOk(x)).length}
 function charPanel(){const n=Object.keys(P.eq||{}).length+(P.weapon?1:0);
@@ -3876,8 +3878,16 @@ const THEMES=[['classic','Classic'],
  ['ludi','Ludibrium Toy','linear-gradient(#ffd6ec,#fff3b8 60%,#bfe6ff)','#fffaf2','#ffffff','#ffe3f1','#8a3d6b','#d6457f','#41203a','#8f6b84','#f2a6cf','#ffcf3a','#d6457f','#8a2c5a'],
  ['aqua','Aqua Road','linear-gradient(#0e4d6e,#1b8aa6 55%,#062a3d)','#eaf8fb','#ffffff','#c9ecf3','#0c4459','#0f86a3','#0d2f3b','#55818f','#5fb6c9','#ffb547','#126f8a','#06384a'],
  ['sunset','Amherst Sunset','linear-gradient(#ff9a6b,#ffcf8a 55%,#6b4a8a)','#fff5ee','#ffffff','#ffe0cc','#7a3b2a','#d0582a','#3d1f16','#8a6a5c','#e8a184','#8a5ac8','#a1462a','#5c2416']];
+/* each theme's own animated background layer (same layout): a pixel pattern that drifts behind the page */
+const TH_DECO={henesys:'radial-gradient(circle,#fff8 2px,transparent 3px) 0 0/46px 46px',ellinia:'radial-gradient(ellipse 14px 7px at 30% 50%,#b8f08a88,transparent 70%) 0 0/60px 60px',perion:'linear-gradient(115deg,transparent 0 40%,#ffd29a22 40% 46%,transparent 46%) 0 0/80px 80px',kerning:'linear-gradient(#ff5fd211 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,#7fe7ff11 1px,transparent 1px) 0 0/22px 22px',lith:'radial-gradient(circle,#ffffff55 1px,transparent 2px) 0 0/34px 34px',sleepy:'radial-gradient(circle,#ffd98a33 2px,transparent 3px) 0 0/52px 52px',orbis:'radial-gradient(circle,#ffffffaa 1px,transparent 2px) 0 0/40px 40px',elnath:'radial-gradient(circle,#ffffffcc 2px,transparent 3px) 0 0/38px 38px',ludi:'radial-gradient(circle,#ffffff99 3px,transparent 4px) 0 0/64px 64px',aqua:'radial-gradient(circle,#ffffff44 2px,transparent 3px) 0 0/30px 30px'};
+const TH_SPEED={kerning:'6s',sleepy:'30s',orbis:'18s',elnath:'14s',ludi:'22s',aqua:'9s',ellinia:'16s',henesys:'24s',perion:'20s',lith:'26s'};
 function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,tx,mu,tb,ton,s1,s2,dark]=t;
- return 'html{background:'+sky+' fixed!important}'
+ const deco=TH_DECO[t[0]]||'none',spd=TH_SPEED[t[0]]||'20s';
+ return '@keyframes thDrift{to{background-position:200px 160px}}'
+ +'body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.8;background:'+deco+';animation:thDrift '+spd+' linear infinite}'
+ +'#app,#site{position:relative;z-index:1}'
+ +'.logo{color:'+hd+'!important;text-shadow:2px 2px 0 '+s2+'!important}.logo small{color:'+mu+'!important}'
+ +'html{background:'+sky+' fixed!important}'
  +'#app .panel,#site .panel,#app .win,.ws-card{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
  +'#site .panel h2{color:'+hd+'!important}'
  +'#app,#app .panel *:not(.afx):not(.gmtag):not(.clsall):not(svg *){color:inherit}'
