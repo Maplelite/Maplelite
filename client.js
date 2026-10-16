@@ -1,4 +1,4 @@
-window.__BUILD='3.5-e57865dd8f';
+window.__BUILD='3.5-971ebfd0e7';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4078,6 +4078,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
    else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,fx:m.fx,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
    else if(m.t==='wsent'){L.chat.push({ts:Date.now(),from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
+   else if(m.t==='fres'||m.t==='fspawned'){if(window.__onFight)window.__onFight(m)}
    else if(m.t==='plog'){if(typeof log==='function'&&m.from!==(P&&P.name)){logs.push(['['+m.from+'] '+m.text,'','plog']);if(typeof refreshLog==='function')refreshLog()}}
    else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
    else if(m.t==='achat'){L.chat.push({ts:Date.now(),from:m.from,md:m.md,fx:m.fx,text:m.text,all:true});if(L.chat.length>80)L.chat.shift();if(L.ctab!=='all')L.unread.all=(L.unread.all||0)+1}
@@ -4099,6 +4100,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function retry(){clearTimeout(L.timer);if(!want())return;L.tries++;L.timer=setTimeout(connect,Math.min(30000,3000*L.tries))}
  function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=L.chat.filter(m=>m.party||m.w||m.guild)}}
  {const _lg=log;log=function(t,c,k){const r=_lg.apply(this,arguments);try{if(L.party&&L.state==='on'&&!['map','party','guild','plog','chat'].includes(k||'gen')&&(c==='good'||k==='combat'||k==='quest'||k==='items')){out({t:'plog',text:String(t)});logs.push(['['+P.name+'] '+t,c||'','plog'])}}catch(e){}return r}}
+ window.__liveOut=o=>out(o);window.__liveOn=()=>L.state==='on';
  const out=o=>{if(o&&/^(chat|pchat|gchat|w)$/.test(o.t)&&L.me&&L.me.staff){const f=adminFx();if(f!=='none')o.fx=f}if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
  /* the 7 basic expressions (v62 F1-F7). A skin (later an NX item) maps 1-7 to other pictures. */
  const EMO=[null,['😊','Happy'],['😟','Troubled'],['😢','Cry'],['😠','Angry'],['😵','Bewildered'],['😳','Stunned'],['😍','Love']];
@@ -4432,9 +4434,10 @@ body.chatfull{overflow:hidden}
    try{log('Enchanting '+(nm.n||'')+': '+msg.replace(/^\S+\s/,''),j.success?'good':'bad','items')}catch(_){}
    ench={st:4,res:'<div style="font-size:15px">'+(nm.i||'')+' <b>'+(nm.n||'')+'</b></div><div style="margin-top:6px">'+msg+'</div>'}})});
  /* monsters: the server rolls the rewards; the browser's own drop roll is switched off while authority is on */
- wrap('win',f=>function(){const k=typeof enc!=='undefined'&&enc&&enc.k;if(!G.on||!k)return f.apply(this,arguments);if(k==='training_snail'){send({a:'tut'},null,true);return f.apply(this,arguments)}
+ wrap('win',f=>function(){const k=typeof enc!=='undefined'&&enc&&enc.k;if(!G.on||!k)return f.apply(this,arguments);const m2=window.__authM2&&window.__authM2()&&enc.sreg;if(k==='training_snail'){send({a:'tut'},null,true);return f.apply(this,arguments)}
   const ad=window.addDrop,dl=window.dropLoot;window.addDrop=function(){};if(typeof dl==='function')window.dropLoot=function(){};
   let r;try{r=f.apply(this,arguments)}finally{window.addDrop=ad;if(typeof dl==='function')window.dropLoot=dl}
+  if(m2)return r;
   send({a:'kill',mon:k},j=>{if(!j||!j.ok||!P)return;for(const d of j.drops||[]){ad(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}
    try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}},true);return r});
  wrap('lootTake',f=>function(g){if(G.on&&g&&g.sid){send({a:'pickup',id:g.sid},null,true);try{log(g.id==='meso'?'You pick up '+g.q+' mesos.':'You pick up '+((ITEMS[g.id]||{}).n||g.id)+(g.q>1?' x'+g.q:'')+'.','good','items')}catch(e){}return}return f.apply(this,arguments)});
@@ -4452,6 +4455,27 @@ body.chatfull{overflow:hidden}
  wrap('gmDo',f=>function(a){const inv0=P&&JSON.stringify(P.inv),m0=P&&P.mesos,l0=P&&P.lvl;const r=f.apply(this,arguments);if(!G.on||!P)return r;
   if(a==='give'&&JSON.stringify(P.inv)!==inv0){const o=JSON.parse(inv0);for(const k in P.inv)if((P.inv[k]|0)>(o[k]|0))send({a:'admin',item:k,n:(P.inv[k]|0)-(o[k]|0)})}
   if(P.mesos!==m0)send({a:'admin',mesos:P.mesos-m0});if(P.lvl!==l0)send({a:'admin',lvl:P.lvl});return r});
+ /* ---- server combat (milestone 2): while connected to the live world, monsters are registered with the channel
+    server, every attack is reported there, and the server's HP is the real HP. Rewards come with the server's kill. ---- */
+ const M2=()=>G.on&&window.__liveOn&&window.__liveOn();window.__authM2=M2;
+ const lout=o=>{try{return window.__liveOut&&window.__liveOut(o)}catch(e){return false}};
+ function regMobs(){if(!M2()||typeof fld==='undefined')return;const L=[];for(const m of fld)if(m&&m.hp>0&&!m.sreg&&m.eid!=null&&m.k!=='training_snail'){m.sreg=1;L.push({eid:String(m.eid),k:m.k})}if(L.length)lout({t:'fspawn',list:L})}
+ const snap=()=>{const o={};if(typeof fld!=='undefined')for(const m of fld)if(m&&m.sreg)o[m.eid]=m.hp;return o};
+ function report(sk,before){const after={};if(typeof fld!=='undefined')for(const m of fld)if(m&&m.sreg)after[m.eid]=m.hp;const hits=[];
+  for(const e in before){const a=e in after?Math.max(0,after[e]):0,d=before[e]-a;if(d>0)hits.push({eid:e,d})}
+  if(hits.length)lout({t:'fhit',sk,hits});for(const e in after)G.seen[e]=after[e]}
+ G.seen={};
+ const atkWrap=(name,skOf)=>wrap(name,f=>function(){if(!M2()||G.depth)return f.apply(this,arguments);regMobs();const b=snap();G.depth=1;let r;try{r=f.apply(this,arguments)}finally{G.depth=0}report(skOf.apply(this,arguments),b);return r});
+ atkWrap('attack',()=> 'basic');atkWrap('qsUse',k=>k||'basic');atkWrap('finalAttack',()=>{try{const f=(typeof SE!=='undefined')&&Object.keys(SE).find(k=>SE[k].k==='final'&&P.sk[k]>0);return f||'basic'}catch(e){return 'basic'}});
+ /* HP lost outside attacks (poison and similar), once a second */
+ setInterval(()=>{if(!M2()||typeof fld==='undefined')return;regMobs();const b={},hits=[];for(const m of fld)if(m&&m.sreg&&m.eid in G.seen&&m.hp<G.seen[m.eid]){hits.push({eid:String(m.eid),d:G.seen[m.eid]-Math.max(0,m.hp)})}
+  for(const m of fld)if(m&&m.sreg)G.seen[m.eid]=m.hp;if(hits.length)lout({t:'fhit',sk:'dot',hits})},1000);
+ {const _r=render;render=function(){const o=_r.apply(this,arguments);try{regMobs();if(M2()&&typeof fld!=='undefined'&&!fld.length&&G.inFight){G.inFight=false;lout({t:'fend'})}if(typeof fld!=='undefined'&&fld.length)G.inFight=true}catch(e){}return o}}
+ window.__onFight=function(m){if(!P||typeof fld==='undefined')return;
+  if(m.t==='fres'){for(const s of m.mobs||[]){const x=fld.find(q=>String(q.eid)===String(s.eid));if(x&&s.hp>x.hp){x.hp=s.hp;G.seen[x.eid]=s.hp}}
+   for(const k of m.kills||[]){if(k.state){G.last=k.state;if(!G.q.length)apply(k.state)}for(const d of k.drops||[]){window.addDrop(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}}
+   if((m.kills||[]).length){try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}try{save()}catch(e){}}
+   try{render()}catch(e){}}};
  /* party EXP share from the live world */
  window.__authPshare=function(mon){if(G.on&&mon)send({a:'pshare',mon},null,true)};
 })();
