@@ -1,4 +1,4 @@
-window.__BUILD='3.5-587e4fcafe';
+window.__BUILD='3.5-c026bc71a3';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -1195,7 +1195,7 @@ function avatarSvg(p,wd){const lk=p.look||{g:LK.g[0],face:LK.face[0],hair:LK.hai
 /* a small real-time head icon (face, hair, skin, hat, eyewear) cut from the full avatar */
 function headIcon(p,px){try{return avatarSvg(p,px).replace(/<text x="62" y="68"[^>]*>[^<]*<\/text>/,'').replace(/viewBox="[^"]*"/,'viewBox="17 6 48 46"').replace(/style="[^"]*"/,'style="width:'+px+'px;height:'+px+'px;display:inline-block;vertical-align:middle;border-radius:4px"')}catch(e){return '🧍'}}
 /* a pixel maple leaf that takes the theme's heading colour */
-function leafIcon(){const t=(typeof THEMES!=='undefined'&&THEMES.find(x=>x[0]===thCur))||null;const col=t&&t[0]!=='classic'?t[7]:'#d9443a';try{return icoSvg('leaf',col)}catch(e){return '🍁'}}
+function leafIcon(){const t=(typeof THEMES!=='undefined'&&THEMES.find(x=>x[0]===thCur))||null;const col=t&&t[0]!=='classic'?t[7]:'#d9443a';try{return '<img alt="" src="'+icoSvg('leaf',col)+'" style="width:1em;height:1em;image-rendering:pixelated;vertical-align:middle">'}catch(e){return '🍁'}}
 function safeAv(p){try{return avatarSvg(p,110)}catch(e){return '🧙'}}
 function eqOffN(){return [P.weapon].concat(Object.values(P.eq||{})).filter(x=>x&&!eqOk(x)).length}
 function charPanel(){const n=Object.keys(P.eq||{}).length+(P.weapon?1:0);
@@ -3891,16 +3891,22 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#site{background:'+sky+'!important;color:'+tx+'!important;--d:'+bd+';--wd:'+ton+';--wl:'+s1+';--pp:'+pn+';--o:'+hd+'}'
  +(TH_GROUND[t[0]]?'#site .ws-hills path:nth-child(1){fill:'+TH_GROUND[t[0]][0]+'!important}#site .ws-hills path:nth-child(2){fill:'+TH_GROUND[t[0]][1]+'!important}#site .ws-hills path:nth-child(3){fill:'+TH_GROUND[t[0]][2]+'!important}#site .ws-foot{background:linear-gradient('+TH_GROUND[t[0]][3]+','+TH_GROUND[t[0]][4]+')!important}':'')
  +'#site .ws-play,#site .ws-b,#site .ws-b.p,#site .ws-nav a,#site .ws-rk button,#site .ws-news-item{background:linear-gradient('+b1+','+b2+')!important;border-color:'+bd+'!important;color:'+tx+'!important;text-shadow:none!important}'
- +'#site .ws-play{box-shadow:0 8px 0 '+bd+'!important}#site .ws-nav a:hover,#site .ws-nav a.on{background:'+ton+'!important;color:#fff!important}'
+ +'#site .ws-play{background:linear-gradient('+ton+'cc,'+ton+')!important;color:#fff!important;text-shadow:0 3px 0 '+bd+'!important;box-shadow:0 8px 0 '+bd+'!important}'
+ +(['kerning','sleepy','aqua','ellinia'].includes(t[0])?'#site .ws-sub,#site .ws-sub *{color:#fff!important;text-shadow:0 1px 2px #000a!important}#site .ws-sub a{color:'+ton+'!important}':'#site .ws-sub,#site .ws-sub *{color:'+tx+'!important;text-shadow:none!important}#site .ws-sub a{color:'+hd+'!important}')
+ +'#site .ws-nav a:hover,#site .ws-nav a.on{background:'+ton+'!important;color:#fff!important}'
  +'#site .ws-tag{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
  +'#site .ws-bar{color:'+hd+'!important}'
  +(t[0]==='aqua'?'#site .ws-sun,#site .ws-cl{display:none!important}#site .ws-lf{display:none!important}':'')
+ +'#site .ws-logo{-webkit-text-stroke-color:'+bd+'!important;color:'+bd+'!important}'
+ +'#site .ws-logo:before{background:linear-gradient(105deg,transparent 38%,'+ton+'ee 50%,transparent 62%) 160% 0/250% 100% no-repeat,linear-gradient(180deg,#fff 0,#fff 38%,'+b2+' 70%,'+ton+' 100%)!important;-webkit-background-clip:text!important;background-clip:text!important}'
+ +(typeof icoSvg==='function'?'#site .ws-logo:after{content:""!important;width:.45em;height:.45em;background:url("'+icoSvg(TH_DECOR[t[0]]||'leaf',ton)+'") center/contain no-repeat;image-rendering:pixelated}':'')
+ +'#site .ws-logo .lg-sp{color:'+ton+'!important}'
+ +'#site .ws-card h2{background:linear-gradient('+s1+','+s2+')!important;border-color:'+bd+'!important;color:#fff!important}'
+ +'#site .ws-card{color:'+tx+'!important}#site .ws-card b,#site .ws-card strong,#site .ws-card h3,#site .ws-card h4{color:'+hd+'!important}'
  +'#site .ws-sun{background:radial-gradient(circle,'+s1+'66 0,transparent 68%)!important}'
  +'#site .ws-cl{background:'+pn+'!important;opacity:.85!important}'
  +'#site .ws-cl:before,#site .ws-cl:after{background:'+pn+'!important}'
- +'#site .ws-lf{font-size:0!important;width:16px;height:16px;background:'+ton+'}'
- +'#site .ws-sp svg,#site .ws-mob svg{width:26px;height:26px;display:block}'
- +'#site .ws-lf svg{width:18px;height:18px;display:block;opacity:.9}'
+ +'#site .ws-lf{font-size:0!important}'
  +'.logo{color:'+hd+'!important;text-shadow:2px 2px 0 '+s2+'!important}.logo small{color:'+mu+'!important}'
  +'html{background:'+sky+' fixed!important}'
  +'#app .panel,#site .panel,#app .win,.ws-card{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
@@ -3921,10 +3927,11 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +(dark?'#app .panel a{color:'+hd+'!important}':'')}
 /* the falling decoration for each theme: one of the game's own pixel sprites that fits that place */
 const TH_DECOR={henesys:'mushroom',ellinia:'leaf',perion:'boar',kerning:'octopus',lith:'shell',sleepy:'stump',orbis:'star',elnath:'crystal',ludi:'doll',aqua:'slime'};
+const thImg=(tpl,col,px)=>'<img alt="" src="'+icoSvg(tpl,col)+'" style="width:'+(px||20)+'px;height:'+(px||20)+'px;image-rendering:pixelated;display:block">';
 function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t);
  /* falling leaves use the game's own leaf sprite, in this theme's accent colour */
- try{const col=t[0]==='classic'?'#e58a2e':t[11];document.querySelectorAll('#site .ws-lf').forEach(e=>{e.innerHTML=icoSvg(TH_DECOR[t[0]]||'leaf',col)});document.querySelectorAll('#site .ws-sp').forEach(e=>{e.innerHTML=icoSvg('star',col)});const MOBS=['snail','mushroom','slime','snail','mushroom','pig'];document.querySelectorAll('#site .ws-mob').forEach((e,i)=>{try{e.innerHTML=icoSvg(MOBS[i%MOBS.length],col)}catch(x){}})}catch(e){}}
-let thCur='classic';try{thCur=LS.getItem('ml_theme')||'classic'}catch(e){}thApply(thCur);
+ try{const col=t[0]==='classic'?'#e58a2e':t[11];document.querySelectorAll('#site .ws-lf').forEach(e=>{e.innerHTML=thImg(TH_DECOR[t[0]]||'leaf',col,20)});document.querySelectorAll('#site .ws-sp').forEach(e=>{e.innerHTML=thImg('star',col,26)});const MOBS=['snail','mushroom','slime','snail','mushroom','pig'];document.querySelectorAll('#site .ws-mob').forEach((e,i)=>{try{e.innerHTML=thImg(MOBS[i%MOBS.length],col,34)}catch(x){}})}catch(e){}}
+let thCur='classic';try{thCur=LS.getItem('ml_theme')||'classic'}catch(e){}thApply(thCur);setTimeout(()=>thApply(thCur),0);
 function themePanel(){return '<div class="panel" id="themepanel"><h2>🎨 Theme</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Colors for the game and the website.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
  +THEMES.map(t=>{const sw=t[0]==='classic'?'linear-gradient(90deg,#8fbde3,#eef1f7,#f0a030)':'linear-gradient(90deg,'+t[6]+' 0 25%,'+t[3]+' 25% 60%,'+t[11]+' 60%)';
   return '<button data-th="'+t[0]+'" class="'+(thCur===t[0]?'main':'')+'" style="min-height:40px;display:flex;align-items:center;gap:6px"><span style="width:22px;height:22px;border-radius:5px;border:1px solid #0006;flex:none;background:'+sw+'"></span>'+t[1]+(t[0]==='classic'?' (default)':'')+'</button>'}).join('')+'</div></div>'}
