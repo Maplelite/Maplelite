@@ -1,4 +1,4 @@
-window.__BUILD='3.5-a67c170b59';
+window.__BUILD='3.5-ebdc452dc7';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3895,6 +3895,143 @@ function themePanel(){return '<div class="panel" id="themepanel"><h2>🎨 Theme<
   return '<button data-th="'+t[0]+'" class="'+(thCur===t[0]?'main':'')+'" style="min-height:40px;display:flex;align-items:center;gap:6px"><span style="width:22px;height:22px;border-radius:5px;border:1px solid #0006;flex:none;background:'+sw+'"></span>'+t[1]+(t[0]==='classic'?' (default)':'')+'</button>'}).join('')+'</div></div>'}
 {const _fb=featBody;featBody=function(id){const b=_fb.apply(this,arguments);return id==='settings'?themePanel()+b:b}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-th]');if(!b)return;thCur=b.dataset.th;try{LS.setItem('ml_theme',thCur)}catch(_){}thApply(thCur);if(typeof render==='function'&&P)render()});
+
+/* ===== v3.5: original pixel-art icons (no emoji) for items and monsters.
+   Each icon is a 16x16 pixel template, coloured from the item's or monster's name (red, blue, steel, gold...),
+   drawn as a crisp SVG and cached. Templates are by kind: one per weapon type, armor slot, potion, scroll, ore and
+   so on; monsters by family (snails, mushrooms, slimes, stumps, pigs, drakes, golems...), inspired by how they look
+   in MapleStory but drawn from scratch.
+   Palette letters: k outline, a main, b main dark, c main light, h shine, m metal, n metal dark, w wood, x wood dark,
+   g gold/accent, e eye, s skin, r red, l leaf green, t white, '.' empty. ===== */
+const ICO_T={
+ sword:`..............kk|.............kmk|............kmnk|...........kmnk.|..........kmnk..|.........kmnk...|........kmnk....|...kk..kmnk.....|...kgkkmnk......|....kgmnk.......|.....kgk........|....kwkgk.......|...kwk.kgk......|..kwk...kk......|.kxk............|.kk.............`,
+ twosword:`.............kkk|............kmmk|...........kmmnk|..........kmmnk.|.........kmmnk..|........kmmnk...|.......kmmnk....|..kk..kmmnk.....|..kgkkmmnk......|...kgmmnk.......|....kggk........|...kwkkgk.......|..kwk..kgk......|.kwk....kk......|kxk.............|kk..............`,
+ axe:`.........kkk....|........kmmmk...|.......kmmmmnk..|......kkmmmmnk..|.....kwkkmmnnk..|....kwk..knnk...|...kwk....kk....|..kwk...........|.kwk............|kwk.............|kxk.............|kk..............|................|................|................|................`,
+ mace:`..........kkk...|.........kmgmk..|........kmmmmnk.|........kgmmmgk.|........kmmmnnk.|.........kngnk..|........kwkkk...|.......kwk......|......kwk.......|.....kwk........|....kwk.........|...kwk..........|..kxk...........|..kk............|................|................`,
+ dagger:`................|...........kk...|..........kmk...|.........kmnk...|........kmnk....|.......kmnk.....|......kmnk......|...kk.kmnk......|...kgkmnk.......|....kgnk........|....kxgk........|...kxk.k........|..kxk...........|..kk............|................|................`,
+ spear:`.............kk.|............kmmk|...........kmmnk|...........kmnk.|..........kgnk..|.........kwkk...|........kwk.....|.......kwk......|......kwk.......|.....kwk........|....kwk.........|...kwk..........|..kwk...........|.kxk............|.kk.............|................`,
+ polearm:`..........kkkk..|.........kmmmmk.|........kmmmnnk.|.........kkmnk..|..........kgk...|.........kwkk...|........kwk.....|.......kwk......|......kwk.......|.....kwk........|....kwk.........|...kwk..........|..kwk...........|.kxk............|.kk.............|................`,
+ bow:`.....kkk........|....kwwwk.......|...kwk..kk......|..kwk.....kk....|..kwk.......k...|.kwk........k...|.kgk........k...|.kgk........k...|.kwk........k...|..kwk.......k...|..kwk.....kk....|...kwk..kk......|....kwwwk.......|.....kkk........|................|................`,
+ crossbow:`................|..kkkkkkkkkk....|.kwwwwwwwwwwk...|..kk..kgk..kk...|......kmk.......|......kmk.......|......kwk.......|......kwk.......|.....kwwk.......|.....kxwk.......|.....kxxk.......|......kk........|................|................|................|................`,
+ claw:`................|....kk.kk.kk....|...kmk.kmk.kmk..|...kmk.kmk.kmk..|...knk.knk.knk..|...kmnkmnkkmnk..|...kaaaaaaaak...|...kabbbbbbak...|...kaaaaaaaak...|....kaaaaaak....|.....kbbbbk.....|......kkkk......|................|................|................|................`,
+ wand:`...........kkk..|..........kgcgk.|..........kcgck.|...........kgk..|..........kwk...|.........kwk....|........kwk.....|.......kwk......|......kwk.......|.....kwk........|....kxk.........|....kk..........|................|................|................|................`,
+ staff:`..........kkkk..|.........kgaagk.|.........kacchk.|.........kgaagk.|..........kgwk..|.........kwk....|........kwk.....|.......kwk......|......kwk.......|.....kwk........|....kwk.........|...kwk..........|..kwk...........|..kxk...........|..kk............|................`,
+ knuckle:`................|................|...kkkkkkkk.....|..kmmmmmmmmk....|..kmnmnmnmnk....|..kkkkkkkkkk....|..kaaaaaaaak....|..kabbbbbbak....|..kaaaaaaaak....|...kaaaaaak.....|....kkkkkk......|................|................|................|................|................`,
+ gun:`................|................|..kkkkkkkkkkk...|.kmmmmmmmmmmnk..|.knnnnnnnnnnnk..|..kkkkwwwkkkk...|.....kwwk.......|....kwwk........|....kwxk........|...kxxk.........|...kkkk.........|................|................|................|................|................`,
+ hat:`................|................|......kkkk......|.....kaaaak.....|....kaacaaak....|....kaccaaak....|...kaaaaaaaak...|...kaaaaaaaak...|..kbbbbbbbbbbk..|.kbbbbbbbbbbbbk.|..kkkkkkkkkkkk..|................|................|................|................|................`,
+ top:`................|...kkk....kkk...|..kaaakkkkaaak..|.kaaaaaaaaaaaak.|.kaakaaaaaakaak.|.kak.kaaaak.kak.|.kk..kaaaak..kk.|.....kaccak.....|.....kaaaak.....|.....kaaaak.....|.....kbbbbk.....|.....kkkkkk.....|................|................|................|................`,
+ bottom:`................|................|....kkkkkkkk....|....kbbbbbbk....|....kaaaaaak....|....kaaaaaak....|....kaakkaak....|....kaak.kaak...|...kaak..kaak...|...kaak..kaak...|...kaak..kaak...|...kbbk..kbbk...|...kkkk..kkkk...|................|................|................`,
+ overall:`................|...kkk....kkk...|..kaaakkkkaaak..|.kaaaaaaaaaaaak.|.kak.kaccak.kak.|.kk..kaaaak..kk.|.....kaaaak.....|.....kbbbbk.....|.....kaakaak....|....kaak.kaak...|....kaak.kaak...|....kbbk.kbbk...|....kkkk.kkkk...|................|................|................`,
+ shoes:`................|................|................|................|...kkk.....kkk..|...kaak....kaak.|...kaak....kaak.|...kaakk...kaakk|..kaaaaak.kaaaaak|..kbbbbbk.kbbbbbk|..kkkkkkk.kkkkkkk|................|................|................|................|................`,
+ gloves:`................|....k.k.k.......|...kakakak......|...kakakak.k....|...kakakakkak...|...kaaaaaakak...|...kaaaaaaak....|...kaaaaaaak....|....kaaaaak.....|....kbbbbbk.....|....kkkkkkk.....|................|................|................|................|................`,
+ cape:`................|....kkkkkkkk....|...kgaaaaaagk...|...kaaaaaaaak...|..kaaacaaaaaak..|..kaaacaaaaaak..|..kaaaaaaaaaak..|.kaaaaaaaaaaaak.|.kaaaaaaaaaaaak.|.kbbbbbbbbbbbbk.|.kkbkkbkkbkkbkk.|..k..k..k..k....|................|................|................|................`,
+ shield:`................|...kkkkkkkkkk...|..kmmmmmmmmmmk..|..kmaaaaaaaamk..|..kmaaaggaaamk..|..kmaaggggaamk..|..kmaaaggaaamk..|..kmaaaaaaaamk..|...kmaaaaaamk...|....kmaaaamk....|.....kmaamk.....|......kmmk......|.......kk.......|................|................|................`,
+ earring:`................|......kkk.......|.....kg.gk......|.....kg.gk......|......kgk.......|......kgk.......|.....kaaak......|....kaccaak.....|....kaaaaak.....|....kbaaabk.....|.....kbbbk......|......kkk.......|................|................|................|................`,
+ ring:`................|................|......kkkk......|.....kaccak.....|.....kaaaak.....|....kgkkkkgk....|...kg......gk...|...kg......gk...|...kg......gk...|....kg....gk....|.....kggggk.....|......kkkk......|................|................|................|................`,
+ medal:`................|....kk....kk....|....krk..krk....|.....krkkrk.....|......krrk......|.....kkggkk.....|....kgggggg k...|...kggcgggggk...|...kgcggggggk...|...kgggggggbk...|....kgggggbk....|.....kkbbkk.....|.......kk.......|................|................|................`,
+ potion:`................|......kkkk......|......kttk......|......kxxk......|.....kkttkk.....|....kt....tk....|...kt......tk...|...kaaaaaaaak...|...kacaaaaaak...|...kaacaaaaak...|...kaaaaaaaak...|....kbbbbbbk....|.....kkkkkk.....|................|................|................`,
+ food:`................|.......kk.......|........kl......|.....kkkllkk....|....kaaakaaak...|...kacaaaaaaak..|...kcaaaaaaaak..|...kaaaaaaaaak..|...kaaaaaaaaak..|....kaaaaaaak...|....kbaaaaabk...|.....kbbbbbk....|......kkkkk.....|................|................|................`,
+ scroll:`................|..kkkkkkkkkk....|.kttttttttttk...|.kkttttttttkk...|..kt.kkkk.tk....|..kt......tk....|..kt.kkkk.tk....|..kt......tk....|..kt.kkk..tk....|..kt......tk....|.kkttttttttkk...|.kttttttttttk...|..kkkkkkkkkk....|................|................|................`,
+ arrow:`................|...........kkk..|...........kmk..|..........kmnk..|.........kwk....|........kwk.....|.......kwk......|......kwk.......|.....kwk........|..k.kwk.........|..kkkwk.........|..kakk..........|.kaak...........|.kkk............|................|................`,
+ star:`................|.......kk.......|......kmmk......|......kmnk......|.kkkkkmmnkkkkk..|..kmmmmmmmmnk...|...kmmnkmmnk....|....kmnkmnk.....|...kmnk.kmnk....|..kmnk...kmnk...|..kkk.....kkk...|................|................|................|................|................`,
+ bullet:`................|................|................|.....kkkk.......|....kgmmmk......|....kgmmmk......|....kgggggk.....|....kgggggk.....|....kbbbbbk.....|....kbbbbbk.....|....kkkkkkk.....|................|................|................|................|................`,
+ ore:`................|................|.......kkk......|.....kkaaakk....|....kaacaaabk...|...kacchaaabbk..|...kaccaaaabbk..|..kaaaaaaaabbk..|..kbaaaaaabbbk..|...kbbaaabbbk...|....kkbbbbkk....|......kkkk......|................|................|................|................`,
+ shell:`................|................|.......kkkk.....|.....kkaaaakk...|....kaabbbbaak..|...kabbaaaabbak.|...kabaccaaabak.|...kabacaabbak..|...kaabaabbaak..|....kaabbbaak...|.....kkaaakk....|.......kkk......|................|................|................|................`,
+ cap:`................|................|.....kkkkkk.....|...kkaaaaaakk...|..kaataaaataak..|.kaaaaaaataaaak.|.kaataaaaaaaaak.|.kaaaaaatataaak.|.kbbbbbbbbbbbbk.|..kkssssssssk...|....kssssssk....|....kkkkkkkk....|................|................|................|................`,
+ leaf:`................|...........kk...|.........kkllk..|.......kkllllk..|......kllllllk..|.....kllcllllk..|....kllcllllk...|...kllcllllk....|...klcllllk.....|..kllllllk......|..kllllkk.......|.kxkkkk.........|kxk.............|kk..............|................|................`,
+ bone:`................|..kk........kk..|.kttk......kttk.|.kttkk....kkttk.|..kkttkkkkttkk..|....kttttttk....|....kttttttk....|..kkttkkkkttkk..|.kttkk....kkttk.|.kttk......kttk.|..kk........kk..|................|................|................|................|................`,
+ wing:`................|........kkkk....|......kkaaaak...|.....kaaaccak...|....kaaacaak....|...kaaacaak.....|..kaaacaak......|..kaacaak.......|.kaacaak........|.kaaaak.........|.kbbbk..........|.kkkk...........|................|................|................|................`,
+ hide:`................|...kk......kk...|..kaakkkkkkaak..|..kaaaaaaaaaak..|...kaacaaaaak...|...kaaaaaaaak...|..kaaaaaaaaaak..|..kaaaaaaaaaak..|...kaaaaaaaak...|..kaakaaaakaak..|..kk.kkkkk.kk...|................|................|................|................|................`,
+ powder:`................|................|......kkkk......|......kttk......|.....kkttkk.....|....kaaaaaak....|...kaacaaaaak...|...kacaaaaaak...|...kaaaaaaaak...|...kaaaaaaaak...|....kbbbbbbk....|.....kkkkkk.....|................|................|................|................`,
+ crystal:`................|.......kk.......|......kcak......|.....kccaak.....|....kchcaabk....|....kccaaabk....|...kccaaaabbk...|...kcaaaaabbk...|....kaaaabbk....|.....kaabbk.....|......kabk......|.......kk.......|................|................|................|................`,
+ doll:`................|.....kkkkkk.....|....kaaaaaak....|....kaekkeak....|....kaaaaaak....|....kaarraak....|.....kaaaak.....|...kkkaaaakkk...|..kaakaaaakaak..|..kk.kaaaak.kk..|.....kakkak.....|.....kk..kk.....|................|................|................|................`,
+ bag:`................|......kkkk......|.....kg..gk.....|....kkkkkkkk....|...kaaaaaaaak...|..kaacaaaaaaak..|..kacaaaaaaaak..|..kaaaaggaaaak..|..kaaaaggaaaak..|..kaaaaaaaaaak..|...kbbbbbbbbk...|....kkkkkkkk....|................|................|................|................`,
+ face:`................|................|.....kkkkkk.....|....kssssssk....|...kssssssssk...|...ksekssseks...|...kssssssssk...|...kssaaaassk...|....ksssssk.....|.....kkkkkk.....|................|................|................|................|................|................`,
+ pet:`................|....kk....kk....|...kaak..kaak...|...kaakkkkaak...|...kaaaaaaaak...|..kaaekaaekaak..|..kaaaaaaaaaak..|..kaarrkkrraak..|...kaaaaaaaak...|....kaaaaaak....|...kaakkkkaak...|...kkk....kkk...|................|................|................|................`};
+const MON_T={
+ snail:`................|................|.....kkkk.......|....kaaaak......|...kabccbak.....|..kabcbbcbak....|..kabcbabcak..k.|..kabbcbbaak.ksk|..kaabbbaaakksek|...kaaaaakkssssk|.kkkkkkkkssssssk|kssssssssssssk..|.kkkkkkkkkkkkk..|................|................|................`,
+ mushroom:`................|....kkkkkkkk....|...kaaaaaaaak...|..kaatattaataak.|.kaataaaaaataak.|.kaaaaaaaaaaaak.|.kbbbbbbbbbbbbk.|..kkssssssssk...|...kssekkessk...|...kssssssssk...|...kssrrrrssk...|....kssssssk....|...kkk.kk.kkk...|................|................|................`,
+ slime:`................|................|.......kk.......|......kaak......|.....kaacak.....|....kaacaaak....|...kaacaaaaak...|..kaaaaaaaaaak..|..kaaeakkaeaak..|..kaaaaaaaaaak..|..kaaakrrkaaak..|...kbbbbbbbbk...|....kkkkkkkk....|................|................|................`,
+ stump:`................|.....k...k......|....klk.klk.....|...kkllkllkk....|...kwwwwwwwk....|..kwxxwwwxxwk...|..kwwwwwwwwwk...|..kwekwwwekwk...|..kwwwwwwwwwk...|..kwwkkkkwwwk...|..kwwwwwwwwwk...|.kxwwkwwkwwxk...|.kkkk.kk.kkkk...|................|................|................`,
+ pig:`................|................|...kk......kk...|..kaak....kaak..|..kaaakkkkaaak..|.kaaaaaaaaaaaak.|.kaaekaaaaekaak.|.kaaaaaaaaaaaak.|.kaaaakccckaaak.|.kaaaakcekcaaak.|..kaaaakkkaaak..|..kbbbbbbbbbbk..|..kbk.kbbk.kbk..|..kk..kkkk..kk..|................|................`,
+ octopus:`................|.....kkkkkk.....|....kaaaaaak....|...kaacaaaaak...|...kaaaaaaaak...|...kaekaakeak...|...kaaaaaaaak...|...kaaakkaaak...|..kaaaaaaaaaak..|.kakakakakakak..|.kak.kak.kak.k..|..k...k...k.....|................|................|................|................`,
+ bat:`................|................|.k............k.|.kk...kkkk...kk.|.kak.kaaaak.kak.|.kaakaaaaaakaak.|.kaaakeaaekaaak.|..kaaaaaaaaaak..|...kakaaaakak...|...kk.kaak.kk...|.......kk.......|................|................|................|................|................`,
+ eye:`................|.....kkkkkk.....|...kkaaaaaakk...|..kaaatttttaak..|..kaatteeetak...|.kaaatteeetaak..|.kaaatttttaaak..|..kaaaaaaaaak...|...kaaaaaaak....|....kkaaakk.....|......kak.......|.......kak......|........kk......|................|................|................`,
+ boar:`................|................|..kk.......kk...|.kaak.kkk.kaak..|.kaakkaaakkaak..|..kaaaaaaaaaak..|.kaeaaaaaaaeak..|.kaaaaaaaaaaak..|.ktkaaccccaktk..|.ktkacekecaktk..|..kkaaccccakk...|...kbbbbbbbbk...|...kbk.kk.kbk...|...kk..kk..kk...|................|................`,
+ mask:`................|....kkkkkkkk....|...kwwwwwwwwk...|..kwwwwwwwwwwk..|..kwkkwwwwkkwk..|..kwkekwwkekwk..|..kwkkwwwwkkwk..|..kwwwwwwwwwwk..|..kwwwkrrkwwwk..|..kwwwwkkwwwwk..|...kwwwwwwwwk...|....kkkkkkkk....|................|................|................|................`,
+ fairy:`................|..kk........kk..|.kcck......kcck.|.kccck.kk.kccck.|..kcckkssk kcck.|...kkksssskkk...|.....ksekesk....|.....kssssk.....|.....kaaaak.....|....kaaaaaak....|.....kaaaak.....|......kk.kk.....|................|................|................|................`,
+ croc:`................|................|..kk..kk........|.kaakkaak.......|.kaeaaaeakkkkk..|.kaaaaaaaaaaaakk|.ktatatatatatak.|.kaaaaaaaaaaaak.|.ktatatatatatak.|..kaaaaaaaaaak..|..kak.kak.kak...|..kk..kk..kk....|................|................|................|................`,
+ monkey:`................|.....kkkkkk.....|....kaaaaaak....|..kkaaaaaaakk...|.kaakssssssakk..|.kakseksseksak..|..kksssssssk....|....kssrrssk....|...kkaaaaaakk...|..kaakaaaakaak..|..kk.kaaaak.kk..|.....kakkak.....|.....kk..kk.....|................|................|................`,
+ ghost:`................|.....kkkkkk.....|....kaaaaaak....|...kaaaaaaaak...|...kaekaakeak...|...kaaaaaaaak...|...kaaakkaaak...|...kaaaaaaaak...|..kaaaaaaaaak...|..kaaaaaaaaaak..|.kaakaakaakaak..|.kk.kk.kk.kk.k..|................|................|................|................`,
+ drake:`................|..kk............|.kaak....kk.....|.kaeakkkkaak....|.kaaaaaaaaak....|..kttkaaaaaak...|...kkkaaaccaakk.|.....kaaaccaaaak|....kaakaaaaaakk|....kak.kaaakk..|....kk..kakak...|........kk.kk...|................|................|................|................`,
+ golem:`................|....kkkkkkkk....|...kaaaaaaaak...|...kaeaaaaeak...|...kaaaaaaaak...|.kkkbbbbbbbbkkk.|kaaakaaaaaakaaak|kaaakaacaaakaaak|kbbbkaaaaaakbbbk|.kkkkaaaaaakkkk.|....kaak.kaak...|...kbbbk.kbbbk..|...kkkkk.kkkkk..|................|................|................`,
+ skeleton:`................|.....kkkkkk.....|....kttttttk....|....ktekketk....|....kttttttk....|.....ktkktk.....|......kttk......|....kkttttkk....|...kt.kttk.tk...|......kttk......|.....kt..tk.....|....kt....tk....|....kk....kk....|................|................|................`,
+ sentinel:`................|......kkkk......|.....kmmmmk.....|....kmmmmmmk....|....kmekkemk....|....kmmmmmmk....|...kkaaaaaakk...|..kmkaaaaaakmk..|..kmkaaggaakmk..|...kkaaaaaakk...|.....kmkkmk.....|.....kk..kk.....|................|................|................|................`,
+ snake:`................|................|..........kkk...|.........kaaak..|........kaeaak..|........kaaakr..|.......kaaak.r..|..kkk.kaaak.....|.kaaakaaak......|.kaakaaak.......|.kaaaaak........|..kkkkk.........|................|................|................|................`,
+ demon:`................|..kk........kk..|.kmmk......kmmk.|..kmmkkkkkkmmk..|...kaaaaaaaak...|..kaarkaaakraak.|..kaaaaaaaaaak..|..kaatttttttak..|...kaaaaaaaak...|.kkaaaaaaaaaakk.|kaakaaaaaaaakaak|kk.kaak..kaak.kk|...kkkk..kkkk...|................|................|................`,
+ blob:`................|................|......kkkk......|....kkaaaakk....|...kaaacaaaak...|..kaaacaaaaaak..|..kaaekaaekaak..|..kaaaaaaaaaak..|..kaaakkkkaaak..|...kaaaaaaaak...|....kbbbbbbk....|.....kkkkkk.....|................|................|................|................`,
+ hook:`................|......kkkk......|.....kaaaak.....|....kaekkeak....|....kssssssk....|.....kssssk.....|....kkaaaakk....|...kaakaaaakmk..|...kk.kaaaakmk..|......kakkak.kk.|......kk..kk....|................|................|................|................|................`};
+/* colours from the name (first match wins), then by kind */
+const ICO_COL=[[/red|fire|ruby|garnet|blood|flame|scarlet/i,'#d9443a'],[/orange|bronze|copper/i,'#e58a2e'],[/yellow|gold|topaz|sun|banana|lemon/i,'#e8c13a'],
+ [/green|emerald|jade|leaf|lime|zombie|poison/i,'#58b04a'],[/blue|sapphire|aqua|ice|cold|frost|icy|water|mana/i,'#3f86d9'],[/purple|violet|amethyst|curse|dark|shadow|black crystal/i,'#8a5ad0'],
+ [/pink|ribbon|rose|cherry/i,'#e57aa8'],[/white|silver|snow|bone|skele|mummy|holy/i,'#d9dfe6'],[/black|iron|obsidian|steel|mithril|adamant|metal/i,'#6f7782'],
+ [/brown|wood|leather|stump|bark|mask|tree/i,'#9a6a3c'],[/diamond|crystal|opal|orihalcon/i,'#bfe8f2']];
+const ICO_KIND_COL={sword:'#b8c4d0',twosword:'#b8c4d0',axe:'#b8c4d0',mace:'#b8c4d0',dagger:'#b8c4d0',spear:'#b8c4d0',polearm:'#b8c4d0',claw:'#7f8894',knuckle:'#7f8894',gun:'#6f7782',
+ potion:'#d9443a',food:'#d9443a',ore:'#9aa6b2',shell:'#c9925a',cap:'#e58a2e',leaf:'#58b04a',hide:'#9a6a3c',powder:'#d9dfe6',crystal:'#9ad0e8',doll:'#e5b07a',bag:'#b07a48',
+ snail:'#58b04a',mushroom:'#e58a2e',slime:'#58b04a',pig:'#e8a0b0',octopus:'#d9443a',bat:'#7a5aa8',eye:'#8a5ad0',boar:'#9a6a3c',fairy:'#7fd0e0',croc:'#58a05a',monkey:'#9a6a3c',
+ ghost:'#c8d0e0',drake:'#58b04a',golem:'#9aa6b2',skeleton:'#e6e6e6',sentinel:'#9aa6b2',snake:'#58b04a',demon:'#7a2a2a',blob:'#3f86d9',hook:'#3f86d9'};
+function icoShade(hex,f){const n=parseInt(hex.slice(1),16);let r=n>>16,g=n>>8&255,b=n&255;const m=x=>Math.max(0,Math.min(255,Math.round(f<0?x*(1+f):x+(255-x)*f)));return '#'+[m(r),m(g),m(b)].map(v=>v.toString(16).padStart(2,'0')).join('')}
+const ICO_CACHE={};
+function icoSvg(tpl,main,opts){opts=opts||{};const key=tpl+'|'+main+'|'+(opts.metal||'');if(ICO_CACHE[key])return ICO_CACHE[key];
+ const rows=(ICO_T[tpl]||MON_T[tpl]||ICO_T.bag).split('|');const metal=opts.metal||'#cfd6dd';
+ const P={k:'#1b2233',a:main,b:icoShade(main,-.32),c:icoShade(main,.38),h:'#ffffff',m:metal,n:icoShade(metal,-.35),w:'#8a5a2c',x:'#5a3818',g:'#e8b830',e:'#111111',s:'#f2c9a0',r:'#d9443a',l:'#5ab04a',t:'#f6f6f2'};
+ let r='';for(let y=0;y<16;y++){const row=rows[y]||'';for(let x=0;x<16;x++){const ch=row[x];if(!ch||ch==='.'||ch===' ')continue;r+='<rect x="'+x+'" y="'+y+'" width="1" height="1" fill="'+(P[ch]||main)+'"/>'}}
+ const svg='<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" shape-rendering="crispEdges">'+r+'</svg>';
+ return ICO_CACHE[key]='data:image/svg+xml;base64,'+btoa(svg)}
+const WTY={oh_sword:'sword',th_sword:'twosword',oh_axe:'axe',th_axe:'axe',oh_bw:'mace',th_bw:'mace',dagger:'dagger',spear:'spear',polearm:'polearm',bow:'bow',crossbow:'crossbow',claw:'claw',wand:'wand',staff:'staff',knuckle:'knuckle',gun:'gun'};
+const STPL={Hat:'hat',Top:'top',Bottom:'bottom',Overall:'overall',Shoes:'shoes',Gloves:'gloves',Cape:'cape',Shield:'shield',Earring:'earring',Ring:'ring',Pendant:'earring',Medal:'medal',Face:'face',Eyes:'face',Eye:'face',Belt:'bottom'};
+function itemTpl(id,it){if(!it)return 'bag';const n=it.n||'';
+ if(it.w){let t=null;try{t=typeof tyOf==='function'?tyOf(id):null}catch(e){}if(!t){t=it.ty||it.mw||'';if(it.rng==='claw')t='claw';else if(it.rng==='bow')t='bow';else if(it.rng==='xbow')t='crossbow';else if(it.rng==='gun')t='gun';else if(/axe/i.test(n))t='oh_axe';else if(/club|mace|hammer/i.test(n))t='oh_bw'}
+  return WTY[t]||(/wand/i.test(n)?'wand':/staff/i.test(n)?'staff':/dagger|knife|razor/i.test(n)?'dagger':/spear/i.test(n)?'spear':/bow/i.test(n)?'bow':'sword')}
+ if(it.s)return STPL[it.s]||'hat';
+ if(it.pet||/^pet_/.test(id))return 'pet';
+ if(it.scr||/^sc_/.test(id)||/scroll/i.test(n))return 'scroll';
+ if(it.ammo||/arrow/i.test(n))return /throwing|star/i.test(n)?'star':/bullet/i.test(n)?'bullet':'arrow';
+ if(/throwing-star|stars/i.test(n))return 'star';if(/bullet/i.test(n))return 'bullet';
+ if(it.heal||it.mpheal||it.hpp||it.mpp||/potion|elixir|water|tonic|antidote|eyedrop|cure/i.test(n))return /apple|egg|meat|banana|orange|lemon|chocolate|cake|pizza/i.test(n)?'food':'potion';
+ if(/apple|egg|meat|banana|orange|lemon|chocolate|cake|food/i.test(n))return 'food';
+ if(/ore|rubble|rock|slate|flint|block/i.test(n))return /crystal/i.test(n)?'crystal':'ore';if(/crystal|icicle|gem|core/i.test(n))return 'crystal';
+ if(/shell|shellpiece/i.test(n))return 'shell';if(/cap\b|spore/i.test(n))return 'cap';if(/leaf|seedling|branch|sap/i.test(n))return 'leaf';
+ if(/bone|skull|rib|tooth|horn|tusk/i.test(n))return 'bone';if(/wing|feather/i.test(n))return 'wing';if(/skin|leather|hide|bark|armor|board|cloth|bandage|tail|leg|head|hoof|tentacle/i.test(n))return 'hide';
+ if(/powder|dust/i.test(n))return 'powder';if(/doll|piece|omok/i.test(n))return 'doll';if(/bubble|liquid|blood/i.test(n))return 'potion';
+ return 'bag'}
+function colorFor(n,kind){for(const [re,c] of ICO_COL)if(re.test(n))return c;return ICO_KIND_COL[kind]||'#8fa6c8'}
+function itemIconUrl(id){try{const b=(typeof baseOf==='function'&&P)?baseOf(id):id,it=ITEMS[b]||ITEMS[id];if(!it)return null;const t=itemTpl(b,it),n=it.n||'';
+  const metal=/gold/i.test(n)?'#e8c13a':/bronze|copper/i.test(n)?'#d08a4a':/dark|black|steel|iron/i.test(n)?'#8a929c':/mithril|silver/i.test(n)?'#e6ecf2':null;
+  const main=(['sword','twosword','axe','mace','dagger','spear','polearm'].includes(t)?colorFor(n,'hide'):colorFor(n,t));return icoSvg(t,main,{metal})}catch(e){return null}}
+function monTpl(k,d){const n=(d&&d.n)||k;
+ const R=[[/snail/i,'snail'],[/mushmom|mushroom|shroom/i,'mushroom'],[/slime|bubbling/i,'slime'],[/stump/i,'stump'],[/pig/i,'pig'],[/octo|squid/i,'octopus'],[/stirge|bat/i,'bat'],
+  [/eye/i,'eye'],[/boar|hog|kargo/i,'boar'],[/mask/i,'mask'],[/fairy/i,'fairy'],[/ligator|croco/i,'croc'],[/lupin|monkey/i,'monkey'],[/wraith|ghost|shade|boogie|malady/i,'ghost'],
+  [/drake|dragon/i,'drake'],[/golem/i,'golem'],[/skele|mummy|dog/i,'skeleton'],[/sentinel/i,'sentinel'],[/necki|snake/i,'snake'],[/balrog|tauro/i,'demon'],[/hook|pirate|bob/i,'hook']];
+ for(const [re,t] of R)if(re.test(n))return t;return 'blob'}
+function monIconUrl(k){const d=(typeof MON!=='undefined'&&MON[k])||null;const t=monTpl(k,d),n=(d&&d.n)||k;
+ const main=/snail/i.test(n)&&!/blue|red/i.test(n)?'#58b04a':colorFor(n,t);return icoSvg(t,main)}
+const icoImg=(url,cls)=>url?'<img class="pxi'+(cls?' '+cls:'')+'" src="'+url+'" alt="">':'';
+/* Items and monsters get their pixel icon wherever the game shows their emoji (.i). The original emoji stays in .ie. */
+(function applyIcons(){try{for(const k in ITEMS){const it=ITEMS[k];if(!it||it._px)continue;const u=itemIconUrl(k);if(u){it.ie=it.i;it.i=icoImg(u);it._px=1}}}catch(e){}
+ try{for(const k in MON){const m=MON[k];if(!m||m._px)continue;m.ie=m.i;m.i=icoImg(monIconUrl(k),'pxm');m._px=1}}catch(e){}})();
+/* new items created later (instances, pets) */
+{const _r=render;render=function(){try{for(const k in ITEMS){const it=ITEMS[k];if(it&&!it._px&&it.n){const u=itemIconUrl(k);if(u){it.ie=it.i;it.i=icoImg(u);it._px=1}}}}catch(e){}return _r.apply(this,arguments)}}
+(()=>{const st=document.createElement('style');st.textContent='img.pxi{width:1.25em;height:1.25em;image-rendering:pixelated;vertical-align:-0.25em;display:inline-block}.slot img.pxi,.shopcard .sci img.pxi,.eqs img.pxi,.tile img.pxi{width:70%;height:auto;max-width:44px;vertical-align:middle}img.pxm{width:1.4em;height:1.4em}';document.head.appendChild(st)})();
+/* pixel icons for the main tabs */
+Object.assign(ICO_T,{
+ map:`................|................|.kkkkkkkkkkkkkk.|.kccakccakcaaak.|.kclakcaakclaak.|.kcllkcaakcllak.|.kcllkllakclllk.|.kaaakllakllaak.|.kaaakaaakaaaak.|.kaaakaaakarark.|.kaaakaaakaarak.|.kkkkkkkkkkkkkk.|................|................|................|................`,
+ hero:`................|.....kkkkkk.....|....kxxxxxxk....|....kxssssxk....|....ksekkesk....|....kssssssk....|.....kssssk.....|....kkaaaakk....|...kskaaaakskk..|...kskaaaaksk...|....kkbbbbkk....|.....kbkkbk.....|.....kxk.kxk....|.....kkk.kkk....|................|................`,
+ chat:`................|..kkkkkkkkkkkk..|.kttttttttttttk.|.kttttttttttttk.|.ktkkttkkttkkt k|.ktkkttkkttkktk.|.kttttttttttttk.|.kttttttttttttk.|..kkkktkkkkkkk..|.....kttk.......|.....ktk........|.....kk.........|................|................|................|................`,
+ menu:`................|................|..kkkkkkkkkkkk..|..kttttttttttk..|..kkkkkkkkkkkk..|................|..kkkkkkkkkkkk..|..kttttttttttk..|..kkkkkkkkkkkk..|................|..kkkkkkkkkkkk..|..kttttttttttk..|..kkkkkkkkkkkk..|................|................|................`});
+{const U={play:icoSvg('map','#5aa8e0'),stats:icoSvg('hero','#e85a3a'),pack:icoSvg('bag','#d9443a'),quests:icoSvg('scroll','#e8c13a'),social:icoSvg('chat','#f6f6f2'),cash:icoSvg('crystal','#5ac8f0'),menu:icoSvg('menu','#f6f6f2')};
+ for(const k in U)TABI[k]='<img class="pxi pxt" src="'+U[k]+'" alt="">';
+ const st=document.createElement('style');st.textContent='img.pxt{width:30px;height:30px;vertical-align:middle}';document.head.appendChild(st)}
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
