@@ -1637,7 +1637,8 @@ const SKM={
  mclaw:{ic:'🪄',nm:'Magic Claw',max:20,ty:'Active',pre:[['ebolt',1]],d:'Use MP to attack an enemy twice.',fx:n=>'MP -'+MAG.mcMp[n-1]+'; Basic attack '+MAG.mcAt[n-1]+' x 2 Hit, mastery '+mastery(n)+'%',cost:n=>MAG.mcMp[n-1]+' MP'}};
 Object.values(SKM).forEach(d=>d.job='Magician');Object.assign(SKJ,SKM);
 SKL.mguard=['🔮','Magic Guard'];SKL.marmor=['🧿','Magic Armor'];SKL.ebolt=['⚡','Energy Bolt'];SKL.mclaw=['🪄','Magic Claw'];
-const hasMW=()=>!!W().mw;
+/* v3.4: as in v62, spells can be cast with any weapon or none; a wand or staff only adds magic attack */
+const hasMW=()=>true;
 /* v3.4: the v62 / MapleStory Classic magic formula (meowdb Damage & Combat Formulas):
    MagicTotal = floor(INT/2) + magic attack (weapon, gear, scrolls, buffs)
    MAX = SkillPower/100 x MagicTotal x (1 + INT/125);  MIN = SkillPower/100 x MagicTotal x (1 + INT x m / 125),
