@@ -1,4 +1,4 @@
-window.__BUILD='3.5-11a624f0c3';
+window.__BUILD='3.5-aa46a041ae';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3435,7 +3435,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
  log('Spawn side: '+SPAWN_SIDES[(i+1)%3][2]+'. You will appear there when your next fight starts.','','combat');save();render()},true);
 /* v3.5: the move buttons are just arrows (right and left) */
 {const _r=render;render=function(){const o=_r.apply(this,arguments);try{const a=document.getElementById('adv'),b=document.getElementById('bk');
- const im=r=>'<img alt="" src="'+icoSvg('arrow','#e8b830')+'" style="width:60px;height:60px;image-rendering:pixelated;display:block;margin:auto;transform:rotate('+r+'deg)">';if(a&&a.dataset.arw!=='3'){a.innerHTML=im(45);a.title='Step right';a.setAttribute('aria-label','Step right');a.dataset.arw='3'}if(b&&b.dataset.arw!=='3'){b.innerHTML=im(-135);b.title='Step left';b.setAttribute('aria-label','Step left');b.dataset.arw='3'}}catch(e){}return o}}
+ const im=r=>'<img alt="" src="'+icoSvg('arrow','#e8b830')+'" style="width:60px;height:60px;image-rendering:pixelated;display:block;margin:auto;transform:rotate('+r+'deg)">';if(a&&a.dataset.arw!=='2'){a.innerHTML='<svg viewBox="0 0 16 16" width="34" height="34" style="image-rendering:pixelated;display:block;margin:auto" shape-rendering="crispEdges"><path d="M3 7h6V3h2v1h1v1h1v1h1v1h1v2h-1v1h-1v1h-1v1h-1v1h-2V9H3z" fill="#2a2340"/><path d="M3 7h6V3h2v1h1v1h1v1h1v1h1v2h-1v1h-1v1h-1v1h-1v1h-2V9H3z" fill="#ffd65a" transform="translate(-1,-1)"/></svg>';a.title='Step right';a.dataset.arw='2'}if(b&&b.dataset.arw!=='2'){b.innerHTML='<svg viewBox="0 0 16 16" width="34" height="34" style="image-rendering:pixelated;display:block;margin:auto" shape-rendering="crispEdges"><path d="M13 7H7V3H5v1H4v1H3v1H2v1H1v2h1v1h1v1h1v1h1v1h2V9h6z" fill="#2a2340"/><path d="M13 7H7V3H5v1H4v1H3v1H2v1H1v2h1v1h1v1h1v1h1v1h2V9h6z" fill="#ffd65a" transform="translate(-1,-1)"/></svg>';b.title='Step left';b.dataset.arw='2'}}catch(e){}return o}}
 /* v3.5: Slash Blast is a melee sweep: your normal reach (no extra column) and only your line and the lines right next
    to it. Before, it reached one column further and hit monsters on every line. */
 {const _sb=skSlash;skSlash=function(){const tf=targetsFor;targetsFor=function(reach,n){const pr=PRf();return tf(Math.max(0,reach-SB_EXTRA),99).filter(m=>Math.abs(m.row-pr)<=1).slice(0,n)};try{return _sb.apply(this,arguments)}finally{targetsFor=tf}}}
