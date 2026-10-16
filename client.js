@@ -3572,6 +3572,11 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 /* v3.4: no Free Market menu tile. In v62 the Free Market is a place you walk into from town maps (Free Market
    Entrance); it comes back as a map when player shops are built. */
 for(let i=FEAT.length-1;i>=0;i--)if(FEAT[i][0]==='market'||FEAT[i][0]==='pets')FEAT.splice(i,1);/* pets come back on the Character screen when they are built */
+/* v3.4: Shanks (Vasily) takes you to Victoria Island from level 7 for 150 mesos, as in v62. (The free ride with
+   Lucas's Recommendation Letter belongs to a later version's quest chain, which this game does not have.) */
+QD.ferry.goal='Pay Shanks 150 mesos for the ride to Victoria Island (from level 7). You can never come back.';
+{const _dd=dlgDo;dlgDo=function(k){if(k==='qa:ferry'&&P){if(P.mesos<150){log('Shanks: The ride costs 150 mesos. Come back when you have them.','bad','quest');talk=null;return render()}
+  const r=_dd(k);if(P.q.ferry){P.mesos-=150;log('You pay Shanks 150 mesos.','','quest');save()}return r}return _dd(k)}}
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
