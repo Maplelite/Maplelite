@@ -823,9 +823,11 @@ const baseOf=id=>(P.inst&&P.inst[id])?P.inst[id].b:id;
 function tyOf(id){const b=baseOf(id),it=ITEMS[b];if(it.w){if(b==='great_axe')return'th_axe';if(/axe/i.test(b))return'oh_axe';if(/club|mace|hammer/i.test(b))return'oh_bw';if(it.mw)return it.mw;if(it.dag)return'dagger';if(it.rng==='claw')return'claw';if(/crossbow/i.test(b))return'crossbow';if(/bow/i.test(b))return'bow';return'oh_sword'}return({Hat:'helmet',Top:'top',Bottom:'bottom',Gloves:'gloves',Shoes:'shoes',Cape:'cape',Shield:'shield',Earring:'earring'})[it.s]||null}
 const slotsOf=id=>P.inst&&P.inst[id]?P.inst[id].sl:baseSl(id);
 function instBuild(id){const d=P.inst[id],b=ITEMS[d.b],st=d.st,it=Object.assign({},b),x={};
- if(b.w)it.watk=b.watk+(st.watk||0);else it.def=(b.def||0)+(st.def||0);
- const bon=Object.assign({},b.bon||{});['str','dex','int','luk'].forEach(k=>{if(st[k])bon[k]=(bon[k]||0)+st[k]});it.bon=Object.keys(bon).length?bon:null;
- ['matk','mdef','hp','jump','speed'].forEach(k=>{if(st[k])x[k]=st[k]});if(b.w&&st.watk===undefined)it.watk=b.watk;
+ if(b.w)it.watk=Math.max(0,b.watk+(st.watk||0));else it.def=Math.max(0,(b.def||0)+(st.def||0));
+ const bon=Object.assign({},b.bon||{});['str','dex','int','luk'].forEach(k=>{if(st[k])bon[k]=Math.max(0,(bon[k]||0)+st[k]);if(bon[k]===0)delete bon[k]});it.bon=Object.keys(bon).length?bon:null;
+ Object.assign(x,b.x||{});/* v3.4: keep the item's own extra stats; scrolls and drop variance add to them */
+ ['matk','mdef','hp','mp','acc','eva','jump','speed'].forEach(k=>{if(k==='matk'&&b.w&&b.matk)return;if(st[k])x[k]=Math.max(0,(x[k]||0)+st[k]);if(x[k]===0)delete x[k]});if(b.w&&st.watk===undefined)it.watk=b.watk;
+ if(b.w&&b.matk&&st.matk){it.matk=Math.max(0,b.matk+st.matk)}
  it.x=x;it.inst=1;it.sl=d.sl;it.n=b.n+(d.ok?' (+'+d.ok+')':'')+' ['+d.sl+']';ITEMS[id]=it;DESC[id]=(DESC[d.b]||'')+' Upgrade slots left: '+d.sl+'.'}
 function instReg(){for(const id in (P.inst||{}))instBuild(id)}
 function eff(id){const it=ITEMS[id],o={};if(it.w)o.watk=it.watk;if(it.def)o.def=it.def;if(it.bon)for(const k in it.bon)o[k]=it.bon[k];if(it.x)for(const k in it.x)o[k]=it.x[k];return o}
@@ -1613,7 +1615,7 @@ ITEMS.hardwood_staff={n:'Hardwood Staff',i:'🦯',w:1,mw:'staff',watk:17,matk:24
 DESC.wooden_wand='A simple wand that focuses magic. Magicians only.';DESC.hardwood_wand='A sturdier wand with more magic power. Magicians only.';
 DESC.wooden_staff='A walking staff that channels magic. Magicians only.';DESC.hardwood_staff='A hardwood staff with more magic power. Magicians only.';
 MAPS.ellinia.shopList=MAPS.ellinia.shopList.concat(['wooden_wand','hardwood_wand','wooden_staff','hardwood_staff']);
-const MG_REACH=3;/* spells reach 3 columns on the 7-wide board */
+const MG_REACH=4;/* v3.4: spells reach 4 columns on the 7-wide board, one more than bows and claws (range is the mage perk) */
 const mastery=n=>15+5*Math.floor((n-1)/2);
 const MAG={
  mgPct:n=>11+3*((n-1)%5)+19*Math.floor((n-1)/5),
@@ -1636,8 +1638,14 @@ const SKM={
 Object.values(SKM).forEach(d=>d.job='Magician');Object.assign(SKJ,SKM);
 SKL.mguard=['🔮','Magic Guard'];SKL.marmor=['🧿','Magic Armor'];SKL.ebolt=['⚡','Energy Bolt'];SKL.mclaw=['🪄','Magic Claw'];
 const hasMW=()=>!!W().mw;
-function magRange(atk,mast){const w=W(),I=eS('int'),M=I+(w.matk||0)+((w.x&&w.x.matk)||0),
- mx=((M*M/1000+M)/30+I/200)*atk,mn=((M*M/1000+M*(mast/100)*0.9)/30+I/200)*atk;return[Math.max(1,Math.floor(mn)),Math.max(1,Math.floor(mx))]}
+/* v3.4: the v62 / MapleStory Classic magic formula (meowdb Damage & Combat Formulas):
+   MagicTotal = floor(INT/2) + magic attack (weapon, gear, scrolls, buffs)
+   MAX = SkillPower/100 x MagicTotal x (1 + INT/125);  MIN = SkillPower/100 x MagicTotal x (1 + INT x m / 125),
+   m = (SpellMastery/10 + 0.1) x 0.7. Callers pass mastery as a percent (10 + 5 x SpellMastery). */
+function magTotal(){const w=W(),I=eS('int');return Math.floor(I/2)+(w.matk||0)+((w.x&&w.x.matk)||0)+gearMatk()}
+function gearMatk(){let a=0;for(const s in (P.eq||{})){const it=ITEMS[P.eq[s]];if(it&&eqOk(P.eq[s])){if(it.x&&it.x.matk)a+=it.x.matk}}return a}
+function magRange(atk,mast){const I=eS('int'),K=atk/100,MT=magTotal(),sm=Math.max(0,((mast||10)-10)/5),m=(sm/10+0.1)*0.7;
+ return[Math.max(1,Math.floor(K*MT*(1+I*m/125))),Math.max(1,Math.floor(K*MT*(1+I/125)))]}
 const accMagic=()=>(eS('int')*1.2+P.lvl*2+eS('luk')*.6)/2.5+5;
 function guardTake(x){const now=Date.now();if(!(P.b&&P.b.guard>now))return x;const mp=Math.floor(x*(P.b.guardv|0)/100);
  if(mp<=0)return x;if(P.mp>=mp){P.mp-=mp;return x-mp}P.mp=0;return x}
@@ -1723,8 +1731,11 @@ const _ty=tyOf;tyOf=function(id){const b=ITEMS[baseOf(id)];return(b&&b.w&&b.ty)|
 
 
 /* ===== Combat v2: 5 lines (+1 per 25 levels), aggressive vs passive monsters, single and multi target ===== */
-/* Combat lines: you start with 5 and gain 1 more every 25 levels. NRf() = number of lines, PRf() = the line you stand in (the middle one). */
-const NRf=()=>5+Math.floor(((P&&P.lvl)||1)/25),PRf=()=>Math.floor(NRf()/2);let fld=[];
+/* Combat lines: NRf() = number of lines (from the level, see monCap), PRf() = the line you stand in (the middle one). */
+const /* v3.4 board size by level: up to 6 monsters at levels 1-10, rising evenly to 15 at level 71 (when Dragon Roar, the
+   first 15-monster attack, can be learned) and to 20 at level 150; 2 monsters per row, so 3 to 10 rows */
+monCap=()=>{const l=(P&&P.lvl)||1;if(l<=10)return 6;if(l<=71)return Math.round(6+(l-10)*9/61);return Math.min(20,Math.round(15+(l-71)*5/79))},
+NRf=()=>Math.ceil(monCap()/2),PRf=()=>Math.floor(NRf()/2);let fld=[];
 ['shroom','slime','stump','axe_stump','stirge','evil_eye','horny_mushroom'].forEach(k=>{if(MON[k])MON[k].ag=1});/* aggressive monsters: edit this list to tune */
 /* The board has COLS columns: you stand in column 0, monsters occupy columns 1..COLS-1 (gap = column - 1, so gap runs 0..MAXGAP). */
 const COLS=7,MAXGAP=COLS-2;
@@ -2701,9 +2712,9 @@ window.__siteAdmin={show,hide,paint};
      (never two in the same cell). The board holds lines x 3 monsters at most.
    Before this, at most one monster joined every 3-7.5 s and a line held one monster, so kill speed was capped at about
    700 an hour whatever your damage: a warrior's Slash Blast had nothing to hit and levelled no faster than a Beginner. */
-const ROWCAP=3;
+const ROWCAP=2;/* v3.4: at most 2 monsters per row */
 const mapCap=()=>{const a=mobSlots(P.map);return Math.max(1,Math.floor(a.length*.75))};
-const boardCap=()=>Math.min(mapCap(),NRf()*ROWCAP);
+const boardCap=()=>Math.min(mapCap(),monCap());
 function freeCells(){const c=[];for(let r=0;r<NRf();r++){const inRow=fld.filter(o=>o.row===r);if(inRow.length>=ROWCAP)continue;for(let g=1;g<=MAXGAP;g++)if(!inRow.some(o=>o.gap===g))c.push([r,g])}return c}
 function spawnWave(now,first){let n=0;const want=boardCap()-fld.length;
  for(let i=0;i<want;i++){const cells=freeCells();if(!cells.length)break;const s=claimSlot(P.map);if(s<0)break;
@@ -3016,7 +3027,7 @@ setInterval(()=>{if(!P||!enc)return;const now=Date.now();let ch=false;
 /* ---------- the engine ---------- */
 const seCd={};
 const say=(t,c)=>{log(t,c||'','combat');render()};
-const elMul=(m,el)=>{const e=(MON[m.k]||{}).el||{};const r=el&&e[el];return r==='w'?1.5:r==='r'?0.5:r==='i'?0:1};
+const elMul=(m,el)=>{const e=(MON[m.k]||{}).el||{};const r=el&&e[el];return r==='w'?1.25:r==='r'?0.75:r==='i'?0:1};/* v62: weak x1.25, resists x0.75, immune x0 */
 function seTargets(e,reach,n){const pool=fld.filter(m=>m.hp>0&&m.gap<=reach);if(!pool.length)return[];
  if(e.sh==='row'){const c=pool.slice().sort((a,b)=>a.gap-b.gap||Math.abs(a.row-PRf())-Math.abs(b.row-PRf()))[0];return pool.filter(m=>m.row===c.row).sort((a,b)=>a.gap-b.gap).slice(0,n)}
  return targetsFor(reach,n).filter(m=>m.hp>0)}
@@ -3066,7 +3077,8 @@ function seUse(k){const e=SE[k];if(!e||!P||P.dead)return;const n=sl(k);if(!n||!s
   if(e.fx==='recoil'){shiftMobs(1,{delay:0});log('The recoil throws you back a step.','','combat')}
   seKill(ts);if(e.k==='phys')finalAttack();save();return render()}
  /* ----- heal: heals you, hurts undead in reach ----- */
- if(e.k==='heal'){P.mp-=mp;lastAtk=now;const amt=Math.max(1,Math.floor((eS('int')*1.2+eS('luk')+((W().matk|0)+seMatk()))*(l.hp||100)/100));
+ if(e.k==='heal'){P.mp-=mp;lastAtk=now;/* v62 Heal: (INT x 1.2 + LUK) x MagicTotal / 1000 x target multiplier (4 for one target: you), scaled by the skill's heal % */
+  const amt=Math.max(1,Math.floor((eS('int')*1.2+eS('luk'))*(magTotal()+seMatk())/1000*4*(l.hp||100)/100));
   P.hp=Math.min(P.maxHp,P.hp+amt);log('Heal: +'+amt+' HP.','good','combat');
   if(enc){const ts=targetsFor(reach,l.mobCount||6).filter(m=>m.hp>0&&(MON[m.k]||{}).ud);for(const m of ts){const x=Math.max(1,Math.floor(amt*elMul(m,'holy')));m.hp-=x;m.prov=true;log('Heal burns the undead '+MON[m.k].n+' for '+x+'.','hit','combat')}seKill(ts)}
   save();return render()}
@@ -3528,6 +3540,31 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
     if(ev.extra.length>=24){gmMsg='24 extra events is the limit.';return render()}ev.extra.push(Math.round(ts/60e3)*60e3);delete soDraft.so_gm_evdate;delete soDraft.so_gm_evtime;gmMsg='Maze event scheduled.';audit('scheduled a maze event')}
    else if(a==='evt'){}
    c.ev=ev;c.by=MYID();c.t=Date.now();try{LS.setItem('mapleish_rates',JSON.stringify(c))}catch(e){}save();render()}}
+})();
+
+/* ===== v3.4: every piece of equipment is its own item
+   - Equipment never stacks: each piece is a separate item with its own stats, upgrade slots and scroll history
+     (built on the scroll system's item instances, P.inst).
+   - Dropped equipment gets random stats, as in v62: each stat the item has moves up or down by up to 10% of its value
+     (at least 1), capped at 5 for STR/DEX/INT/LUK, attack, magic attack, accuracy, avoid, speed and jump, and at 10 for
+     defense, magic defense, HP and MP. Stats never go below 0. Shop-bought and quest equipment is the standard item.
+   - Stacks from older saves are split into separate standard items. ===== */
+(function(){
+ const isEq=k=>{const it=ITEMS[k];return !!it&&(it.w||it.s)&&!it.ammo&&!it.inst&&!(P.inst&&P.inst[k])};
+ const CAP={str:5,dex:5,int:5,luk:5,watk:5,matk:5,acc:5,eva:5,speed:5,jump:5,def:10,mdef:10,hp:10,mp:10};
+ const ri=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+ function variance(base){const b=ITEMS[base],st={};const v={};
+  if(b.w){v.watk=b.watk|0;if(b.matk)v.matk=b.matk|0}else v.def=b.def|0;
+  for(const k in (b.bon||{}))v[k]=b.bon[k]|0;for(const k in (b.x||{}))if(CAP[k])v[k]=b.x[k]|0;
+  for(const k in v){const val=v[k];if(!(val>0))continue;const r=Math.min(Math.max(1,Math.ceil(val*0.1)),CAP[k]||5);const d=ri(-r,r);if(d)st[k]=d}return st}
+ window.newEquip=function(base,random){P.inst=P.inst||{};const id=base+'#'+(P.ic=(P.ic|0)+1);
+  P.inst[id]={b:base,sl:baseSl(base),ok:0,lost:0,st:random?variance(base):{}};instBuild(id);return id};
+ /* split any stacked or plain equipment in the inventory into separate items */
+ window.splitEquips=function(){if(!P||!P.inv)return;for(const k of Object.keys(P.inv)){if(!isEq(k))continue;const n=P.inv[k]|0;delete P.inv[k];for(let i=0;i<n;i++)P.inv[newEquip(k,false)]=1}};
+ /* picking up a dropped piece: random stats */
+ {const _lt=lootTake;lootTake=function(g){const it=ITEMS[g.id];if(!isEq(g.id))return _lt(g);for(let i=0;i<(g.q||1);i++)P.inv[newEquip(g.id,true)]=1;log('You pick up '+it.n+'.','good','items')}}
+ {const _s=save;save=function(){try{splitEquips()}catch(e){}return _s.apply(this,arguments)}}
+ {const _r=render;render=function(){try{if(P&&typeof scr!=='undefined'&&scr==='game')splitEquips()}catch(e){}return _r.apply(this,arguments)}}
 })();
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
