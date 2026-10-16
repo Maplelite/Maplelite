@@ -1,4 +1,4 @@
-window.__BUILD='3.5-acbade812e';
+window.__BUILD='3.5-0a1060614f';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3817,6 +3817,9 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 /* v3.5: the combat block gets a title bar (and full screen through its +/- button, like chat). */
 {const _bp=battlePanel;battlePanel=function(){const h=_bp.apply(this,arguments);return h.replace(/^(\s*<div class="panel"[^>]*>)/,'$1<h2>⚔️ Combat</h2>')}}
 (()=>{const st=document.createElement('style');st.textContent='#app .panel.full,#livechatbox.full{position:fixed!important;inset:0;z-index:2147483000;margin:0!important;border-radius:0!important;overflow:auto;padding-top:env(safe-area-inset-top,0px)}body.chatfull{overflow:hidden}';document.head.appendChild(st)})();
+/* v3.5: opening an NPC keeps the page on its dialogue (it used to jump to the top) */
+{let lastTalk=null;const _r=render;render=function(){const y=window.scrollY;const out=_r.apply(this,arguments);try{const k=talk?talk.npc+'|'+(talk.page||''):null;
+ if(k&&k!==lastTalk){const d=document.querySelector('.dlginline');if(d){window.scrollTo(0,y);d.scrollIntoView({block:'center'})}}lastTalk=k}catch(e){}return out}}
 
 /* v3.5: game font setting (Menu tab). Changes the game/body text only; titles and the logo keep their font.
    Henesys (Boiled Pasta, default) and Kerning Arcade (Arcade Byte) are built in; the others load from fonts/ when
@@ -4047,7 +4050,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='treq')L.treq={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='tstate')L.trade=m;
    else if(m.t==='tend'){L.trade=null;L.err=m.why||''}
-   else if(m.t==='tdone'){L.trade=null;applyTrade(m)}
+   else if(m.t==='tdone'){L.trade=null;applyTrade(m);if(window.gAct)gAct({a:'sync'},null,true)}
    else if(m.t==='party'){L.party=m.id;L.members=m.members||[];if(m.note)L.err=m.note;if(!m.id)L.chatTo='map'}
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='pgain'){if(P&&typeof gain==='function'){if(window.__auth&&window.__auth.on&&m.mon)window.__authPshare(m.mon);else gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
@@ -4067,8 +4070,8 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='badd'){if(P){P.buddies=P.buddies||[];if(!P.buddies.some(n=>n.toLowerCase()===m.name.toLowerCase())){P.buddies.push(m.name);log(m.name+' is now your buddy.','good','social');save()}askWho()}}
    else if(m.t==='shops')L.shops=m.shops||[];
    else if(m.t==='myshop'){L.myShop=m.shop;if(m.note)L.err=m.note;if(P){if(m.shop)P.shopHold=m.shop.items.map(o=>Object.assign({},o));else returnHold();save()}}
-   else if(m.t==='ssold'){if(P){P.mesos+=m.mesos|0;log(m.buyer+' bought '+m.name+(m.n>1?' x'+m.n:'')+' from your shop for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save()}}
-   else if(m.t==='sgot'){if(P){P.mesos=Math.max(0,P.mesos-(m.mesos|0));recvItem(m);log('You bought '+m.name+(m.n>1?' x'+m.n:'')+' from '+m.from+' for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save();render()}}
+   else if(m.t==='ssold'){if(window.gAct)setTimeout(()=>gAct({a:'sync'},null,true),50);if(P){P.mesos+=m.mesos|0;log(m.buyer+' bought '+m.name+(m.n>1?' x'+m.n:'')+' from your shop for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save()}}
+   else if(m.t==='sgot'){if(window.gAct)setTimeout(()=>gAct({a:'sync'},null,true),50);if(P){P.mesos=Math.max(0,P.mesos-(m.mesos|0));recvItem(m);log('You bought '+m.name+(m.n>1?' x'+m.n:'')+' from '+m.from+' for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save();render()}}
    else if(m.t==='err'){L.err=m.error;liveNote(m.error)}
    paint()};
   ws.onclose=()=>{if(L.ws===ws){L.ws=null;L.state='off';L.here=[];paint();retry()}}}
@@ -4360,8 +4363,8 @@ body.chatfull{overflow:hidden}
    empty, so a slow answer never undoes a newer action. ===== */
 (function(){
  const G={on:false,q:[],busy:false,last:null,slot:null};window.__auth=G;
- const AUTH=['lvl','exp','mesos','nx','ap','sp','str','dex','int','luk','maxHp','maxMp','inv','inst','eq','weapon','sk','q','qp','kills','ic','job'];
- function apply(st){if(!st||!P||st.name!==P.name)return;for(const k of AUTH)if(k in st)P[k]=st[k];if(P.hp>P.maxHp)P.hp=P.maxHp;if(P.mp>P.maxMp)P.mp=P.maxMp;try{if(typeof instReg==='function')instReg()}catch(e){}}
+ const AUTH=['lvl','exp','mesos','nx','ap','sp','str','dex','int','luk','maxHp','maxMp','inv','inst','eq','weapon','sk','q','qp','kills','ic','job','cinv','cb','base','job2','skJob'];
+ function apply(st){if(!st||!P||st.name!==P.name)return;for(const k of AUTH)if(k in st)P[k]=st[k];if(st.peq&&Array.isArray(P.pets))P.pets.forEach((p,i)=>{if(p)p.eq=Object.assign({},st.peq[i]||{})});if(P.hp>P.maxHp)P.hp=P.maxHp;if(P.mp>P.maxMp)P.mp=P.maxMp;try{if(typeof instReg==='function')instReg()}catch(e){}}
  function pump(){if(G.busy||!G.q.length)return;const job=G.q.shift();G.busy=true;
   fetch('/api/g',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({slot:SLOT},job.b))}).then(r=>r.json()).then(j=>{
    G.busy=false;if(j&&j.state){G.last=j.state;if(!G.q.length){apply(j.state);try{save()}catch(e){}}}
@@ -4387,14 +4390,46 @@ body.chatfull{overflow:hidden}
  wrap('qAccept',f=>function(id){const r=f.apply(this,arguments);if(G.on&&P&&P.q[id]==='active')send({a:'qaccept',quest:id});return r});
  wrap('qTurn',f=>function(id){const s0=P&&P.q[id];const r=f.apply(this,arguments);if(G.on&&P&&s0==='active'&&P.q[id]!=='active')send({a:'qdone',quest:id});return r});
  wrap('qGiveUp',f=>function(id){const s0=P&&P.q[id];const r=f.apply(this,arguments);if(G.on&&s0==='active')send({a:'qgiveup',quest:id});return r});
- wrap('die',f=>function(){const r=f.apply(this,arguments);if(G.on)send({a:'die'},null,true);return r});
+ wrap('revive',f=>function(here){const dead=P&&P.dead;const r=f.apply(this,arguments);if(G.on&&dead&&P&&!P.dead)send({a:'die',wheel:here===2?1:0},null,true);return r});
+ /* jobs */
+ wrap('dlgDo',f=>function(k){const j0=P&&P.job,j20=P&&P.job2,inv0=P&&JSON.stringify(P.inv);const r=f.apply(this,arguments);if(!G.on||!P||typeof k!=='string')return r;
+  if(/^job:/.test(k)&&!j0&&P.job)send({a:'job',job:P.job});
+  else if(k==='j2:start')send({a:'j2start'},null,true);
+  else if(k==='j2:proof'&&JSON.stringify(P.inv)!==inv0)send({a:'j2proof'});
+  else if(/^j2:pick:/.test(k)&&!j20&&P.job2)send({a:'job2',branch:P.job2});
+  return r});
+ /* Cash Shop */
+ wrap('cashBuy',f=>function(id){const n0=P&&P.nx;const r=f.apply(this,arguments);if(G.on&&P&&P.nx<n0)send({a:'cash',id});return r});
+ wrap('cashUse',f=>function(id){const c0=P&&P.cinv&&P.cinv[id];const sk0=P&&Object.assign({},P.sk);const r=f.apply(this,arguments);
+  if(G.on&&P&&P.cinv&&(P.cinv[id]|0)<(c0|0)){const reset=Object.keys(sk0).filter(k=>(sk0[k]|0)>0&&!(P.sk[k]>0));send({a:'cuse',id,skills:reset})}return r});
+ wrap('petEquip',f=>function(k){const c0=P&&P.cinv&&P.cinv[k];const r=f.apply(this,arguments);if(G.on&&P&&P.cinv&&(P.cinv[k]|0)<(c0|0))send({a:'pequip',id:k,pet:P.petOn|0});return r});
+ /* scrolls: the server rolls; the result screen shows the server's answer */
+ wrap('enchGo',f=>function(){if(!G.on||typeof ench==='undefined'||!ench||!ench.tgt)return f.apply(this,arguments);const e=ench;if(!(P.inv['sc_'+e.sk]>0))return;
+  ench={st:4,res:'<div class="mute">Enchanting…</div>'};render();
+  send({a:'scroll',item:e.tgt.id,sk:e.sk,white:!!e.white},j=>{if(!j)return;const nm=j.item&&ITEMS[j.item]?ITEMS[j.item]:(ITEMS[e.tgt.id]||{n:''});
+   const msg=!j.ok?j.error:j.success?'✨ Success!'+(j.changes?' '+Object.keys(j.changes).map(k=>k.toUpperCase()+' '+(j.changes[k]>0?'+':'')+j.changes[k]).join(', '):''):(j.white?'💥 The scroll failed, but the White Scroll protected your upgrade slot.':'💥 The scroll failed. The upgrade slot is used up.');
+   try{log('Enchanting '+(nm.n||'')+': '+msg.replace(/^\S+\s/,''),j.success?'good':'bad','items')}catch(_){}
+   ench={st:4,res:'<div style="font-size:15px">'+(nm.i||'')+' <b>'+(nm.n||'')+'</b></div><div style="margin-top:6px">'+msg+'</div>'}})});
  /* monsters: the server rolls the rewards; the browser's own drop roll is switched off while authority is on */
- wrap('win',f=>function(){const k=typeof enc!=='undefined'&&enc&&enc.k;if(!G.on||!k)return f.apply(this,arguments);
+ wrap('win',f=>function(){const k=typeof enc!=='undefined'&&enc&&enc.k;if(!G.on||!k)return f.apply(this,arguments);if(k==='training_snail'){send({a:'tut'},null,true);return f.apply(this,arguments)}
   const ad=window.addDrop,dl=window.dropLoot;window.addDrop=function(){};if(typeof dl==='function')window.dropLoot=function(){};
   let r;try{r=f.apply(this,arguments)}finally{window.addDrop=ad;if(typeof dl==='function')window.dropLoot=dl}
   send({a:'kill',mon:k},j=>{if(!j||!j.ok||!P)return;for(const d of j.drops||[]){ad(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}
    try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}},true);return r});
  wrap('lootTake',f=>function(g){if(G.on&&g&&g.sid){send({a:'pickup',id:g.sid},null,true);try{log(g.id==='meso'?'You pick up '+g.q+' mesos.':'You pick up '+((ITEMS[g.id]||{}).n||g.id)+(g.q>1?' x'+g.q:'')+'.','good','items')}catch(e){}return}return f.apply(this,arguments)});
+ /* the server follows your map (teleports, events, waking in town) */
+ {const _r=render;render=function(){const o=_r.apply(this,arguments);try{if(G.on&&P&&P.map&&G.map!==P.map){G.map=P.map;send({a:'where',to:P.map},null,true)}}catch(e){}return o}}
+ /* things used up in the browser */
+ wrap('useAmmo',f=>function(n){const a=typeof ammoId==='function'?ammoId():null;const r=f.apply(this,arguments);if(G.on&&a)send({a:'consume',item:a,n:n|0||1},null,true);return r});
+ wrap('petFeed',f=>function(){const n0=P&&P.inv[PET_FOOD]|0;const r=f.apply(this,arguments);if(G.on&&P&&(P.inv[PET_FOOD]|0)<n0)send({a:'consume',item:PET_FOOD,n:n0-(P.inv[PET_FOOD]|0)},null,true);return r});
+ /* small reward sources */
+ wrap('breakBox',f=>function(){const inv0=P&&JSON.stringify(P.inv);const r=f.apply(this,arguments);if(G.on&&P&&JSON.stringify(P.inv)!==inv0)send({a:'box'},null,true);return r});
+ wrap('dlgDo',f=>function(k){const rain=P&&P.qp&&P.qp.rain,got=P&&P.evt&&P.evt.got;const r=f.apply(this,arguments);if(!G.on||!P||typeof k!=='string')return r;
+  if(/^ans:/.test(k)&&(P.qp.rain|0)>(rain|0))send({a:'quiz'},null,true);
+  if(k==='ev:prize'&&!got&&P.evt&&P.evt.got)send({a:'prize',ev:String(P.evt.id)},null,true);return r});
+ wrap('gmDo',f=>function(a){const inv0=P&&JSON.stringify(P.inv),m0=P&&P.mesos,l0=P&&P.lvl;const r=f.apply(this,arguments);if(!G.on||!P)return r;
+  if(a==='give'&&JSON.stringify(P.inv)!==inv0){const o=JSON.parse(inv0);for(const k in P.inv)if((P.inv[k]|0)>(o[k]|0))send({a:'admin',item:k,n:(P.inv[k]|0)-(o[k]|0)})}
+  if(P.mesos!==m0)send({a:'admin',mesos:P.mesos-m0});if(P.lvl!==l0)send({a:'admin',lvl:P.lvl});return r});
  /* party EXP share from the live world */
  window.__authPshare=function(mon){if(G.on&&mon)send({a:'pshare',mon},null,true)};
 })();
