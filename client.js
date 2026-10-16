@@ -1193,7 +1193,7 @@ function avatarSvg(p,wd){const lk=p.look||{g:LK.g[0],face:LK.face[0],hair:LK.hai
  return s+'</svg>'}
 function eqOffN(){return [P.weapon].concat(Object.values(P.eq||{})).filter(x=>x&&!eqOk(x)).length}
 function charPanel(){const n=Object.keys(P.eq||{}).length+(P.weapon?1:0);
- return '<div class="panel win"><div class="title">CHARACTER</div><div class="pad" style="text-align:center">'+avatarSvg(P,150)+'<div style="margin-top:4px"><b>'+P.name+'</b> <span class="mute">Lv '+P.lvl+' '+jobName()+'</span></div><div class="mute">'+(n?n+' item'+(n>1?'s':'')+' equipped'+(eqOffN()?' ('+eqOffN()+' greyed out)':''):'Nothing equipped')+'</div></div></div>'}
+ return '<div class="panel win"><div class="title">CHARACTER</div><div class="pad" style="text-align:center">'+avatarSvg(P,150)+'<div style="margin-top:4px"><b>'+selfName()+'</b> <span class="mute">Lv '+P.lvl+' '+jobName()+'</span></div><div class="mute">'+(n?n+' item'+(n>1?'s':'')+' equipped'+(eqOffN()?' ('+eqOffN()+' greyed out)':''):'Nothing equipped')+'</div></div></div>'}
 
 /* ===== Inventory (MapleStory layout: Equip / Use / Etc / Cash) + Scrolling menu ===== */
 (function(){const s=document.createElement('style');s.textContent='.invm{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:auto;gap:4px;max-width:300px;margin:8px auto 0;padding:4px;background:#e7e3d1;border:2px solid #a9b3c4;border-radius:6px}.invm .slot{aspect-ratio:1;width:100%;height:auto;min-height:0}.invm .qt{right:auto;left:4px;bottom:2px}.mesob{display:flex;align-items:center;gap:8px;margin:8px auto 0;max-width:300px;padding:5px 10px;background:#fff;border:2px solid #a9b3c4;border-radius:6px}.mesob b{flex:1;text-align:right;font-size:15px}.cmp{display:grid;grid-template-columns:1.1fr .8fr 1fr 1fr;gap:3px 6px;font-size:13px;align-items:center}.cmp .h{font-weight:700;font-size:12px}.cmp .ok{color:#1c7a2e;font-weight:700}.cmp .no{color:#b3261e;font-weight:700}';document.head.appendChild(s)})();
@@ -2326,7 +2326,7 @@ function decorate(){if(!P||scr!=='game')return;const app=document.getElementById
  /* the face in combat shows the current emote */
  const cp=document.getElementById('cpanel');if(cp){const hd=cp.querySelector('#slk');if(hd&&hd.parentNode&&!hd.parentNode.querySelector('.face-wrap'))hd.parentNode.insertAdjacentHTML('afterbegin',faceWrap(40))}
  if(tab==='menu'&&!feat&&!app.querySelector('.profcard')){const pn=[...app.querySelectorAll('.panel.win')].find(x=>{const t=x.querySelector('.title');return t&&t.textContent.trim()==='MENU'});
-  if(pn)pn.insertAdjacentHTML('beforebegin','<div class="panel win profcard"><div class="pad"><div>'+(idleSprite()||'<span class="idleb">'+_avatarRaw(P).replace(/style="[^"]*"/,'style="width:78px;display:block"')+'</span>')+'</div><div class="who"><b>'+esc2(P.name)+'</b><span class="mute">Lv '+P.lvl+' '+jobName()+'</span></div></div></div>')}}
+  if(pn)pn.insertAdjacentHTML('beforebegin','<div class="panel win profcard"><div class="pad"><div>'+(idleSprite()||'<span class="idleb">'+_avatarRaw(P).replace(/style="[^"]*"/,'style="width:78px;display:block"')+'</span>')+'</div><div class="who"><b>'+selfName()+'</b><span class="mute">Lv '+P.lvl+' '+jobName()+'</span></div></div></div>')}}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);try{hookIcons();decorate()}catch(e){}return r}}
 hookIcons();
 
@@ -3634,6 +3634,9 @@ for(const k in V62_WFIX)if(ITEMS[k])Object.assign(ITEMS[k],V62_WFIX[k]);
 /* v3.5: armor that differed from the v62 data set to its v62 level, defense and stats (starter clothes had 1 defense). */
 const V62_AFIX={"shield_15": {"req": 15, "def": 15, "bon": null, "buy": 6000}, "earring_15": {"req": 25, "def": 0, "bon": null}, "top_c0": {"req": 0, "def": 3, "bon": null, "buy": 50}, "top_c1": {"req": 0, "def": 3, "bon": null, "buy": 50}, "top_c3": {"req": 0, "def": 3, "bon": null, "buy": 50}, "bottom_c0": {"req": 0, "def": 2, "bon": null, "buy": 50}, "bottom_c1": {"req": 0, "def": 2, "bon": null, "buy": 50}, "shoes_c0": {"req": 0, "def": 2, "bon": null, "buy": 50}, "shoes_c1": {"req": 0, "def": 2, "bon": null, "buy": 50}, "shoes_c2": {"req": 0, "def": 2, "bon": null, "buy": 50}, "shoes_c3": {"req": 0, "def": 2, "bon": null, "buy": 50}, "brown_skullcap": {"req": 5, "def": 5, "bon": null, "buy": 500}, "green_skullcap": {"req": 5, "def": 5, "bon": null}, "red_headband": {"req": 5, "def": 5, "bon": null, "buy": 1000}, "black_headband": {"req": 5, "def": 5, "bon": null, "buy": 450}, "green_headband": {"req": 5, "def": 5, "bon": null, "buy": 450}, "yellow_headband": {"req": 5, "def": 5, "bon": null, "buy": 450}, "blue_headband": {"req": 5, "def": 5, "bon": null, "buy": 450}};
 for(const k in V62_AFIX)if(ITEMS[k])Object.assign(ITEMS[k],V62_AFIX[k]);
+/* v3.5: your own name with the [GM] tag (online staff) and your worn medal's mini icon. */
+function selfName(){try{const md=P.eq&&P.eq.Medal?String(P.eq.Medal).replace(/#.*$/,''):null,it=md&&ITEMS[md];
+ const gm=typeof window!=='undefined'&&window.__liveStaff;return (gm?'<span class="gmtag">[GM]</span> ':'')+(it?'<span class="mdl" title="'+esc2(it.n)+'">'+it.i+'</span>':'')+esc2(P.name)}catch(e){return esc2(P.name)}}
 
 /* v3.5: the Free Market, as in v62 a place you walk into from town maps (Free Market Entrance), with player shops.
    You come back out to the town you entered from. No monsters. The shops themselves need the server (online version):
@@ -3982,7 +3985,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
-   if(m.t==='welcome'){setTimeout(askWho,300);setTimeout(mFetch,500);if(m.me&&m.me.staff&&L.spyOn&&(L.spyOn.map||L.spyOn.friends||L.spyOn.guild))setTimeout(()=>out({t:'spyset',spy:L.spyOn}),500);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
+   if(m.t==='welcome'){setTimeout(askWho,300);setTimeout(mFetch,500);if(m.me&&m.me.staff&&L.spyOn&&(L.spyOn.map||L.spyOn.friends||L.spyOn.guild))setTimeout(()=>out({t:'spyset',spy:L.spyOn}),500);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;window.__liveStaff=!!(m.me&&m.me.staff);L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
    else if(m.t==='here')L.here=m.players||[];
    else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
@@ -3996,16 +3999,16 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
-   else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
+   else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
    else if(m.t==='wsent'){L.chat.push({ts:Date.now(),from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
-   else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
-   else if(m.t==='achat'){L.chat.push({ts:Date.now(),from:m.from,text:m.text,all:true});if(L.chat.length>80)L.chat.shift();if(L.ctab!=='all')L.unread.all=(L.unread.all||0)+1}
+   else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
+   else if(m.t==='achat'){L.chat.push({ts:Date.now(),from:m.from,md:m.md,fx:m.fx,text:m.text,all:true});if(L.chat.length>80)L.chat.shift();if(L.ctab!=='all')L.unread.all=(L.unread.all||0)+1}
    else if(m.t==='spy'){m.ts=m.ts||Date.now();(L.spyLog=L.spyLog||[]).push(m);if(L.spyLog.length>120)L.spyLog.shift()}
    else if(m.t==='mail'){mFetch();if(m.from)log('New mail from '+m.from+'.','good','self')}
    else if(m.t==='whois'){if(m.tag==='g')L.gon=m.list||[];else L.buds=m.list||[]}
    else if(m.t==='ginv'){L.ginv={guild:m.guild,from:m.from,until:Date.now()+60000}}
    else if(m.t==='gupd'){if(m.note)log(m.note,'','guild');gFetch()}
-   else if(m.t==='gchat'){if(L.guild&&m.guild===L.guild.name){L.chat.push({ts:Date.now(),from:m.from,text:m.text,guild:true});if(L.chat.length>60)L.chat.shift();if(L.ctab!=='guild')L.unread.guild++}}
+   else if(m.t==='gchat'){if(L.guild&&m.guild===L.guild.name){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,text:m.text,guild:true});if(L.chat.length>60)L.chat.shift();if(L.ctab!=='guild')L.unread.guild++}}
    else if(m.t==='breq')L.breq={from:m.from,until:Date.now()+60000};
    else if(m.t==='badd'){if(P){P.buddies=P.buddies||[];if(!P.buddies.some(n=>n.toLowerCase()===m.name.toLowerCase())){P.buddies.push(m.name);log(m.name+' is now your buddy.','good','social');save()}askWho()}}
    else if(m.t==='shops')L.shops=m.shops||[];
@@ -4037,7 +4040,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   if(L.ctab==='friends'&&!party){const sel=document.getElementById('live-wto');const to=(sel&&sel.value)||L.wTo;if(!to){L.err='Pick who to whisper (add buddies first).';paint();return false}L.wTo=to;return out({t:'w',to,text})}
   if(L.ctab==='guild'&&!party){if(!L.guild)return false;return out({t:'gchat',text,guild:L.guild.name,to:L.guild.members.map(m=>m.n)})}
   if(L.ctab==='log')return false;
-  if(L.ctab==='all'&&!party){if(!(L.me&&L.me.staff))return false;return out({t:'achat',text})}
+  if(L.ctab==='all'&&!party){if(!(L.me&&L.me.staff))return false;return out({t:'achat',text,fx:adminFx()})}
   if(L.ctab==='party'&&!party)party=true;return out({t:(party||L.chatTo==='party')&&L.party?'pchat':'chat',text})};
 /* receiving an item (trade or shop): equipment keeps its own stats */
  function recvItem(o){if(o.inst&&o.inst.b&&ITEMS[o.inst.b]){P.inst=P.inst||{};const id=o.inst.b+'#'+(P.ic=(P.ic|0)+1);P.inst[id]={b:o.inst.b,sl:o.inst.sl|0,ok:o.inst.ok|0,lost:o.inst.lost|0,st:o.inst.st||{}};instBuild(id);P.inv[id]=1}
@@ -4174,17 +4177,20 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
      +'<div style="display:flex;gap:6px;margin-top:6px"><input id="lt-m" type="number" min="0" placeholder="Mesos" value="'+(L.myOffer.mesos||'')+'" style="flex:1;min-width:0"><button data-lt="mesos">Set mesos</button></div>'
      +'<div style="display:flex;gap:6px;margin-top:6px"><button class="main" data-lt="ok" style="flex:1">Confirm</button><button data-lt="cancel" style="flex:1">Cancel</button></div><div class="mute" style="font-size:12px">Changing an offer clears both confirmations. The trade happens when you both confirm.</div></div>':'')
    +shopHtml()
-   +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
-   +(others.length?others.map(x=>'<button class="npc" data-prof="'+esc(x.name)+'"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><span style="flex:1;text-align:left">'+esc(x.name)+' <span class="mute">Lv '+(x.lvl|0)+'</span><br><span class="mute">'+(x.job?esc(x.job):'Beginner')+(L.members.some(y=>y.id===x.id)?' · Party':'')+'</span></span></button>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
+   +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+nm(x.name,x.staff,x.medal)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
+   +(others.length?others.map(x=>'<button class="npc" data-prof="'+esc(x.name)+'"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><span style="flex:1;text-align:left">'+nm(x.name,x.staff,x.medal)+' <span class="mute">Lv '+(x.lvl|0)+'</span><br><span class="mute">'+(x.job?esc(x.job):'Beginner')+(L.members.some(y=>y.id===x.id)?' · Party':'')+'</span></span></button>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')+'</div>'}
  /* the chat panel: tabs Map / Friends (whispers) / Party / Guild / Activity log (read-only game log) */
  L.ctab=L.ctab||'map';L.unread={all:0,map:0,friends:0,party:0,guild:0};L.spyOn={map:false,friends:false,guild:false};
  const tabOf=m=>m.all?'all':m.w?'friends':m.party?'party':m.guild?'guild':'map';
- function chatLine(m){return m.emote?'<div><b>'+esc(m.from)+'</b> <span style="font-size:20px">'+m.emote+'</span></div>':m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):esc(m.from)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':m.guild?' style="color:#a0661c"':'')+'><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'}
+ function medalIco(md){const it=md&&typeof ITEMS!=='undefined'&&ITEMS[md];return it?'<span class="mdl" title="'+esc(it.n)+'">'+(typeof itemIcon==='function'?itemIcon(md):it.i)+'</span>':''}
+ function nm(name,gm,md){return (gm?'<span class="gmtag">[GM]</span> ':'')+medalIco(md)+esc(name)}
+ window.liveName=nm;
+ function chatLine(m){return m.emote?'<div><b>'+nm(m.from,m.gm,m.md)+'</b> <span style="font-size:20px">'+m.emote+'</span></div>':m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):nm(m.from,m.gm,m.md)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':m.guild?' style="color:#a0661c"':'')+'><b>'+nm(m.from,m.gm,m.md)+':</b> '+esc(m.text)+'</div>'}
  function chatHtml(){const T=[['all','All'],['map','Map'],['friends','Friends'],['party','Party'],['guild','Guild'],['log','Log']];const t=L.ctab;
   let body;
   if(t==='all'){const staff=L.me&&L.me.staff;const col={map:'#2b6cb0',friends:'#7a3fb5',guild:'#a0661c'};
-   const mine=L.chat.filter(m=>!m.party).map(m=>({ts:m.ts||0,h:m.all?'<div style="color:#c2410c;font-weight:bold">📢 '+esc(m.from)+': '+esc(m.text)+'</div>':chatLine(m)}));
+   const mine=L.chat.filter(m=>!m.party).map(m=>({ts:m.ts||0,h:m.all?'<div class="afx afx-'+esc(m.fx||'none')+'">📢 '+nm(m.from,true,m.md)+': '+esc(m.text)+'</div>':chatLine(m)}));
    const spies=staff?(L.spyLog||[]).filter(m=>L.spyOn[m.kind]).map(m=>({ts:m.ts||0,h:'<div style="color:'+col[m.kind]+';opacity:.9;font-size:.92em">['+(m.kind==='map'?'Ch'+m.ch+' '+esc((typeof MAPS!=='undefined'&&MAPS[m.map]&&MAPS[m.map].n)||m.map):m.kind==='friends'?esc(m.from)+' → '+esc(m.to):'Guild '+esc(m.guild))+'] <b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'})):[];
    const v=mine.concat(spies).sort((a,b)=>a.ts-b.ts);body=v.length?v.map(x=>x.h).join(''):'<div class="mute">All: announcements from the staff, plus your map, whispers and guild chat in one place.</div>'}
   else if(t==='log'){const v=(typeof logs!=='undefined'?logs:[]).slice(-60);body=v.length?v.map(l=>'<div class="'+l[1]+'">'+esc(l[0])+'</div>').join(''):'<div class="mute">Nothing here yet.</div>'}
@@ -4241,6 +4247,31 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   if(t.id==='live-say'){const i=document.getElementById('live-in');if(i&&liveSay(i.value)){i.value=''}}});
  document.addEventListener('keydown',e=>{const fk=/^F([1-7])$/.exec(e.key);if(fk&&L.state==='on'&&!(e.target&&/INPUT|TEXTAREA/.test(e.target.tagName))){e.preventDefault();liveEmote(+fk[1]);return}
  if(e.key==='Enter'&&e.target&&e.target.id==='live-in'){if(liveSay(e.target.value))e.target.value=''}});
+/* v3.5: [GM] tag and medal icons next to names; admin All-chat effects (picked and saved in the Admin tab). */
+const AFX=[['none','Plain'],['flaming','Flaming'],['icy','Icy'],['demonic','DEMONIC'],['angelic','ANGELIC'],['neon','NEON'],['ghostly','Ghostly'],['rainbow','Rainbow'],['golden','Golden']];
+function adminFx(){let v='none';try{v=(P&&P.ui&&P.ui.afx)||localStorage.getItem('ml_afx')||'none'}catch(e){}return AFX.some(a=>a[0]===v)?v:'none'}
+function afxPanel(){const v=adminFx();return '<div class="panel"><h2>📢 All-chat effect</h2><div class="mute" style="margin-bottom:6px">How your messages look in the All chat.</div><div class="afxgrid">'+AFX.map(a=>'<button data-afx="'+a[0]+'" class="'+(a[0]===v?'sel':'')+'"><span class="afx afx-'+a[0]+'">'+a[1]+'</span></button>').join('')+'</div></div>'}
+{const _fb=featBody;featBody=function(id){if(id==='admin'&&typeof L!=='undefined'&&L.me&&L.me.staff){let b='';try{b=_fb.apply(this,arguments)}catch(e){}if(/Admins only/.test(b))b='';return afxPanel()+b}return _fb.apply(this,arguments)}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-afx]');if(!b)return;try{localStorage.setItem('ml_afx',b.dataset.afx)}catch(_){}if(P){P.ui=P.ui||{};P.ui.afx=b.dataset.afx;try{save()}catch(_){}}render()});
+(()=>{const st=document.createElement('style');st.textContent=`.gmtag{color:#d62828;font-weight:bold;text-shadow:0 0 2px #fff}
+.mdl{display:inline-flex;width:1.1em;height:1.1em;font-size:.9em;align-items:center;justify-content:center;vertical-align:-.15em;margin-right:2px}.mdl img,.mdl svg{width:100%;height:100%}
+.afxgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}.afxgrid button.sel{outline:2px solid #e8a04a}
+.afx{font-weight:bold}.afx-none{color:#c2410c}
+.afx-flaming{background:linear-gradient(0deg,#ff2a00,#ff9a00,#ffe000);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 6px rgba(255,90,0,.45);animation:afxFl 0.9s ease-in-out infinite alternate}
+@keyframes afxFl{from{filter:brightness(1)}to{filter:brightness(1.35)}}
+.afx-icy{color:#bfefff;text-shadow:0 0 3px #3aa0ff,0 0 7px #8fd3ff;-webkit-text-stroke:.3px #1b6fb5}
+.afx-demonic{color:#7a0010;text-shadow:0 0 4px #ff0033,0 0 9px #400;letter-spacing:.5px;animation:afxDm 1.6s infinite}
+@keyframes afxDm{0%,100%{transform:none}50%{text-shadow:0 0 8px #ff0033,0 0 14px #600}}
+.afx-angelic{color:#fff7d6;text-shadow:0 0 4px #ffd84a,0 0 10px #fff;-webkit-text-stroke:.3px #b08a1a}
+.afx-neon{color:#fff;text-shadow:0 0 3px #ff2bd6,0 0 7px #ff2bd6,0 0 12px #00e5ff;animation:afxNe 1.2s infinite alternate}
+@keyframes afxNe{to{text-shadow:0 0 2px #00e5ff,0 0 6px #00e5ff,0 0 12px #ff2bd6}}
+.afx-ghostly{color:#9fb3c8;opacity:.8;text-shadow:0 0 6px #dfe9f5;animation:afxGh 2.4s ease-in-out infinite}
+@keyframes afxGh{50%{opacity:.4;transform:translateY(-1px)}}
+.afx-rainbow{background:linear-gradient(90deg,#f33,#f90,#ee0,#3c3,#39f,#93f,#f33);background-size:200% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:afxRb 3s linear infinite}
+@keyframes afxRb{to{background-position:200% 0}}
+.afx-golden{color:#e0a800;text-shadow:0 1px 0 #7a5a00,0 0 6px #ffe680}
+.afx .gmtag{-webkit-text-fill-color:#d62828}`;document.head.appendChild(st)})();
+{const _sf=syncFeat;syncFeat=function(){_sf.apply(this,arguments);if(L.me&&L.me.staff&&!FEAT.some(f=>f[0]==='admin'))FEAT.push(['admin','\u{1F6E0}\uFE0F','Admin'])}}
 })();
 
 /* ===== v1.1: auto-hunt button, no tips, lines message ===== */
