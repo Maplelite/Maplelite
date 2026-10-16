@@ -3689,7 +3689,9 @@ const day=t=>t?new Date(t).toLocaleDateString(undefined,{year:'numeric',month:'s
 /* keep window.__KV.me in step with logins and logouts */
 async function refreshMe(){const r=await get('/api/me');if(window.__KV)window.__KV.me=r.me||null;return r.me}
 /* ---------- heartbeat ---------- */
-setInterval(()=>{if(me()&&document.visibilityState==='visible')fetch('/api/ping',{method:'POST',credentials:'same-origin'}).then(r=>r.json()).then(j=>{/* the EXP rate an admin set reaches players already online within a minute */if(j&&'rates' in j&&window.__KV){if(j.rates==null)delete window.__KV.shared.mapleish_rates;else window.__KV.shared.mapleish_rates=j.rates}}).catch(()=>{})},60000);
+/* presence: every open page (site or game, visible or not) checks in every 15 s; 30 s after the last check-in from
+   any page the player counts as offline */
+setInterval(()=>{if(me())fetch('/api/ping',{method:'POST',credentials:'same-origin'}).then(r=>r.json()).then(j=>{/* the EXP rate an admin set reaches players already online within a minute */if(j&&'rates' in j&&window.__KV){if(j.rates==null)delete window.__KV.shared.mapleish_rates;else window.__KV.shared.mapleish_rates=j.rates}}).catch(()=>{})},15000);
 /* ---------- server box ---------- */
 let stats=null,lastHtml='';
 function paintStats(){const st=$('ws-stats');if(!st)return;
@@ -3730,7 +3732,7 @@ async function showPlayers(){if(!(role()==='admin'||role()==='gm'))return;open(p
  let h='';
  if(plTab==='accounts'){const r=await get('/api/admin/accounts');if(r.error)h='<p class="sa-empty">'+esc(r.error)+'</p>';else{
    const L=r.list.filter(a=>!plQ||a.id.toLowerCase().includes(plQ)||(a.chars||[]).some(c=>c.toLowerCase().includes(plQ)));
-   h='<input id="pl-q" placeholder="Search account or character" value="'+esc(plQ)+'" style="width:100%;margin-bottom:8px">'+'<p class="ws-note">'+r.list.length+' accounts, '+r.list.filter(a=>a.last_seen>Date.now()-300000).length+' online now.</p>'
+   h='<input id="pl-q" placeholder="Search account or character" value="'+esc(plQ)+'" style="width:100%;margin-bottom:8px">'+'<p class="ws-note">'+r.list.length+' accounts, '+r.list.filter(a=>a.last_seen>Date.now()-45000).length+' online now.</p>'
     +L.map(a=>'<div class="ws-row pl-r" style="align-items:flex-start;gap:8px;flex-wrap:wrap"><span style="flex:1;min-width:180px"><b>'+esc(a.id)+'</b>'+(a.banned?' <span class="ws-tagc s">Suspended</span>':'')+(a.role!=='player'?' <span class="ws-tagc">'+esc(a.role.toUpperCase())+'</span>':'')
      +'<small>'+esc(a.email)+' · joined '+day(a.created)+' · seen '+ago(a.last_seen)+'<br>'+(a.chars.length?esc(a.chars.join(', ')):'No characters')+'</small></span>'
      +(adm&&a.id.toLowerCase()!==me().id.toLowerCase()?'<span class="sa-btns" style="flex-wrap:wrap"><select data-prole="'+esc(a.id)+'">'+['player','gm','admin'].map(x=>'<option'+(a.role===x?' selected':'')+'>'+x+'</option>').join('')+'</select>'
@@ -3795,11 +3797,11 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')};
  const esc=t=>String(t==null?'':t).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
  function want(){return typeof P!=='undefined'&&P&&typeof scr!=='undefined'&&scr==='game'&&typeof SLOT!=='undefined'&&window.__KV&&window.__KV.me}
- function close(){clearTimeout(L.timer);if(L.ws){const w=L.ws;L.ws=null;try{w.onclose=null;w.close()}catch(e){}}L.state='off';L.here=[];}
+ function close(){clearTimeout(L.timer);if(L.ws){const w=L.ws;L.ws=null;try{if(w.readyState===1)w.send('{"t":"bye"}')}catch(e){}try{w.onclose=null;w.close()}catch(e){}}/* leaving on purpose: no grace period */L.state='off';L.here=[];}
  function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
-   if(m.t==='welcome'){setTimeout(askWho,300);L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold();L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
+   if(m.t==='welcome'){setTimeout(askWho,300);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
    else if(m.t==='here')L.here=m.players||[];
    else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
