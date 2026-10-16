@@ -1,4 +1,4 @@
-window.__BUILD='3.5-3733c07d90';
+window.__BUILD='3.5-b28a93f106';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3879,7 +3879,7 @@ const THEMES=[['classic','Classic'],
  ['aqua','Aqua Road','linear-gradient(#0e4d6e,#1b8aa6 55%,#062a3d)','#eaf8fb','#ffffff','#c9ecf3','#0c4459','#0f86a3','#0d2f3b','#55818f','#5fb6c9','#ffb547','#126f8a','#06384a'],
  ['sunset','Amherst Sunset','linear-gradient(#ff9a6b,#ffcf8a 55%,#6b4a8a)','#fff5ee','#ffffff','#ffe0cc','#7a3b2a','#d0582a','#3d1f16','#8a6a5c','#e8a184','#8a5ac8','#a1462a','#5c2416']];
 /* each theme's own animated background layer (same layout): a pixel pattern that drifts behind the page */
-const TH_DECO={henesys:'radial-gradient(circle,#fff8 2px,transparent 3px) 0 0/46px 46px',ellinia:'radial-gradient(ellipse 14px 7px at 30% 50%,#b8f08a88,transparent 70%) 0 0/60px 60px',perion:'linear-gradient(115deg,transparent 0 40%,#ffd29a22 40% 46%,transparent 46%) 0 0/80px 80px',kerning:'linear-gradient(#ff5fd211 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,#7fe7ff11 1px,transparent 1px) 0 0/22px 22px',lith:'radial-gradient(circle,#ffffff55 1px,transparent 2px) 0 0/34px 34px',sleepy:'radial-gradient(circle,#ffd98a33 2px,transparent 3px) 0 0/52px 52px',orbis:'radial-gradient(circle,#ffffffaa 1px,transparent 2px) 0 0/40px 40px',elnath:'radial-gradient(circle,#ffffffcc 2px,transparent 3px) 0 0/38px 38px',ludi:'radial-gradient(circle,#ffffff99 3px,transparent 4px) 0 0/64px 64px',aqua:'radial-gradient(circle,#ffffff44 2px,transparent 3px) 0 0/30px 30px'};
+const TH_DECO={henesys:'radial-gradient(circle,#fff8 2px,transparent 3px) 0 0/46px 46px',ellinia:'radial-gradient(ellipse 14px 7px at 30% 50%,#b8f08a88,transparent 70%) 0 0/60px 60px',perion:'linear-gradient(115deg,transparent 0 40%,#ffd29a22 40% 46%,transparent 46%) 0 0/80px 80px',kerning:'linear-gradient(#ff5fd211 1px,transparent 1px) 0 0/22px 22px,linear-gradient(90deg,#7fe7ff11 1px,transparent 1px) 0 0/22px 22px',lith:'radial-gradient(circle,#ffffff55 1px,transparent 2px) 0 0/34px 34px',sleepy:'radial-gradient(circle,#ffd98a33 2px,transparent 3px) 0 0/52px 52px',orbis:'radial-gradient(circle,#ffffffaa 1px,transparent 2px) 0 0/40px 40px',elnath:'radial-gradient(circle,#ffffffcc 2px,transparent 3px) 0 0/38px 38px',ludi:'radial-gradient(circle,#ffffff99 3px,transparent 4px) 0 0/64px 64px',aqua:'repeating-linear-gradient(170deg,transparent 0 22px,#bff3ff22 22px 26px) 0 0/120px 120px,radial-gradient(circle,#ffffff44 2px,transparent 3px) 0 0/30px 30px'};
 const TH_SPEED={kerning:'6s',sleepy:'30s',orbis:'18s',elnath:'14s',ludi:'22s',aqua:'9s',ellinia:'16s',henesys:'24s',perion:'20s',lith:'26s'};
 /* the bottom of the website follows each place: [back hill, middle hill, front hill, footer top, footer bottom] */
 const TH_GROUND={henesys:['#7fcf5a','#5aae3e','#3f8a30','#3f8a30','#2c6a22'],ellinia:['#3b7a4e','#2b5e3c','#1c4229','#1f4a2e','#12301d'],perion:['#d9a06a','#b97a48','#8a5028','#8a5028','#5a3218'],kerning:['#3a2f66','#2a2250','#1a1636','#241d46','#0e0b1f'],lith:['#f2dca0','#d9bd7a','#3f8fc9','#2a6ea8','#14466e'],sleepy:['#6b5a3c','#4e4129','#33291a','#33291a','#1d170d'],orbis:['#d8ccff','#b9a6f2','#8f7cd8','#7a66c4','#4b3d8c'],elnath:['#f4fbff','#d7ebf7','#a9cfe6','#7fb3d3','#4d7fa0'],ludi:['#ffc2e0','#ffe08a','#9fd8ff','#ff9fcf','#c24b8a'],aqua:['#2a9bb8','#1a7592','#0b4f66','#0b4f66','#063545']};
@@ -3894,6 +3894,7 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#site .ws-play{box-shadow:0 8px 0 '+bd+'!important}#site .ws-nav a:hover,#site .ws-nav a.on{background:'+ton+'!important;color:#fff!important}'
  +'#site .ws-tag{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
  +'#site .ws-bar{color:'+hd+'!important}'
+ +(t[0]==='aqua'?'#site .ws-sun,#site .ws-cl{display:none!important}#site .ws-lf{display:none!important}':'')
  +'#site .ws-sun{background:radial-gradient(circle,'+s1+'66 0,transparent 68%)!important}'
  +'#site .ws-cl{background:'+pn+'!important;opacity:.85!important}'
  +'#site .ws-cl:before,#site .ws-cl:after{background:'+pn+'!important}'
