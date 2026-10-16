@@ -3642,6 +3642,10 @@ function fmBack(){const r=(P&&MAPS[P.fmRet])?P.fmRet:'henesys';const m=MAPS.free
 /* v3.5: no made-up online activity. The old simulated "players nearby" lines (e.g. "KichiAlpha is chatting nearby.")
    are switched off; real players come from the live world. */
 simAct=function(){};
+/* v3.5: Heracle (guilds). In v62 he is at the Guild Headquarters in Orbis, which this game does not have yet, so he
+   stands in Henesys. Creating and running a guild is on the Social tab (online version). */
+NPCS.heracle={n:'Heracle',i:'🛡️',role:'Guild Headquarters',hi:'Want to start a guild? It costs 1,500,000 mesos and you need to be level 10. Open the Social tab while you are here in Henesys.'};
+if(MAPS.henesys&&!MAPS.henesys.npcs.includes('heracle'))MAPS.henesys.npcs.push('heracle');
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
@@ -3804,7 +3808,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
-   if(m.t==='welcome'){setTimeout(askWho,300);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
+   if(m.t==='welcome'){setTimeout(askWho,300);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
    else if(m.t==='here')L.here=m.players||[];
    else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
@@ -3821,7 +3825,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='w'){L.chat.push({from:m.from,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
    else if(m.t==='wsent'){L.chat.push({from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
    else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({from:m.from,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
-   else if(m.t==='whois')L.buds=m.list||[];
+   else if(m.t==='whois'){if(m.tag==='g')L.gon=m.list||[];else L.buds=m.list||[]}
+   else if(m.t==='ginv'){L.ginv={guild:m.guild,from:m.from,until:Date.now()+60000}}
+   else if(m.t==='gupd'){if(m.note)log(m.note,'','guild');gFetch()}
+   else if(m.t==='gchat'){if(L.guild&&m.guild===L.guild.name){L.chat.push({from:m.from,text:m.text,guild:true});if(L.chat.length>60)L.chat.shift();if(L.ctab!=='guild')L.unread.guild++}}
    else if(m.t==='breq')L.breq={from:m.from,until:Date.now()+60000};
    else if(m.t==='badd'){if(P){P.buddies=P.buddies||[];if(!P.buddies.some(n=>n.toLowerCase()===m.name.toLowerCase())){P.buddies.push(m.name);log(m.name+' is now your buddy.','good','social');save()}askWho()}}
    else if(m.t==='shops')L.shops=m.shops||[];
@@ -3847,7 +3854,8 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  window.liveSay=function(text,party){text=String(text||'').trim();if(!text)return false;
   const wm=/^\/w(?:hisper)?\s+(\S+)\s+(.+)$/i.exec(text);if(wm)return out({t:'w',to:wm[1],text:wm[2]});
   if(L.ctab==='friends'&&!party){const sel=document.getElementById('live-wto');const to=(sel&&sel.value)||L.wTo;if(!to){L.err='Pick who to whisper (add buddies first).';paint();return false}L.wTo=to;return out({t:'w',to,text})}
-  if(L.ctab==='log'||L.ctab==='guild')return false;
+  if(L.ctab==='guild'&&!party){if(!L.guild)return false;return out({t:'gchat',text,guild:L.guild.name,to:L.guild.members.map(m=>m.n)})}
+  if(L.ctab==='log')return false;
   if(L.ctab==='party'&&!party)party=true;return out({t:(party||L.chatTo==='party')&&L.party?'pchat':'chat',text})};
 /* receiving an item (trade or shop): equipment keeps its own stats */
  function recvItem(o){if(o.inst&&o.inst.b&&ITEMS[o.inst.b]){P.inst=P.inst||{};const id=o.inst.b+'#'+(P.ic=(P.ic|0)+1);P.inst[id]={b:o.inst.b,sl:o.inst.sl|0,ok:o.inst.ok|0,lost:o.inst.lost|0,st:o.inst.st||{}};instBuild(id);P.inv[id]=1}
@@ -3868,6 +3876,36 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function emoRow(){const left=Math.max(0,15000-(Date.now()-L.emoAt));if(left>0)setTimeout(()=>{if(Date.now()-L.emoAt>=15000)paint()},left+50);
   return '<div style="display:flex;gap:4px;margin-top:6px">'+[1,2,3,4,5,6,7].map(e=>'<button data-le="'+e+'" title="F'+e+' '+EMO[e][1]+'"'+(left>0?' disabled':'')+' style="flex:1;min-width:0;min-height:34px;padding:0;font-size:20px;line-height:1">'+emoPic(e,P&&P.emoteSkin)+'</button>').join('')+'</div>'
    +(left>0?'<div class="mute" style="font-size:12px;text-align:center">Emotes ready in '+Math.ceil(left/1000)+'s</div>':'')}
+ /* ===== guilds: stored on the server; this is the Social tab's guild screen and the guild invitations ===== */
+ const RANK={1:'Master',2:'Jr. Master',3:'Member'};
+ function gApi(path,body){return fetch('/api/guild'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({slot:SLOT},body||{}))}).then(r=>r.json()).then(j=>{if(j.error){L.gerr=j.error;L.err=j.error}else L.gerr='';gFetch();return j}).catch(()=>{L.gerr='Could not reach the server.'})}
+ function gFetch(){if(!want())return;fetch('/api/guild?slot='+SLOT).then(r=>r.json()).then(j=>{if(j.error)return;L.guild=j.guild;L.grank=j.rank;L.gcost=j.cost;L.gmin=j.minLvl;if(j.invite&&!L.ginv)L.ginv={guild:j.invite.guild,from:j.invite.by,until:Date.now()+30000};
+   if(P){const nm=L.guild?L.guild.name:null;if((P.guild&&P.guild.name)!==nm){P.guild=nm?{name:nm,live:1}:null;save()}}gWho();paint();if(typeof tab!=='undefined'&&tab==='social')render()}).catch(()=>{})}
+ function gWho(){if(L.guild)out({t:'who',tag:'g',names:L.guild.members.map(m=>m.n)})}
+ window.liveGuild={create:name=>{if(!P)return;if(P.map!=='henesys'){L.gerr='Talk to Heracle in Henesys to create a guild.';return render()}if(P.mesos<(L.gcost||1500000)){L.gerr='Creating a guild costs '+(L.gcost||1500000).toLocaleString()+' mesos.';return render()}
+   gApi('/create',{name,mesos:P.mesos}).then(j=>{if(j&&j.ok){P.mesos-=(L.gcost||1500000);log('You created the guild '+j.guild.name+' (-'+(L.gcost||1500000).toLocaleString()+' mesos).','good','guild');save();render()}else render()})},
+  invite:to=>gApi('/invite',{to}).then(()=>render()),accept:()=>{L.ginv=null;gApi('/accept').then(()=>{paint();render()})},decline:()=>{L.ginv=null;gApi('/decline');paint()},
+  leave:()=>gApi('/leave').then(()=>render()),kick:who=>gApi('/kick',{who}).then(()=>render()),rank:(who,rank)=>gApi('/rank',{who,rank}).then(()=>render()),
+  notice:text=>gApi('/notice',{text}).then(()=>render()),disband:()=>gApi('/disband').then(()=>render())};
+ function guildHtml(){const G=L.guild,on=n=>(L.gon||[]).find(x=>x.name.toLowerCase()===n.toLowerCase());let h='<div class="panel"><h2>🛡️ Guild</h2>';
+  if(L.state!=='on')h+='<div class="mute">Connecting to the server…</div>';
+  if(!G){h+=(L.ginv&&L.ginv.until>Date.now()?'<div class="mrow" style="background:rgba(240,170,60,.2);border-radius:8px"><div style="flex:1"><b>'+esc(L.ginv.from)+'</b> invites you to <b>'+esc(L.ginv.guild)+'</b>.</div><button data-lg="accept">Join</button><button data-lg="decline">No</button></div>':'')
+    +'<p>You are not in a guild. A guild member can invite you, or you can start your own.</p>'
+    +'<p class="mute">Creating a guild: talk to <b>Heracle</b> in Henesys. It costs <b>'+(L.gcost||1500000).toLocaleString()+' mesos</b> and you need to be level '+(L.gmin||10)+'. Guilds hold 30 members.</p>'
+    +(P&&P.map==='henesys'?'<div style="display:flex;gap:6px"><input id="lg-name" maxlength="12" placeholder="Guild name (3-12 letters/numbers)" style="flex:1;min-width:0"><button class="main" data-lg="create">Create</button></div>':'<div class="mute">You are not in Henesys.</div>')}
+  else{const me=L.me&&L.me.name;const r=L.grank|0;
+   h+='<div class="row"><b style="font-size:1.1em">'+esc(G.name)+'</b><span class="mute">'+G.members.length+'/'+G.cap+' · you: '+RANK[r]+'</span></div>'
+    +'<div class="mute" style="margin:4px 0">Notice: '+(G.notice?esc(G.notice):'(none)')+'</div>'
+    +(r<=2?'<div style="display:flex;gap:6px;margin-bottom:6px"><input id="lg-notice" maxlength="100" placeholder="Set the guild notice" style="flex:1;min-width:0"><button data-lg="notice">Set</button></div>':'')
+    +G.members.slice().sort((a,b)=>a.r-b.r||a.n.localeCompare(b.n)).map(m=>{const o=on(m.n),self=me&&m.n.toLowerCase()===me.toLowerCase();
+     let btn='';if(!self&&r===1)btn=(m.r===3?'<button data-lg="rank:'+esc(m.n)+':2">Promote</button>':'<button data-lg="rank:'+esc(m.n)+':3">Demote</button>')+'<button data-lg="rank:'+esc(m.n)+':1" title="Make Master">👑</button>';
+     if(!self&&r<=2&&m.r>r)btn+='<button data-lg="kick:'+esc(m.n)+'" style="min-width:0">✕</button>';
+     return '<div class="mrow"><span class="av">'+(o?'🟢':'⚪')+'</span><div style="flex:1"><b>'+esc(m.n)+'</b>'+(self?' (you)':'')+'<div class="mute">'+RANK[m.r]+(o?' · Ch '+o.ch+' · '+esc((typeof MAPS!=='undefined'&&MAPS[o.map]&&MAPS[o.map].n)||o.map):' · Offline')+'</div></div>'+btn+'</div>'}).join('')
+    +(r<=2?'<div style="display:flex;gap:6px;margin-top:6px"><input id="lg-inv" maxlength="12" placeholder="Invite by character name" style="flex:1;min-width:0"><button data-lg="invite">Invite</button></div>':'')
+    +'<div style="display:flex;gap:6px;margin-top:8px"><button data-lg="leave" style="flex:1">Leave guild</button>'+(r===1?'<button data-lg="disband" style="flex:1">Disband</button>':'')+'</div>'}
+  return h+(L.gerr?'<div class="mute" style="color:#b0562f;margin-top:6px">'+esc(L.gerr)+'</div>':'')+'</div>'}
+ /* the online version's Social tab is the real guild screen (the old one only lived in this browser) */
+ {const _sp=socialPanel;socialPanel=function(){if(!want())return _sp.apply(this,arguments);return guildHtml()+'<div class="panel"><div class="mute">Buddies, whispers, party and chat are on the Play tab (Players here and Chat).</div></div>'}}
  function budHtml(){const B=(P&&P.buddies)||[];const on=n=>L.buds.find(x=>x.name.toLowerCase()===n.toLowerCase());
   return '<div class="mute" style="margin:8px 0 2px"><b>Buddies</b> ('+B.length+'/50)</div>'
    +(L.breq&&L.breq.until>Date.now()?'<div class="mrow" style="background:rgba(170,120,255,.18);border-radius:8px"><span class="av">💌</span><div style="flex:1"><b>'+esc(L.breq.from)+'</b> wants to be your buddy.</div><button data-lb="accept">Accept</button><button data-lb="decline">No</button></div>':'')
@@ -3910,13 +3948,14 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  setInterval(()=>{if(!want()){if(L.ws||L.state!=='off')close();return}
   if(L.emoAt&&Date.now()-L.emoAt<16000)paint();/* emote cooldown countdown */
   if(!L.ws&&L.state==='off'&&!L.timer)connect();else if(L.slot!==SLOT)connect();else if(P.map!==L.map)sendMap();
-  if(Date.now()-(L.lastCount||0)>30000){L.lastCount=Date.now();askWho();fetch('/api/live/counts').then(r=>r.json()).then(j=>{if(j&&j.counts){L.counts=j.counts;paint()}}).catch(()=>{})}
+  if(Date.now()-(L.lastCount||0)>30000){L.lastCount=Date.now();askWho();gWho();fetch('/api/live/counts').then(r=>r.json()).then(j=>{if(j&&j.counts){L.counts=j.counts;paint()}}).catch(()=>{})}
   if(L.ws&&L.ws.readyState===1&&Date.now()-(L.lastPing||0)>25000){L.lastPing=Date.now();try{L.ws.send('{"t":"ping"}')}catch(e){}}},1000);
  /* the Players here panel, drawn after the Play screen */
  function panelHtml(){const st=L.state==='on'?'🟢 Channel '+L.ch:L.state==='connecting'?'🟡 Connecting…':'⚪ Offline';
   const others=L.here.filter(x=>!L.me||x.id!==L.me.id);
   return '<div class="pad"><div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div>'
    +(L.invite&&L.invite.until>Date.now()?'<div class="mrow" style="background:rgba(242,193,78,.2);border-radius:8px"><span class="av">🎉</span><div style="flex:1"><b>'+esc(L.invite.name)+'</b> invites you to a party.</div><button data-lp="accept">Join</button><button data-lp="decline">No</button></div>':'')
+   +(L.ginv&&L.ginv.until>Date.now()?'<div class="mrow" style="background:rgba(240,170,60,.2);border-radius:8px"><span class="av">🛡️</span><div style="flex:1"><b>'+esc(L.ginv.from)+'</b> invites you to the guild <b>'+esc(L.ginv.guild)+'</b>.</div><button data-lg="accept">Join</button><button data-lg="decline">No</button></div>':'')
    +(L.treq&&L.treq.until>Date.now()?'<div class="mrow" style="background:rgba(120,200,255,.2);border-radius:8px"><span class="av">🔁</span><div style="flex:1"><b>'+esc(L.treq.name)+'</b> wants to trade.</div><button data-lt="accept">Trade</button><button data-lt="decline">No</button></div>':'')
    +(L.trade?'<div class="panel" style="margin:8px 0;padding:8px"><b>🔁 Trading with '+esc(L.trade.name)+'</b><div style="display:flex;gap:8px;margin-top:6px"><div style="flex:1"><div class="mute">You give'+(L.trade.ok[0]?' ✅':'')+'</div>'+(L.trade.mine.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+' <button data-lt="rm:'+esc(o.k)+'" style="min-height:0;padding:0 6px">✕</button></div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.mine.mesos|0).toLocaleString()+' mesos</div></div><div style="flex:1"><div class="mute">You get'+(L.trade.ok[1]?' ✅':'')+'</div>'+(L.trade.theirs.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+'</div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.theirs.mesos|0).toLocaleString()+' mesos</div></div></div>'
      +'<div style="display:flex;gap:6px;margin-top:6px"><select id="lt-item" style="flex:2;min-width:0">'+tradeable().map(k=>'<option value="'+esc(k)+'">'+esc(ITEMS[k].n)+' ('+P.inv[k]+')</option>').join('')+'</select><input id="lt-n" type="number" min="1" value="1" style="flex:1;min-width:0"><button data-lt="add">Add</button></div>'
@@ -3934,13 +3973,13 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function chatHtml(){const T=[['map','Map'],['friends','Friends'],['party','Party'],['guild','Guild'],['log','Activity log']];const t=L.ctab;
   let body;
   if(t==='log'){const v=(typeof logs!=='undefined'?logs:[]).slice(-60);body=v.length?v.map(l=>'<div class="'+l[1]+'">'+esc(l[0])+'</div>').join(''):'<div class="mute">Nothing here yet.</div>'}
-  else{const v=L.chat.filter(m=>tabOf(m)===t);body=v.length?v.map(chatLine).join(''):'<div class="mute">'+({map:'Map chat: say hi to players on this map.',friends:'Whispers with your buddies and other players show here.',party:L.party?'Party chat: only your party sees this.':'You are not in a party. Invite players from Players here.',guild:'Guild chat: join a guild to use it (guilds are coming).'}[t])+'</div>'}
+  else{const v=L.chat.filter(m=>tabOf(m)===t);body=v.length?v.map(chatLine).join(''):'<div class="mute">'+({map:'Map chat: say hi to players on this map.',friends:'Whispers with your buddies and other players show here.',party:L.party?'Party chat: only your party sees this.':'You are not in a party. Invite players from Players here.',guild:L.guild?'Guild chat: only '+esc(L.guild.name)+' members see this.':'You are not in a guild.'}[t])+'</div>'}
   const B=(P&&P.buddies)||[],rec=[...new Set(L.chat.filter(m=>m.w).map(m=>m.from).reverse())],targets=[...new Set((L.wTo?[L.wTo]:[]).concat(rec,B))];
   let input='';
   if(t==='log')input='<div class="mute" style="font-size:12px;margin-top:4px">The activity log is read-only.</div>';
-  else if(t==='guild')input='<div class="mute" style="font-size:12px;margin-top:4px">Guild chat opens when guilds arrive.</div>';
+  else if(t==='guild'&&!L.guild)input='<div class="mute" style="font-size:12px;margin-top:4px">Join or create a guild (Social tab) to use guild chat.</div>';
   else if(t==='party'&&!L.party)input='';
-  else input='<div style="display:flex;gap:6px;margin-top:6px">'+(t==='friends'?'<select id="live-wto" style="max-width:38%;min-width:0">'+(targets.length?targets.map(n=>'<option'+(n===L.wTo?' selected':'')+'>'+esc(n)+'</option>').join(''):'<option value="">No one yet</option>')+'</select>':'')+'<input id="live-in" maxlength="120" placeholder="'+(t==='friends'?'Whisper…':t==='party'?'Say to your party':'Say something (/w Name to whisper)')+'" style="flex:1;min-width:0"><button id="live-say">Send</button></div>';
+  else input='<div style="display:flex;gap:6px;margin-top:6px">'+(t==='friends'?'<select id="live-wto" style="max-width:38%;min-width:0">'+(targets.length?targets.map(n=>'<option'+(n===L.wTo?' selected':'')+'>'+esc(n)+'</option>').join(''):'<option value="">No one yet</option>')+'</select>':'')+'<input id="live-in" maxlength="120" placeholder="'+(t==='friends'?'Whisper…':t==='party'?'Say to your party':t==='guild'?'Say to your guild':'Say something (/w Name to whisper)')+'" style="flex:1;min-width:0"><button id="live-say">Send</button></div>';
   return '<div class="pad"><div class="seg ltb" style="display:flex;gap:4px;flex-wrap:wrap">'+T.map(x=>'<button data-ct="'+x[0]+'" class="'+(t===x[0]?'on':'')+'" style="flex:1;min-width:0;padding:4px 2px">'+x[1]+(x[0]!=='log'&&L.unread[x[0]]&&t!==x[0]?' <b style="color:#d0451b">•'+L.unread[x[0]]+'</b>':'')+'</button>').join('')+'</div>'
    +'<div class="cbox" id="live-chat" style="max-height:180px;min-height:90px;overflow:auto;margin-top:6px">'+body+'</div>'+input+(t!=='log'?emoRow():'')+'</div>'}
  function paint(){const el=document.getElementById('livebox');if(!el)return;const inp=document.getElementById('live-in'),val=inp?inp.value:'',foc=document.activeElement===inp;
@@ -3960,6 +3999,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    if(a3==='ask'){L.myOffer={items:[],mesos:0};liveTrade.ask(arg3)}else if(a3==='accept'){L.myOffer={items:[],mesos:0};liveTrade.accept()}else if(a3==='add'){offerItem((document.getElementById('lt-item')||{}).value,+(document.getElementById('lt-n')||{}).value)}
    else if(a3==='rm'){L.myOffer.items=L.myOffer.items.filter(o=>o.k!==arg3);liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}else if(a3==='mesos'){L.myOffer.mesos=Math.max(0,Math.min(P.mesos,Math.floor(+(document.getElementById('lt-m')||{}).value||0)));liveTrade.offer(L.myOffer.items,L.myOffer.mesos)}
    else liveTrade[a3]();return}
+  const lg=t.closest&&t.closest('[data-lg]');if(lg){const [a,x1,x2]=lg.dataset.lg.split(':');const v=id=>(document.getElementById(id)||{}).value||'';
+   if(a==='create')liveGuild.create(v('lg-name'));else if(a==='invite')liveGuild.invite(v('lg-inv'));else if(a==='notice')liveGuild.notice(v('lg-notice'));
+   else if(a==='kick'){if(confirm('Remove '+x1+' from the guild?'))liveGuild.kick(x1)}else if(a==='rank'){if(+x2!==1||confirm('Make '+x1+' the guild Master? You become Jr. Master.'))liveGuild.rank(x1,+x2)}
+   else if(a==='disband'){if(confirm('Disband the guild? This cannot be undone.'))liveGuild.disband()}else if(a==='leave'){if(confirm('Leave the guild?'))liveGuild.leave()}else liveGuild[a]();return}
   const ct=t.closest&&t.closest('[data-ct]');if(ct){L.ctab=ct.dataset.ct;L.err='';paint();return}
   const le=t.closest&&t.closest('[data-le]');if(le){liveEmote(+le.dataset.le);return}
   const lb=t.closest&&t.closest('[data-lb]');if(lb){const [a,...r]=lb.dataset.lb.split(':');const arg=r.join(':');
