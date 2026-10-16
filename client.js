@@ -3811,7 +3811,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
-   if(m.t==='welcome'){setTimeout(askWho,300);if(m.me&&m.me.staff&&L.spyOn&&(L.spyOn.map||L.spyOn.friends||L.spyOn.guild))setTimeout(()=>out({t:'spyset',spy:L.spyOn}),500);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
+   if(m.t==='welcome'){setTimeout(askWho,300);setTimeout(mFetch,500);if(m.me&&m.me.staff&&L.spyOn&&(L.spyOn.map||L.spyOn.friends||L.spyOn.guild))setTimeout(()=>out({t:'spyset',spy:L.spyOn}),500);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
    else if(m.t==='here')L.here=m.players||[];
    else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
@@ -3830,6 +3830,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
    else if(m.t==='achat'){L.chat.push({ts:Date.now(),from:m.from,text:m.text,all:true});if(L.chat.length>80)L.chat.shift();if(L.ctab!=='all')L.unread.all=(L.unread.all||0)+1}
    else if(m.t==='spy'){m.ts=m.ts||Date.now();(L.spyLog=L.spyLog||[]).push(m);if(L.spyLog.length>120)L.spyLog.shift()}
+   else if(m.t==='mail'){mFetch();if(m.from)log('New mail from '+m.from+'.','good','self')}
    else if(m.t==='whois'){if(m.tag==='g')L.gon=m.list||[];else L.buds=m.list||[]}
    else if(m.t==='ginv'){L.ginv={guild:m.guild,from:m.from,until:Date.now()+60000}}
    else if(m.t==='gupd'){if(m.note)log(m.note,'','guild');gFetch()}
@@ -3912,10 +3913,38 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   return h+(L.gerr?'<div class="mute" style="color:#b0562f;margin-top:6px">'+esc(L.gerr)+'</div>':'')+'</div>'}
  /* the online version's Social tab is the real guild screen (the old one only lived in this browser) */
  {const _sp=socialPanel;socialPanel=function(){if(!want())return _sp.apply(this,arguments);return guildHtml()+'<div class="panel"><div class="mute">Buddies, whispers, party and chat are on the Play tab (Players here and Chat).</div></div>'}}
+ /* ===== Mailbox: System (from the game and staff only) and Messages (from players only). Kept on the server, so it
+    arrives while you are offline. A mailbox button on the Play screen shows how many are unread. ===== */
+ L.mail=[];L.unreadMail=0;L.mview=null;/* null closed | {f:'system'|'player', open:id, compose:{to,subject,body}} */
+ function mFetch(){if(!window.__KV||!window.__KV.me)return;fetch('/api/mail').then(r=>r.json()).then(j=>{if(j.error)return;L.mail=j.mail||[];L.unreadMail=j.unread|0;drawMailBtn();if(L.mview)render()}).catch(()=>{})}
+ function mApi(path,body){return fetch('/api/mail'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({slot:typeof SLOT!=='undefined'?SLOT:0},body||{}))}).then(r=>r.json()).then(j=>{L.merr=j.error||'';mFetch();return j}).catch(()=>{L.merr='Could not reach the server.'})}
+ window.liveMail={open:f=>{L.mview={f:f||'system'};mFetch();render()},close:()=>{L.mview=null;render()},
+  read:id=>{L.mview.open=id;const r=L.mail.find(x=>x.id===id);if(r&&!r.read){r.read=1;L.unreadMail=Math.max(0,L.unreadMail-1);mApi('/read',{id})}render()},
+  del:id=>{mApi('/delete',{id}).then(()=>{if(L.mview)L.mview.open=null;render()})},
+  compose:(to,subject)=>{L.mview=L.mview||{f:'player'};L.mview.f='player';L.mview.compose={to:to||'',subject:subject||'',body:''};render()},
+  send:(to,subject,body)=>mApi('/send',{to,subject,body}).then(j=>{if(j&&j.ok){if(L.mview)L.mview.compose=null;L.merr='Sent to '+to+'.'}render()}),
+  system:(to,subject,body)=>mApi('/system',{to,subject,body}).then(j=>{if(j&&j.ok){if(L.mview)L.mview.compose=null;L.merr='System mail sent ('+j.sent+').'}render()})};
+ function drawMailBtn(){const b=document.getElementById('mailbtn');if(b)b.innerHTML=mailBtnInner()}
+ const mailBtnInner=()=>'📬 Mail'+(L.unreadMail?' <b class="mbadge">'+L.unreadMail+'</b>':'');
+ function mailHtml(){const V=L.mview,f=V.f,list=L.mail.filter(m=>m.kind===f),cnt=k=>L.mail.filter(m=>m.kind===k&&!m.read).length,staff=window.__KV.me&&/admin|gm/.test(window.__KV.me.role||'');
+  let h='<div class="panel"><div class="row"><h2>📬 Mailbox</h2><button data-lm="close">Close</button></div>'
+   +'<div class="seg ltb" style="display:flex;gap:4px"><button data-lm="f:system" class="'+(f==='system'?'on':'')+'" style="flex:1">System'+(cnt('system')?' •'+cnt('system'):'')+'</button><button data-lm="f:player" class="'+(f==='player'?'on':'')+'" style="flex:1">Messages'+(cnt('player')?' •'+cnt('player'):'')+'</button></div>'
+   +'<div class="mute" style="font-size:12px;margin:4px 0">'+(f==='system'?'Notices from the game and the staff. Players cannot send these.':'Private messages from other players. They arrive even while you are offline.')+'</div>';
+  if(V.compose){const c=V.compose,sys=f==='system';h+='<div style="display:flex;flex-direction:column;gap:6px"><input id="lm-to" maxlength="12" placeholder="'+(sys?'Character name, or all':'To (character name)')+'" value="'+esc(c.to)+'"><input id="lm-subj" maxlength="40" placeholder="Subject" value="'+esc(c.subject)+'"><textarea id="lm-body" maxlength="500" rows="5" placeholder="Message">'+esc(c.body)+'</textarea><div style="display:flex;gap:6px"><button class="main" data-lm="'+(sys?'sendsys':'send')+'" style="flex:1">'+(sys?'Send system mail':'Send')+'</button><button data-lm="cancel" style="flex:1">Cancel</button></div></div>'}
+  else if(V.open){const m=L.mail.find(x=>x.id===V.open);if(m)h+='<div class="cbox" style="padding:8px"><div><b>'+esc(m.subject)+'</b></div><div class="mute" style="font-size:12px">From '+esc(m.from)+' · '+new Date(m.created).toLocaleString()+'</div><div style="margin-top:8px;white-space:pre-wrap">'+esc(m.body)+'</div></div><div style="display:flex;gap:6px;margin-top:6px"><button data-lm="back" style="flex:1">Back</button>'+(m.kind==='player'?'<button data-lm="reply:'+esc(m.from)+'" style="flex:1">Reply</button>':'')+'<button data-lm="del:'+m.id+'" style="flex:1">Delete</button></div>'}
+  else{h+=(list.length?list.map(m=>'<div class="mrow" data-lm="open:'+m.id+'" style="cursor:pointer'+(m.read?';opacity:.7':'')+'"><span class="av">'+(m.read?'📭':'📩')+'</span><div style="flex:1;min-width:0"><b>'+esc(m.subject)+'</b><div class="mute" style="font-size:12px">'+esc(m.from)+' · '+new Date(m.created).toLocaleDateString()+'</div></div></div>').join(''):'<div class="mute">No '+(f==='system'?'system mail':'messages')+' yet.</div>')
+    +(f==='player'?'<button class="main" data-lm="new" style="width:100%;margin-top:8px">Write a message</button>':(staff?'<button data-lm="newsys" style="width:100%;margin-top:8px">Send system mail (staff)</button>':''))}
+  return h+(L.merr?'<div class="mute" style="margin-top:6px;color:#b0562f">'+esc(L.merr)+'</div>':'')+'</div>'}
+ /* the mailbox button on the Play screen, and the mailbox screen (replaces the Play screen while open) */
+ {const _r3=render;render=function(){const out=_r3.apply(this,arguments);try{if(window.__KV&&window.__KV.me&&typeof scr!=='undefined'&&scr==='game'&&P){const app=document.getElementById('app');
+   if(L.mview&&tab==='play'){[...app.querySelectorAll(':scope > .panel')].forEach(x=>x.style.display='none');const d=document.createElement('div');d.innerHTML=mailHtml();app.insertBefore(d.firstChild,app.firstChild.nextSibling)}
+   else if(tab==='play'&&!document.getElementById('mailbtn')){const first=[...app.querySelectorAll(':scope > .panel')][0];if(first){const b=document.createElement('button');b.id='mailbtn';b.className='mailbtn';b.dataset.lm='openbox';b.innerHTML=mailBtnInner();first.style.position='relative';first.appendChild(b)}}}}catch(e){}return out}}
+ (()=>{const st=document.createElement('style');st.textContent='.mailbtn{position:absolute;top:8px;right:8px;z-index:3;min-height:30px;padding:2px 10px;font-size:13px}.mbadge{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#d0451b;color:#fff;font-size:11px;line-height:16px;text-align:center}';document.head.appendChild(st)})();
+ setInterval(()=>{if(window.__KV&&window.__KV.me&&!L.ws)mFetch()},120000);
  function budHtml(){const B=(P&&P.buddies)||[];const on=n=>L.buds.find(x=>x.name.toLowerCase()===n.toLowerCase());
   return '<div class="mute" style="margin:8px 0 2px"><b>Buddies</b> ('+B.length+'/50)</div>'
    +(L.breq&&L.breq.until>Date.now()?'<div class="mrow" style="background:rgba(170,120,255,.18);border-radius:8px"><span class="av">💌</span><div style="flex:1"><b>'+esc(L.breq.from)+'</b> wants to be your buddy.</div><button data-lb="accept">Accept</button><button data-lb="decline">No</button></div>':'')
-   +B.map(n=>{const o=on(n);return '<div class="mrow"><span class="av">'+(o?'🟢':'⚪')+'</span><div style="flex:1"><b>'+esc(n)+'</b><div class="mute">'+(o?'Online · Ch '+o.ch+' · '+esc((typeof MAPS!=='undefined'&&MAPS[o.map]&&MAPS[o.map].n)||o.map):'Offline')+'</div></div>'+(o?'<button data-lb="w:'+esc(n)+'">Whisper</button>':'')+'<button data-lb="rm:'+esc(n)+'" style="min-width:0">✕</button></div>'}).join('')
+   +B.map(n=>{const o=on(n);return '<div class="mrow"><span class="av">'+(o?'🟢':'⚪')+'</span><div style="flex:1"><b>'+esc(n)+'</b><div class="mute">'+(o?'Online · Ch '+o.ch+' · '+esc((typeof MAPS!=='undefined'&&MAPS[o.map]&&MAPS[o.map].n)||o.map):'Offline')+'</div></div>'+(o?'<button data-lb="w:'+esc(n)+'">Whisper</button>':'<button data-lm="mailto:'+esc(n)+'">Mail</button>')+'<button data-lb="rm:'+esc(n)+'" style="min-width:0">✕</button></div>'}).join('')
    +'<div style="display:flex;gap:6px;margin-top:4px"><input id="lb-name" maxlength="12" placeholder="Character name" style="flex:1;min-width:0"><button data-lb="add">Add buddy</button></div>'}
  function shopHtml(){if(!P||P.map!=='free_market')return '';const me=L.me&&L.me.id;let h='<div class="panel" style="margin:8px 0;padding:8px"><b>🏪 Free Market shops</b>';
   const others=L.shops.filter(x=>x.id!==me);
@@ -4015,6 +4044,12 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    if(a==='create')liveGuild.create(v('lg-name'));else if(a==='invite')liveGuild.invite(v('lg-inv'));else if(a==='notice')liveGuild.notice(v('lg-notice'));
    else if(a==='kick'){if(confirm('Remove '+x1+' from the guild?'))liveGuild.kick(x1)}else if(a==='rank'){if(+x2!==1||confirm('Make '+x1+' the guild Master? You become Jr. Master.'))liveGuild.rank(x1,+x2)}
    else if(a==='disband'){if(confirm('Disband the guild? This cannot be undone.'))liveGuild.disband()}else if(a==='leave'){if(confirm('Leave the guild?'))liveGuild.leave()}else liveGuild[a]();return}
+  const lm=t.closest&&t.closest('[data-lm]');if(lm){const [a,...r]=lm.dataset.lm.split(':');const arg=r.join(':');const v=id=>(document.getElementById(id)||{}).value||'';
+   if(a==='openbox'){tab='play';liveMail.open(L.mail.some(m=>m.kind==='player'&&!m.read)&&!L.mail.some(m=>m.kind==='system'&&!m.read)?'player':'system')}
+   else if(a==='close')liveMail.close();else if(a==='f'){L.mview={f:arg};L.merr='';render()}else if(a==='open')liveMail.read(+arg);else if(a==='back'){L.mview.open=null;render()}
+   else if(a==='del'){if(confirm('Delete this mail?'))liveMail.del(+arg)}else if(a==='reply')liveMail.compose(arg,'Re: '+((L.mail.find(m=>m.id===L.mview.open)||{}).subject||'').replace(/^(Re: )+/,''));
+   else if(a==='new')liveMail.compose('','');else if(a==='mailto'){tab='play';L.mview={f:'player'};liveMail.compose(arg,'')}else if(a==='newsys'){L.mview.compose={to:'all',subject:'',body:''};render()}
+   else if(a==='cancel'){L.mview.compose=null;render()}else if(a==='send')liveMail.send(v('lm-to'),v('lm-subj'),v('lm-body'));else if(a==='sendsys')liveMail.system(v('lm-to'),v('lm-subj'),v('lm-body'));return}
   const sp=t.closest&&t.closest('[data-spy]');if(sp){const k=sp.dataset.spy;L.spyOn[k]=!L.spyOn[k];out({t:'spyset',spy:L.spyOn});paint();return}
   const ct=t.closest&&t.closest('[data-ct]');if(ct){L.ctab=ct.dataset.ct;L.err='';paint();return}
   const le=t.closest&&t.closest('[data-le]');if(le){liveEmote(+le.dataset.le);return}
