@@ -2714,7 +2714,7 @@ window.__siteAdmin={show,hide,paint};
    Before this, at most one monster joined every 3-7.5 s and a line held one monster, so kill speed was capped at about
    700 an hour whatever your damage: a warrior's Slash Blast had nothing to hit and levelled no faster than a Beginner. */
 const ROWCAP=2;/* v3.4: at most 2 monsters per row */
-const mapCap=()=>{const a=mobSlots(P.map);return Math.max(1,Math.floor(a.length*.75))};
+var mapCap=()=>{const a=mobSlots(P.map);return Math.max(1,Math.floor(a.length*.75))};
 const boardCap=()=>Math.min(mapCap(),monCap());
 function freeCells(){const c=[];for(let r=0;r<NRf();r++){const inRow=fld.filter(o=>o.row===r);if(inRow.length>=ROWCAP)continue;for(let g=1;g<=MAXGAP;g++)if(!inRow.some(o=>o.gap===g))c.push([r,g])}return c}
 function spawnWave(now,first){let n=0;const want=boardCap()-fld.length;
@@ -3712,10 +3712,13 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    - "Players here" on the Play screen lists the real players on your map in your channel, updated live; changing
      maps updates it for everyone.
    - Map chat: messages go to everyone on your map in your channel (120 letters, at most 5 per 5 seconds).
+   - Parties (up to 6, in your channel): invite players from the list; the leader can remove members; party chat;
+     members on the same map get 20% of each kill's EXP. The map's monsters are shared with the other players on the
+     map, and the first to arrive gets priority (a 1.5x share).
    - Reconnects by itself (after 3 s, then slower) if the connection drops. ===== */
 (function(){
  const API=(window.MAPLE_API||'').replace(/\/$/,'');
- const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:''};
+ const L={ws:null,ch:+(localStorage.getItem('ml_ch')||1)||1,here:[],chat:[],state:'off',slot:null,map:null,counts:null,tries:0,timer:null,err:'',share:null,party:null,members:[],invite:null,chatTo:'map'};
  window.liveState=L;
  const wsUrl=()=>{const base=API||location.origin;let t='';try{t=localStorage.getItem('ml_token')||''}catch(e){}
   return base.replace(/^http/,'ws')+'/api/live?ch='+L.ch+'&slot='+L.slot+(t?'&token='+t:'')};
@@ -3725,17 +3728,27 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
-   if(m.t==='welcome'){L.here=m.here||[];L.counts=m.counts;L.me=m.me;if(P&&P.map!==m.me.map)sendMap()}
+   if(m.t==='welcome'){L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
    else if(m.t==='here')L.here=m.players||[];
    else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
    else if(m.t==='chat'){L.chat.push(m);if(L.chat.length>30)L.chat.shift()}
+   else if(m.t==='share')L.share=m;
+   else if(m.t==='party'){L.party=m.id;L.members=m.members||[];if(m.note)L.err=m.note;if(!m.id)L.chatTo='map'}
+   else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
+   else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
    else if(m.t==='err'){L.err=m.error}
    paint()};
   ws.onclose=()=>{if(L.ws===ws){L.ws=null;L.state='off';L.here=[];paint();retry()}}}
  function retry(){clearTimeout(L.timer);if(!want())return;L.tries++;L.timer=setTimeout(connect,Math.min(30000,3000*L.tries))}
- function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=[]}}
- window.liveSay=function(text){text=String(text||'').trim();if(!text||!L.ws||L.ws.readyState!==1)return false;L.ws.send(JSON.stringify({t:'chat',text}));return true};
+ function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=L.chat.filter(m=>m.party)}}
+ const out=o=>{if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
+ window.liveSay=function(text,party){text=String(text||'').trim();if(!text)return false;return out({t:(party||L.chatTo==='party')&&L.party?'pchat':'chat',text})};
+ window.liveParty={invite:id=>out({t:'pinvite',to:id}),accept:()=>{L.invite=null;out({t:'paccept'});paint()},decline:()=>{L.invite=null;out({t:'pdecline'});paint()},leave:()=>out({t:'pleave'}),kick:id=>out({t:'pkick',id})};
+ /* party EXP: tell the server about each kill so party members on this map get their share */
+ {const _w=win;win=function(){const k=enc&&enc.k;const r=_w.apply(this,arguments);try{if(k&&L.party&&MON[k])out({t:'pexp',exp:MON[k].exp|0})}catch(e){}return r}}
+ /* the map's monsters are shared with the other players on it; the first to arrive gets priority */
+ {const _mc=mapCap;mapCap=function(){const base=_mc();const s=L.share;if(!s||!(s.n>1)||!(L.ws&&L.ws.readyState===1))return base;try{const pop=mobSlots(P.map).length;return Math.max(1,Math.floor(pop*0.75*s.w/s.total))}catch(e){return base}}}
  window.liveChannel=function(n){n=+n;if(!(n>=1&&n<=3)||n===L.ch)return;L.ch=n;try{localStorage.setItem('ml_ch',String(n))}catch(e){}L.chat=[];connect();paint()};
  /* keep the connection matched to the character and map */
  setInterval(()=>{if(!want()){if(L.ws||L.state!=='off')close();return}
@@ -3747,16 +3760,19 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   const others=L.here.filter(x=>!L.me||x.id!==L.me.id);
   return '<div class="pad"><div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div>'
    +'<div style="display:flex;gap:6px;margin:6px 0">'+[1,2,3].map(n=>'<button data-live-ch="'+n+'" class="'+(n===L.ch?'main':'')+'" style="flex:1;min-height:30px">Ch '+n+(L.counts&&L.counts[n-1]!=null?' ('+L.counts[n-1]+')':'')+'</button>').join('')+'</div>'
-   +(others.length?others.map(x=>'<div class="mrow"><span class="av">🧑</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
-   +'<div class="cbox" id="live-chat" style="max-height:140px;overflow:auto;margin-top:8px">'+(L.chat.length?L.chat.map(m=>'<div><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>').join(''):'<div class="mute">Map chat: say hi to players on this map.</div>')+'</div>'
+   +(L.invite&&L.invite.until>Date.now()?'<div class="mrow" style="background:rgba(242,193,78,.2);border-radius:8px"><span class="av">🎉</span><div style="flex:1"><b>'+esc(L.invite.name)+'</b> invites you to a party.</div><button data-lp="accept">Join</button><button data-lp="decline">No</button></div>':'')
+   +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
+   +(others.length?others.map(x=>'<div class="mrow"><span class="av">🧑</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+'</div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
+   +'<div class="cbox" id="live-chat" style="max-height:140px;overflow:auto;margin-top:8px">'+(L.chat.length?L.chat.map(m=>'<div'+(m.party?' style="color:#2e7d5b"':'')+'><b>'+(m.party?'[Party] ':'')+esc(m.from)+':</b> '+esc(m.text)+'</div>').join(''):'<div class="mute">Map chat: say hi to players on this map.</div>')+'</div>'
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')
-   +'<div style="display:flex;gap:6px;margin-top:6px"><input id="live-in" maxlength="120" placeholder="Say something on this map" style="flex:1;min-width:0"><button id="live-say">Send</button></div></div>'}
+   +'<div style="display:flex;gap:6px;margin-top:6px">'+(L.party?'<button data-lp="to" style="min-width:64px">'+(L.chatTo==='party'?'Party':'Map')+'</button>':'')+'<input id="live-in" maxlength="120" placeholder="Say something on this map" style="flex:1;min-width:0"><button id="live-say">Send</button></div></div>'}
  function paint(){const el=document.getElementById('livebox');if(!el)return;const inp=document.getElementById('live-in'),val=inp?inp.value:'',foc=document.activeElement===inp;
   el.innerHTML=panelHtml();const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
  {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(want()&&tab==='play'&&!(MAPS[P.map]||{}).jobtest){const app=document.getElementById('app');
     const people=[...app.querySelectorAll(':scope > .panel')].find(p=>p.querySelector('.npc'))||[...app.querySelectorAll(':scope > .panel')].find(p=>/PEOPLE/i.test((p.querySelector('h2')||{}).textContent||''));
     if(!document.getElementById('livebox')){const d=document.createElement('div');d.id='livebox';d.className='panel';if(people)people.insertAdjacentElement('afterend',d);else{const log=document.getElementById('log');if(log)log.insertAdjacentElement('beforebegin',d);else app.appendChild(d)}paint()}}}catch(e){}return out}}
  document.addEventListener('click',e=>{const t=e.target;if(t.closest&&t.closest('[data-live-ch]')){liveChannel(t.closest('[data-live-ch]').dataset.liveCh);return}
+  const lp=t.closest&&t.closest('[data-lp]');if(lp){const [a2,arg]=lp.dataset.lp.split(':');if(a2==='invite')liveParty.invite(arg);else if(a2==='kick')liveParty.kick(arg);else if(a2==='to'){L.chatTo=L.chatTo==='party'?'map':'party';paint()}else liveParty[a2]();return}
   if(t.id==='live-say'){const i=document.getElementById('live-in');if(i&&liveSay(i.value)){i.value=''}}});
  document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target&&e.target.id==='live-in'){if(liveSay(e.target.value))e.target.value=''}});
 })();
