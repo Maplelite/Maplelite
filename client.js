@@ -3566,6 +3566,9 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
  {const _s=save;save=function(){try{splitEquips()}catch(e){}return _s.apply(this,arguments)}}
  {const _r=render;render=function(){try{if(P&&typeof scr!=='undefined'&&scr==='game')splitEquips()}catch(e){}return _r.apply(this,arguments)}}
 })();
+/* v3.4: no Free Market menu tile. In v62 the Free Market is a place you walk into from town maps (Free Market
+   Entrance); it comes back as a map when player shops are built. */
+for(let i=FEAT.length-1;i>=0;i--)if(FEAT[i][0]==='market')FEAT.splice(i,1);
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
