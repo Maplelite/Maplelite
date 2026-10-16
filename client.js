@@ -1,4 +1,4 @@
-window.__BUILD='3.5-b5dd1c1219';
+window.__BUILD='3.5-0685faca3d';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4593,9 +4593,20 @@ body.chatfull{overflow:hidden}
   d.innerHTML='<div class="box"><div style="font-size:42px">🍁</div><h2>A new version is out</h2><p>This copy of Maplelite is out of date, so it can\'t connect to the server. Update to keep playing. Your characters are safe on the server.</p><button id="ml-upd" class="main">Update now</button></div>';
   document.body.appendChild(d);document.getElementById('ml-upd').onclick=async()=>{
    if(location.protocol==='file:'){location.href='https://maplelite.github.io/Maplelite/';return}
-   try{if(navigator.serviceWorker){for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}}catch(e){}
-   try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(e){}
-   const u=new URL(location.href);u.searchParams.set('u',Date.now());location.replace(u.toString())}};
+   const b=document.getElementById('ml-upd'),say=t=>{b.disabled=true;b.textContent=t};
+   /* the website and the server deploy separately; only reload once the website copy matches the server, so the
+      page never reloads into an older copy. If the server is the one behind, wait for it instead. */
+   const tagOf=async()=>{try{const u=new URL(location.href);u.searchParams.set('u',Date.now());const t=await (await fetch(u.toString(),{cache:'no-store'})).text();const m=t.match(/client\.js\?v=([a-z0-9]+)/);return m?m[1]:''}catch(e){return ''}};
+   const srv=async()=>{try{const j=await (await fetch('/api/ping',{cache:'no-store'})).json();return (j&&j.build)||''}catch(e){return ''}};
+   const reload=async()=>{try{if(navigator.serviceWorker){for(const r of await navigator.serviceWorker.getRegistrations())await r.unregister()}}catch(e){}
+    try{if(window.caches){for(const k of await caches.keys())await caches.delete(k)}}catch(e){}
+    const u=new URL(location.href);u.searchParams.set('u',Date.now());location.replace(u.toString())};
+   const mine=String(window.__BUILD||'').replace(/^.*-/,'');
+   const step=async()=>{const [sb,tag]=await Promise.all([srv(),tagOf()]),want=sb.replace(/^.*-/,'');
+    if(want&&tag===want)return reload();
+    if(want&&want===mine)return reload();
+    say(tag&&tag===mine?'The server is updating. Waiting for it...':'The update is still on its way. Checking again...');setTimeout(step,8000)};
+   say('Checking for the update...');step()}};
  const check=()=>fetch('/api/ping').then(r=>r.json()).then(j=>{if(j&&j.build&&window.__BUILD&&j.build!==window.__BUILD)window.__outdated()}).catch(()=>{});
  setTimeout(check,1500);setInterval(check,120000);
  const st=document.createElement('style');st.textContent='#ml-outdated{position:fixed;inset:0;z-index:2147483646;background:rgba(10,15,30,.82);display:flex;align-items:center;justify-content:center;padding:16px}#ml-outdated .box{background:#f7f4ea;color:#243552;max-width:340px;width:100%;border-radius:14px;border:3px solid #18223d;padding:18px;text-align:center}#ml-outdated h2{margin:6px 0}#ml-outdated button{margin-top:10px;min-height:44px;width:100%}';document.head.appendChild(st)})();
