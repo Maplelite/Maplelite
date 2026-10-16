@@ -1,4 +1,4 @@
-window.__BUILD='3.5-e9a9f8cbe2';
+window.__BUILD='3.5-3733c07d90';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3890,6 +3890,10 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#app,#site{position:relative;z-index:1}'
  +'#site{background:'+sky+'!important;color:'+tx+'!important;--d:'+bd+';--wd:'+ton+';--wl:'+s1+';--pp:'+pn+';--o:'+hd+'}'
  +(TH_GROUND[t[0]]?'#site .ws-hills path:nth-child(1){fill:'+TH_GROUND[t[0]][0]+'!important}#site .ws-hills path:nth-child(2){fill:'+TH_GROUND[t[0]][1]+'!important}#site .ws-hills path:nth-child(3){fill:'+TH_GROUND[t[0]][2]+'!important}#site .ws-foot{background:linear-gradient('+TH_GROUND[t[0]][3]+','+TH_GROUND[t[0]][4]+')!important}':'')
+ +'#site .ws-play,#site .ws-b,#site .ws-b.p,#site .ws-nav a,#site .ws-rk button,#site .ws-news-item{background:linear-gradient('+b1+','+b2+')!important;border-color:'+bd+'!important;color:'+tx+'!important;text-shadow:none!important}'
+ +'#site .ws-play{box-shadow:0 8px 0 '+bd+'!important}#site .ws-nav a:hover,#site .ws-nav a.on{background:'+ton+'!important;color:#fff!important}'
+ +'#site .ws-tag{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
+ +'#site .ws-bar{color:'+hd+'!important}'
  +'#site .ws-sun{background:radial-gradient(circle,'+s1+'66 0,transparent 68%)!important}'
  +'#site .ws-cl{background:'+pn+'!important;opacity:.85!important}'
  +'#site .ws-cl:before,#site .ws-cl:after{background:'+pn+'!important}'
