@@ -879,11 +879,11 @@ function enchHtml(){const e=ench,hd='<div class="row"><h2>📜 Enchanting</h2><b
 function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.sp+=P.sk.rev|0;delete P.sk.rev;delete P.revCd}cashInit();if(P.cm!==P.map){P.cleared={};P.cm=P.map}const m=MAPS[P.map],w=W(),r=dmgRange(),need=P.lvl<MAXL?EXP[P.lvl-1]:1;
  const gp=(v,m)=>Math.max(0,Math.min(100,v/m*100)),gg=(l,c,v,m)=>'<div class="g"><b>'+l+'</b><div class="gb"><i style="width:'+gp(v,m)+'%;background:'+c+'"></i><em>['+Math.max(0,v)+'/'+m+']</em></div></div>';
  const SB='<div class="sbar"><div class="lvb"><span class="lv">LV. '+P.lvl+(MODE()?' '+MODES[MODE()][1]:'')+'</span><b id="pn" title="'+MODES[MODE()][0]+'"></b></div><div class="gs">'+gg('HP','linear-gradient(#ff7a6a,#c8281e)',P.hp,P.maxHp)+gg('MP','linear-gradient(#6ab8ff,#1f64cc)',P.mp,P.maxMp)+'</div></div>';
- let h=(tab==='play'&&!P.dead)?'':SB;
+ let h=SB;/* v3.5: the character box is always at the top */
  h+='<div class="tabs icontabs">'+['play','stats','pack','quests','social','cash','menu'].map(t=>/* v3.5: icon tabs, all the same size; the name shows on hover and to screen readers */'<button class="'+(tab===t?'on':'')+'" data-t="'+t+'" title="'+TABN[t]+'" aria-label="'+TABN[t]+'"><span class="tbi">'+TABI[t]+'</span>'+({stats:tbd(P.ap+P.sp),quests:tbd(qReadyN()),social:tbd(dmUnread())}[t]||'')+'</button>').join('')+'</div>';
  if(tab==='play'&&P.dead){h+=tombHtml()}else if(tab==='play'){
   if(!(talk&&!enc))h+='<div class="panel">'+townArt(P.map)+'<div class="row"><h2 class="mapname">'+m.i+' '+m.n+'</h2>'+(m.town?'':'<span class="mute">'+(P.cleared[P.map]?'Cleared':freeMove(m)?'Free passage':P.kills+'/'+needFor(m))+'</span>')+'</div><div class="mute">'+m.d+'</div>'+buffLine()+'</div>'
-  ;h+=SB;const lp=(!inShop&&!talk)?lootPanel():'';
+  ;const lp=(!inShop&&!talk)?lootPanel():'';
   if(enc)h+=battlePanel('fight')+lp;
   else if(seeking){h+=battlePanel('seek')+lp}else if(talk){h+=dlgPanel()}else if(m.shop&&inShop){h+=shopPanel()}else{h+=(m.town?quickPanel():battlePanel('idle'))+lp;if(m.npcs){h+=peoplePanel()}}
   h+=trackerHtml();
@@ -3412,11 +3412,11 @@ laneHtml=function(){fixPos();const LH=Math.max(20,Math.min(30,Math.floor(210/NRf
    c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+(f<0?'<small style="font-size:9px">◀</small>':'')+'🧍'+(f>0?'<small style="font-size:9px">▶</small>':'')+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
   h+='<div class="lrow" style="display:flex;background:rgba(120,140,180,.12);border-radius:6px;min-height:'+LH+'px">'+c+'</div>'}
  return h+'</div>'};
-/* keep the target valid on every redraw, and draw the spawn-side button on the character card */
+/* keep the target valid on every redraw, and draw the spawn-side button in the fight section (next to Lock) */
 {const _r=render;render=function(){if(fld.length){fixPos();keepTarget()}else inFight=false;const out=_r.apply(this,arguments);
-  try{if(typeof scr!=='undefined'&&scr==='game'&&P){const box=document.querySelector('#app .sbar .lvb');if(box&&!box.querySelector('#spawnbtn')){const s=SPAWN_SIDES.find(x=>x[0]===(P.spawn||'left'))||SPAWN_SIDES[0];
-    const b=document.createElement('button');b.id='spawnbtn';b.type='button';b.title='Where you appear when a fight starts: '+s[2]+'. Tap to change.';b.textContent=s[1];
-    b.style.cssText='min-height:0;height:22px;width:26px;padding:0;margin-left:6px;font-size:12px;line-height:20px;border-radius:6px;vertical-align:middle';box.appendChild(b)}}}catch(e){}
+  try{if(typeof scr!=='undefined'&&scr==='game'&&P){const lk=document.getElementById('slk'),st=document.getElementById('sk');if((lk||st)&&!document.getElementById('spawnbtn')){const s=SPAWN_SIDES.find(x=>x[0]===(P.spawn||'left'))||SPAWN_SIDES[0];
+    const b=document.createElement('button');b.id='spawnbtn';b.type='button';b.title='Where you appear when a fight starts. Tap to change.';b.textContent='Start: '+s[2]+' '+s[1];
+    b.style.cssText='min-height:34px;padding:2px 10px;font-size:12px;white-space:nowrap;margin-right:6px';if(lk)lk.insertAdjacentElement('beforebegin',b);else{b.style.margin='8px auto 0';b.style.display='block';st.insertAdjacentElement('afterend',b)}}}}catch(e){}
   return out}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#spawnbtn');if(!b||!P)return;e.stopPropagation();const i=SPAWN_SIDES.findIndex(x=>x[0]===(P.spawn||'left'));P.spawn=SPAWN_SIDES[(i+1)%3][0];
  log('Spawn side: '+SPAWN_SIDES[(i+1)%3][2]+'. You will appear there when your next fight starts.','','combat');save();render()},true);
@@ -3755,6 +3755,45 @@ cashHtml=function(){cashInit();const now=Date.now(),fx=[];if(P.cb.exp2>now)fx.pu
   +((P.pets||[]).length?'<div class="mute" style="margin-top:6px">Pets: '+P.pets.map(p=>p.name).join(', ')+' (Character screen)</div>':'')+'</div>'
   +(P.cinv.rock>0?rockHtml('rock'):'')+(P.cinv.vip>0?rockHtml('vip'):'')};
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-ctab]');if(!b)return;cashTab=b.dataset.ctab;render()});
+
+/* v3.5: Details on the map card: the monsters that spawn there (with levels) and, online, who "owns" the map (the
+   player who arrived first and has spawn priority). Tapping a player opens a small profile. */
+let mapDet=false,profileOf=null;
+function mapDetailsHtml(){const m=MAPS[P.map];if(!m)return '';const L=window.liveState;
+ const mons=[...new Set(m.mons||[])].filter(k=>MON[k]).sort((a,b)=>MON[a].lv-MON[b].lv);
+ let h='<div class="mapdet" style="margin-top:6px;border-top:1px solid var(--line);padding-top:6px">'+(m.d?'<div class="mute" style="margin-bottom:6px">'+m.d+'</div>':'');
+ h+='<div class="mute" style="font-size:12px">Monsters here</div>'+(mons.length?'<div style="display:flex;flex-wrap:wrap;gap:4px;margin:4px 0">'+mons.map(k=>'<span class="pill" style="display:inline-flex;gap:4px;align-items:center">'+(MON[k].i||'👾')+' '+MON[k].n+' <b>Lv '+MON[k].lv+'</b></span>').join('')+'</div>':'<div class="mute">None (safe map).</div>');
+ if(L&&L.state==='on'&&(L.here||[]).length+1>1&&mons.length){const me=L.me;const all=(L.here||[]).concat(me?[Object.assign({},me,{map:P.map})]:[]).filter(x=>x.map===P.map||x===me);
+  const owner=all.slice().sort((a,b)=>(a.at||0)-(b.at||0))[0];
+  if(owner)h+='<div class="mute" style="font-size:12px;margin-top:4px">Map owner (arrived first, spawn priority)</div><div class="mrow" data-prof="'+(owner.name||'')+'" style="cursor:pointer"><span class="av">👑</span><div style="flex:1"><b>'+String(owner.name).replace(/</g,'&lt;')+'</b> <span class="mute">Lv '+(owner.lvl|0)+'</span></div></div>'}
+ return h+'</div>'}
+function profileHtml(n){const L=window.liveState||{},p=((L.here||[]).concat(L.me?[L.me]:[])).find(x=>x.name===n)||{name:n};const g=L.guild&&L.guild.members&&L.guild.members.some(x=>x.n===n)?L.guild.name:null;
+ return '<div class="panel" id="profilebox"><div class="row"><h2>🧑 '+String(p.name).replace(/</g,'&lt;')+'</h2><button data-prof="">Close</button></div>'
+  +'<div>Level <b>'+(p.lvl|0||'?')+'</b>'+(p.job?' · '+String(p.job).replace(/</g,'&lt;'):'')+(g?' · Guild <b>'+g+'</b>':'')+'</div>'
+  +(L.me&&n!==L.me.name&&window.liveParty?'<div style="display:flex;gap:6px;margin-top:8px;flex-wrap:wrap">'+(p.id?'<button data-lp="invite:'+p.id+'">Invite to party</button><button data-lt="ask:'+p.id+'">Trade</button>':'')+'<button data-lb="addn:'+n+'">Add buddy</button><button data-lb="w:'+n+'">Whisper</button></div>':'')+'</div>'}
+{const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(!P||typeof scr==='undefined'||scr!=='game'||tab!=='play')return out;
+  const name=document.querySelector('#app h2.mapname');if(name&&!document.getElementById('mapdetbtn')){const b=document.createElement('button');b.id='mapdetbtn';b.textContent=mapDet?'Details ▴':'Details ▾';
+   b.style.cssText='min-height:26px;padding:0 8px;font-size:12px;margin-left:auto';name.parentNode.appendChild(b);{const row=name.parentNode,d=row.nextElementSibling;if(d&&d.textContent&&MAPS[P.map]&&MAPS[P.map].d&&d.textContent.trim()===String(MAPS[P.map].d).trim())d.style.display='none'}if(mapDet)name.closest('.panel').insertAdjacentHTML('beforeend',mapDetailsHtml())}
+  if(profileOf&&!document.getElementById('profilebox')){const card=name&&name.closest('.panel');if(card)card.insertAdjacentHTML('afterend',profileHtml(profileOf))}}catch(e){}return out}}
+document.addEventListener('click',e=>{const t=e.target;if(t.id==='mapdetbtn'){mapDet=!mapDet;render();return}
+ const pr=t.closest&&t.closest('[data-prof]');if(pr){profileOf=pr.dataset.prof||null;render()}});
+
+/* v3.5: every block with a title bar can be collapsed with a +/- button on the right of the title bar. The state is
+   saved with the character (P.ui.col), so it is the same the next time you log in. Quickslots get a title bar. */
+const _qp=quickPanel;quickPanel=function(){const h=_qp.apply(this,arguments);return h.replace('<div class="panel">','<div class="panel"><h2>Quickslots</h2>')};
+const colKey=t=>String(t||'').replace(/[^A-Za-z ]/g,'').trim().toLowerCase().replace(/\s+/g,'_').slice(0,24);
+function decorateCollapse(){try{if(!P)return;P.ui=P.ui||{};const col=P.ui.col=P.ui.col||{};
+ document.querySelectorAll('#app .panel, #livebox, #livechatbox').forEach(pn=>{const hd=pn.querySelector(':scope > h2:first-child, :scope > .row:first-child, :scope > .title:first-child');
+  if(!hd||hd.querySelector('.colbtn'))return;const txt=(hd.querySelector('h2')||hd).textContent;const k=colKey(txt);if(!k)return;
+  const b=document.createElement('button');b.className='colbtn';b.dataset.col=k;b.textContent=col[k]?'+':'−';b.title=col[k]?'Show':'Hide';hd.appendChild(b);
+  pn.classList.toggle('collapsed',!!col[k])})}catch(e){}}
+{const _r=render;render=function(){const out=_r.apply(this,arguments);decorateCollapse();return out}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('.colbtn');if(!b||!P)return;e.stopPropagation();P.ui=P.ui||{};P.ui.col=P.ui.col||{};
+ const k=b.dataset.col;P.ui.col[k]=!P.ui.col[k];const pn=b.closest('.panel,#livebox,#livechatbox');if(pn)pn.classList.toggle('collapsed',P.ui.col[k]);b.textContent=P.ui.col[k]?'+':'−';save()},true);
+(()=>{const st=document.createElement('style');st.textContent='.colbtn{margin-left:auto;float:right;min-height:0!important;height:22px;width:26px;padding:0!important;font-size:16px;line-height:18px;border-radius:6px}'
+ +'#app .panel>h2:first-child,#app .panel>.row:first-child{display:flex;align-items:center;gap:6px}'
+ +'.collapsed>*:not(h2:first-child):not(.row:first-child):not(.title:first-child){display:none!important}'
+ +'.collapsed>h2:first-child,.collapsed>.row:first-child,.collapsed>.title:first-child{margin-bottom:-10px!important}';document.head.appendChild(st)})();
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
@@ -4098,7 +4137,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  /* the Players here panel, drawn after the Play screen */
  function panelHtml(){const st=L.state==='on'?'🟢 Channel '+L.ch:L.state==='connecting'?'🟡 Connecting…':'⚪ Offline';
   const others=L.here.filter(x=>!L.me||x.id!==L.me.id);
-  return '<div class="pad"><div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div>'
+  return '<div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div><div class="pad">'
    +(L.invite&&L.invite.until>Date.now()?'<div class="mrow" style="background:rgba(242,193,78,.2);border-radius:8px"><span class="av">🎉</span><div style="flex:1"><b>'+esc(L.invite.name)+'</b> invites you to a party.</div><button data-lp="accept">Join</button><button data-lp="decline">No</button></div>':'')
    +(L.ginv&&L.ginv.until>Date.now()?'<div class="mrow" style="background:rgba(240,170,60,.2);border-radius:8px"><span class="av">🛡️</span><div style="flex:1"><b>'+esc(L.ginv.from)+'</b> invites you to the guild <b>'+esc(L.ginv.guild)+'</b>.</div><button data-lg="accept">Join</button><button data-lg="decline">No</button></div>':'')
    +(L.treq&&L.treq.until>Date.now()?'<div class="mrow" style="background:rgba(120,200,255,.2);border-radius:8px"><span class="av">🔁</span><div style="flex:1"><b>'+esc(L.treq.name)+'</b> wants to trade.</div><button data-lt="accept">Trade</button><button data-lt="decline">No</button></div>':'')
@@ -4109,7 +4148,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    +shopHtml()
    +budHtml()
    +(L.party&&L.members.length?'<div class="mute" style="margin:6px 0 2px"><b>Party</b> ('+L.members.length+'/6) · members on this map share 20% of each kill\'s EXP</div>'+L.members.map(x=>'<div class="mrow"><span class="av">'+(x.lead?'👑':'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+' · '+esc((typeof MAPS!=='undefined'&&MAPS[x.map]&&MAPS[x.map].n)||x.map)+'</div></div>'+(L.me&&x.id===L.me.id?'<button data-lp="leave">Leave</button>':(L.members.some(y=>y.lead&&L.me&&y.id===L.me.id)?'<button data-lp="kick:'+esc(x.id)+'">Remove</button>':''))+'</div>').join(''):'')
-   +(others.length?others.map(x=>'<div class="mrow"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+((P.buddies||[]).some(n=>n.toLowerCase()===String(x.name).toLowerCase())?'':'<button data-lb="addn:'+esc(x.name)+'">Buddy</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
+   +(others.length?others.map(x=>'<div class="mrow" data-prof="'+esc(x.name)+'" style="cursor:pointer"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+((P.buddies||[]).some(n=>n.toLowerCase()===String(x.name).toLowerCase())?'':'<button data-lb="addn:'+esc(x.name)+'">Buddy</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')+'</div>'}
  /* the chat panel: tabs Map / Friends (whispers) / Party / Guild / Activity log (read-only game log) */
  L.ctab=L.ctab||'map';L.unread={all:0,map:0,friends:0,party:0,guild:0};L.spyOn={map:false,friends:false,guild:false};
@@ -4131,7 +4170,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   else if(t==='guild'&&!L.guild)input='<div class="mute" style="font-size:12px;margin-top:4px">Join or create a guild (Social tab) to use guild chat.</div>';
   else if(t==='party'&&!L.party)input='';
   else input='<div style="display:flex;gap:6px;margin-top:6px">'+(t==='friends'?'<select id="live-wto" style="max-width:38%;min-width:0">'+(targets.length?targets.map(n=>'<option'+(n===L.wTo?' selected':'')+'>'+esc(n)+'</option>').join(''):'<option value="">No one yet</option>')+'</select>':'')+'<input id="live-in" maxlength="120" placeholder="'+(t==='friends'?'Whisper…':t==='party'?'Say to your party':t==='guild'?'Say to your guild':'Say something (/w Name to whisper)')+'" style="flex:1;min-width:0"><button id="live-say">Send</button></div>';
-  return '<div class="pad"><div class="seg ltb" style="display:flex;gap:4px;flex-wrap:wrap">'+T.map(x=>'<button data-ct="'+x[0]+'" class="'+(t===x[0]?'on':'')+'" style="flex:1;min-width:0;padding:4px 2px">'+x[1]+(x[0]!=='log'&&L.unread[x[0]]&&t!==x[0]?' <b style="color:#d0451b">•'+L.unread[x[0]]+'</b>':'')+'</button>').join('')+'</div>'
+  return '<h2>💬 Chat</h2><div class="pad"><div class="seg ltb" style="display:flex;gap:4px;flex-wrap:wrap">'+T.map(x=>'<button data-ct="'+x[0]+'" class="'+(t===x[0]?'on':'')+'" style="flex:1;min-width:0;padding:4px 2px">'+x[1]+(x[0]!=='log'&&L.unread[x[0]]&&t!==x[0]?' <b style="color:#d0451b">•'+L.unread[x[0]]+'</b>':'')+'</button>').join('')+'</div>'
    +'<div class="cbox" id="live-chat" style="max-height:180px;min-height:90px;overflow:auto;margin-top:6px">'+body+'</div>'+input+(t!=='log'?emoRow():'')+'</div>'}
  function paint(){const el=document.getElementById('livebox');if(!el)return;const inp=document.getElementById('live-in'),val=inp?inp.value:'',foc=document.activeElement===inp;
   el.innerHTML=panelHtml();const cx=document.getElementById('livechatbox');if(cx){if(L.unread[L.ctab])L.unread[L.ctab]=0;cx.innerHTML=chatHtml()}const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
@@ -4144,7 +4183,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   return '<div class="pad"><button data-chm="1" class="main" style="width:100%;display:flex;justify-content:space-between;align-items:center;min-height:44px"><span>📡 Channel '+L.ch+(L.state==='on'?'':L.state==='connecting'?' (connecting…)':' (offline)')+'</span><span>👥 '+n(L.ch)+' '+(n(L.ch)===1?'player':'players')+' ▾</span></button>'
    +(L.chOpen?'<div style="margin-top:6px">'+[1,2,3].map(c=>'<button data-live-ch="'+c+'" style="width:100%;display:flex;justify-content:space-between;margin-top:4px;min-height:40px"'+(c===L.ch?' disabled':'')+'><span>Channel '+c+(c===L.ch?' (you are here)':'')+'</span><span>👥 '+n(c)+'</span></button>').join('')+'</div>':'')+'</div>'}
  {const _r2=render;render=function(){const out=_r2.apply(this,arguments);try{if(want()&&tab==='menu'&&!feat){const app=document.getElementById('app');if(!document.getElementById('chbox')){const d=document.createElement('div');d.id='chbox';d.className='panel';const first=app.querySelector(':scope > .panel');if(first)first.insertAdjacentElement('beforebegin',d);else app.appendChild(d);d.innerHTML=chHtml()}}}catch(e){}return out}}
- const _paint0=paint;paint=function(){_paint0();const c=document.getElementById('chbox');if(c)c.innerHTML=chHtml()};
+ const _paint0=paint;paint=function(){_paint0();try{if(typeof decorateCollapse==='function')decorateCollapse()}catch(e){}const c=document.getElementById('chbox');if(c)c.innerHTML=chHtml()};
  document.addEventListener('click',e=>{const t=e.target;if(t.closest&&t.closest('[data-chm]')){L.chOpen=!L.chOpen;if(L.chOpen)fetch('/api/live/counts').then(r=>r.json()).then(j=>{if(j&&j.counts){L.counts=j.counts;paint()}}).catch(()=>{});paint();return}if(t.closest&&t.closest('[data-live-ch]')){liveChannel(t.closest('[data-live-ch]').dataset.liveCh);return}
   const lt=t.closest&&t.closest('[data-lt]');if(lt){const [a3,arg3]=lt.dataset.lt.split(/:(.*)/);
    if(a3==='ask'){L.myOffer={items:[],mesos:0};liveTrade.ask(arg3)}else if(a3==='accept'){L.myOffer={items:[],mesos:0};liveTrade.accept()}else if(a3==='add'){offerItem((document.getElementById('lt-item')||{}).value,+(document.getElementById('lt-n')||{}).value)}
