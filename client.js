@@ -1,4 +1,4 @@
-window.__BUILD='3.5-e650ebb85f';
+window.__BUILD='3.5-97329bdfff';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4613,6 +4613,8 @@ body.chatfull{overflow:hidden}
  {const _r=render;render=function(){const o=_r.apply(this,arguments);try{regMobs();if(M2()&&typeof fld!=='undefined'&&!fld.length&&G.inFight){G.inFight=false;lout({t:'fend'})}if(typeof fld!=='undefined'&&fld.length)G.inFight=true}catch(e){}return o}}
  /* damage you take from monsters is reported too (the server watches for fights where nothing ever hits you) */
  G.dmg=[];window.__fdmg=(eid,d)=>{if(M2())G.dmg.push({eid:String(eid),d:d|0})};setInterval(()=>{if(G.dmg.length&&M2()){lout({t:'fdmg',list:G.dmg.splice(0,50)})}},1000);
+ /* where the monsters are, once a second (for the server's damage check) */
+ setInterval(()=>{if(!M2()||typeof fld==='undefined'||!fld.length)return;let pr=0;try{pr=PRf()}catch(e){}const L=fld.filter(m=>m&&m.sreg&&m.hp>0).slice(0,40).map(m=>({eid:String(m.eid),g:m.gap,r:m.row-pr}));if(L.length)lout({t:'fpos',list:L})},1000);
  window.__onFight=function(m){if(!P||typeof fld==='undefined')return;
   if(m.t==='fres'){if(m.nomp){try{log('Not enough MP.','bad','combat')}catch(e){}}for(const s of m.mobs||[]){const x=fld.find(q=>String(q.eid)===String(s.eid));if(x&&s.hp>x.hp){x.hp=s.hp;G.seen[x.eid]=s.hp}}
    for(const k of m.kills||[]){if(k.state){G.last=k.state;if(!G.q.length)apply(k.state)}for(const d of k.drops||[]){window.addDrop(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}}
