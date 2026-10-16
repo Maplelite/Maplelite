@@ -1,4 +1,4 @@
-window.__BUILD='3.5-eb63dde8b5';
+window.__BUILD='3.5-aa92d2eef0';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4759,7 +4759,7 @@ body.chatfull{overflow:hidden}
  window.__m3on=()=>live();
  /* starting: ask the server for a fight on this map */
  wrap('seek',f=>function(){if(!live())return f.apply(this,arguments);const m=MAPS[P.map];if(!m||m.town||enc)return false;
-  S.on=true;S.want=true;out({t:'gstart',spawn:P.spawn||'left'});
+  S.on=true;S.want=true;out({t:'gstart',spawn:P.spawn||'left',auto:!!autoSeek});
   const k=(m.mons||[])[0];if(!k||!MON[k])return false;enc={k,hp:MON[k].hp,max:MON[k].hp,gap:9,side:1,row:0,eid:-1,mv:1e15,next:1e15,ghost:1};fld=[enc];return true});
  /* the browser's own monsters stand still while the server runs the fight */
  wrap('mobsTick',f=>function(){if(S.on&&live())return;return f.apply(this,arguments)});
@@ -4773,6 +4773,8 @@ body.chatfull{overflow:hidden}
   return f.apply(this,arguments)});
  wrap('useItem',f=>function(id){if(!(S.on&&live()))return f.apply(this,arguments);const it=ITEMS[id];if(!it||!(it.heal||it.mpheal||it.hpp||it.mpp)||!(P.inv[id]>0))return;out({t:'guse',item:id});P.inv[id]--;if(P.inv[id]<=0)delete P.inv[id];render()});
  wrap('flee',f=>function(){if(!(S.on&&live()))return f.apply(this,arguments);S.want=false;out({t:'gleave'})});
+ /* tell the server when Auto-hunt is switched during a fight */
+ let lastAuto=null;setInterval(()=>{if(!(S.on&&live()))return;const a=!!autoSeek;if(a!==lastAuto){lastAuto=a;out({t:'gauto',on:a})}},300);
  /* ticks: the server plays the fight forward when it hears from us */
  setInterval(()=>{if(S.on&&live()&&Date.now()-S.last>280)out({t:'gtick'})},300);
  const name=k=>(MON[k]||{}).n||k;
@@ -4789,7 +4791,7 @@ body.chatfull{overflow:hidden}
    if(e.t==='hurt')log('The '+n+' hits you for '+e.d+'.','bad','combat');else if(e.t==='miss')log('The '+n+' misses.','','combat');
    else if(e.t==='dmg')log('You hit the '+n+' for '+e.d+'.','hit','combat');else if(e.t==='whiff')log('You miss the '+n+'.','','combat');
    else if(e.t==='kill')log('You defeated the '+name(e.k)+'.','good','combat');else if(e.t==='appear')log(e.n===1?'A monster appears.':e.n+' monsters appear.','','combat');
-   else if(e.t==='left')log('You leave the fight.','','combat')}
+   else if(e.t==='left')log('You leave the fight.','','combat');else if(e.t==='clear')log('All monsters defeated. The fight is over.','good','combat')}
   for(const k of m.kills||[]){if(k.state&&window.__authApplyState)window.__authApplyState(k.state);for(const d of k.drops||[]){window.addDrop(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}}
   if((m.kills||[]).length){try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}}
   enc=fld.length?(typeof closestMob==='function'?closestMob(typeof wReach==='function'?wReach():0):fld[0]):null;
