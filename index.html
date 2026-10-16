@@ -270,6 +270,8 @@ url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='520' he
 linear-gradient(#2f9be8,#8fd3fa 60%,#d9f2ff) fixed;background-attachment:fixed}
 body{background:none}
 body::after{content:'🌱 🍄 🌼 🌱 🐌 🌱 🌼 🍄 🌱 🐌 🌼 🌱 🍄 🌱 🌼 🌱';position:fixed;left:0;right:0;bottom:3px;height:24px;z-index:-1;font-size:18px;letter-spacing:14px;white-space:nowrap;overflow:hidden;pointer-events:none}
+/* the game's ground row belongs to the game screen, not the website (it peeked out under the footer) */
+body:not(:has(#site[style*="display: none"]))::after{display:none}
 #app .panel,#app .mcard{background:linear-gradient(#f6f8fb,#dfe5ed);border:3px solid var(--br);border-radius:12px;box-shadow:inset 0 0 0 2px #ffffff,0 4px 0 var(--bd),0 8px 14px rgba(10,20,40,.28);margin-bottom:14px}
 #app .win{padding:0;overflow:hidden}
 #app .panel>h2:first-child,#app .panel>.row:first-child:has(>h2),#app .mcard>h2:first-child,#app .title{margin:-10px -10px 10px;padding:6px 12px;background:linear-gradient(#4a5f8c,#26365a);border:0;border-bottom:3px solid var(--br);border-radius:9px 9px 0 0;box-shadow:inset 0 2px 0 rgba(255,255,255,.55);color:#fff;font:700 15px Maplestory,Arial,sans-serif;letter-spacing:.3px;text-shadow:var(--ol)}
