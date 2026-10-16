@@ -1,4 +1,4 @@
-window.__BUILD='3.5-971ebfd0e7';
+window.__BUILD='3.5-a67c170b59';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3081,7 +3081,7 @@ function seUse(k){const e=SE[k];if(!e||!P||P.dead)return;const n=sl(k);if(!n||!s
     if(e.fx==='freeze'&&elMul(m,'ice')>0){m.frz=now+(l.time||2)*1000;log('The '+d.n+' is frozen.','','combat')}
     if(e.fx==='poison'&&roll&&elMul(m,'poison')>0){const r=magRange(l.mad||70,10+5*(l.mastery|0));m.psn={until:now+(l.time||10)*1000,next:now+1000,dmg:Math.max(1,Math.floor(r[0]/2))};log('The '+d.n+' is poisoned.','','combat')}
     if(e.fx==='knockback'&&Math.random()*100<(l.prop||70)){if(cellFree(m,m.row,Math.min(maxG(m),m.gap+1))){m.gap=Math.min(maxG(m),m.gap+1);m.mv=now+mvT(d)}}
-    if(e.fx==='steal'&&!m.stolen&&roll){m.stolen=1;const dr=(DROPS[m.k]||{}).i||[];const pick=dr.filter(x=>ITEMS[x[0]]);if(pick.length){const it=pick[R(0,pick.length-1)][0];P.inv[it]=(P.inv[it]|0)+1;log('You steal '+ITEMS[it].n+' from the '+d.n+'.','good','items')}}}}
+    if(e.fx==='steal'&&!m.stolen&&roll){m.stolen=1;const dr=(DROPS[m.k]||{}).i||[];const pick=dr.filter(x=>ITEMS[x[0]]);if(pick.length){const it=pick[R(0,pick.length-1)][0];P.inv[it]=(P.inv[it]|0)+1;log('You steal '+ITEMS[it].n+' from the '+d.n+'.','good','items');if(window.gAct)window.gAct({a:'steal',mon:m.k},null,true)}}}}
   if(e.fx==='drain'&&dealt>0){const g=Math.min(Math.floor(dealt*(l.x|0)/100),Math.floor(P.maxHp/2));if(g>0){P.hp=Math.min(P.maxHp,P.hp+g);log('Drain: +'+g+' HP.','good','combat')}}
   if(e.fx==='recoil'){shiftMobs(1,{delay:0});log('The recoil throws you back a step.','','combat')}
   seKill(ts);if(e.k==='phys')finalAttack();save();return render()}
@@ -4472,7 +4472,7 @@ body.chatfull{overflow:hidden}
   for(const m of fld)if(m&&m.sreg)G.seen[m.eid]=m.hp;if(hits.length)lout({t:'fhit',sk:'dot',hits})},1000);
  {const _r=render;render=function(){const o=_r.apply(this,arguments);try{regMobs();if(M2()&&typeof fld!=='undefined'&&!fld.length&&G.inFight){G.inFight=false;lout({t:'fend'})}if(typeof fld!=='undefined'&&fld.length)G.inFight=true}catch(e){}return o}}
  window.__onFight=function(m){if(!P||typeof fld==='undefined')return;
-  if(m.t==='fres'){for(const s of m.mobs||[]){const x=fld.find(q=>String(q.eid)===String(s.eid));if(x&&s.hp>x.hp){x.hp=s.hp;G.seen[x.eid]=s.hp}}
+  if(m.t==='fres'){if(m.nomp){try{log('Not enough MP.','bad','combat')}catch(e){}}for(const s of m.mobs||[]){const x=fld.find(q=>String(q.eid)===String(s.eid));if(x&&s.hp>x.hp){x.hp=s.hp;G.seen[x.eid]=s.hp}}
    for(const k of m.kills||[]){if(k.state){G.last=k.state;if(!G.q.length)apply(k.state)}for(const d of k.drops||[]){window.addDrop(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}}
    if((m.kills||[]).length){try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}try{save()}catch(e){}}
    try{render()}catch(e){}}};
