@@ -1734,7 +1734,7 @@ const _ty=tyOf;tyOf=function(id){const b=ITEMS[baseOf(id)];return(b&&b.w&&b.ty)|
 
 /* ===== Combat v2: 5 lines (+1 per 25 levels), aggressive vs passive monsters, single and multi target ===== */
 /* Combat lines: NRf() = number of lines (from the level, see monCap), PRf() = the line you stand in (the middle one). */
-const /* v3.4 board size by level: up to 6 monsters at levels 1-10, rising evenly to 15 at level 71 (when Dragon Roar, the
+var /* v3.4 board size by level: up to 6 monsters at levels 1-10, rising evenly to 15 at level 71 (when Dragon Roar, the
    first 15-monster attack, can be learned) and to 20 at level 150; 2 monsters per row, so 3 to 10 rows */
 monCap=()=>{const l=(P&&P.lvl)||1;if(l<=10)return 6;if(l<=71)return Math.round(6+(l-10)*9/61);return Math.min(20,Math.round(15+(l-71)*5/79))},
 NRf=()=>Math.ceil(monCap()/2),PRf=()=>Math.floor(NRf()/2);let fld=[];
@@ -3897,6 +3897,12 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  window.liveParty={invite:id=>out({t:'pinvite',to:id}),accept:()=>{L.invite=null;out({t:'paccept'});paint()},decline:()=>{L.invite=null;out({t:'pdecline'});paint()},leave:()=>out({t:'pleave'}),kick:id=>out({t:'pkick',id})};
  /* party EXP: tell the server about each kill so party members on this map get their share */
  {const _w=win;win=function(){const k=enc&&enc.k;const r=_w.apply(this,arguments);try{if(k&&L.party&&MON[k])out({t:'pexp',exp:MON[k].exp|0})}catch(e){}return r}}
+ /* party board size: rows = the lowest party member's rows (on this map) + 1 per extra member there, at most 10 rows
+    (2 monsters per row). Solo: the normal rows for your level. */
+ const capAt=l=>{l=l||1;if(l<=10)return 6;if(l<=71)return Math.round(6+(l-10)*9/61);return Math.min(20,Math.round(15+(l-71)*5/79))};
+ {const _mc0=monCap;monCap=function(){const base=_mc0();try{if(!L.party||!(L.ws&&L.ws.readyState===1)||!P)return base;
+   const here=L.members.filter(x=>x.map===P.map);if(here.length<2)return base;const low=Math.min(...here.map(x=>x.lvl||1));
+   const rows=Math.min(10,Math.ceil(capAt(low)/2)+(here.length-1));return rows*2}catch(e){return base}}}
  /* the map's monsters are shared with the other players on it; the first to arrive gets priority */
  {const _mc=mapCap;mapCap=function(){const base=_mc();const s=L.share;if(!s||!(s.n>1)||!(L.ws&&L.ws.readyState===1))return base;try{const pop=mobSlots(P.map).length;return Math.max(1,Math.floor(pop*0.75*s.w/s.total))}catch(e){return base}}}
  window.liveChannel=function(n){n=+n;if(!(n>=1&&n<=3)||n===L.ch)return;L.chOpen=false;L.ch=n;try{localStorage.setItem('ml_ch',String(n))}catch(e){}L.chat=[];connect();paint()};
