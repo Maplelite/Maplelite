@@ -3811,11 +3811,11 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function connect(){close();if(!want())return;L.slot=SLOT;L.map=P.map;L.state='connecting';let ws;try{ws=new WebSocket(wsUrl())}catch(e){return retry()}L.ws=ws;
   ws.onopen=()=>{L.tries=0;L.state='on';L.err='';if(P&&P.map!==L.map)sendMap()};
   ws.onmessage=e=>{let m;try{m=JSON.parse(e.data)}catch(_){return}
-   if(m.t==='welcome'){setTimeout(askWho,300);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
+   if(m.t==='welcome'){setTimeout(askWho,300);if(m.me&&m.me.staff&&L.spyOn&&(L.spyOn.map||L.spyOn.friends||L.spyOn.guild))setTimeout(()=>out({t:'spyset',spy:L.spyOn}),500);setTimeout(gFetch,400);if(!m.resumed){L.myShop=null;L.shops=[];if(P&&P.shopHold)returnHold()}L.here=m.here||[];L.counts=m.counts;L.me=m.me;L.party=m.me.party||null;if(P&&P.map!==m.me.map)sendMap()}
    else if(m.t==='here')L.here=m.players||[];
    else if(m.t==='join'){L.here=L.here.filter(x=>x.id!==m.p.id).concat([m.p])}
    else if(m.t==='leave')L.here=L.here.filter(x=>x.id!==m.id);
-   else if(m.t==='chat'){L.chat.push(m);if(L.chat.length>60)L.chat.shift();const tb=tabOf(m);if(tb!==L.ctab)L.unread[tb]++}
+   else if(m.t==='chat'){m.ts=m.ts||Date.now();L.chat.push(m);if(L.chat.length>60)L.chat.shift();const tb=tabOf(m);if(tb!==L.ctab)L.unread[tb]++}
    else if(m.t==='share')L.share=m;
    else if(m.t==='treq')L.treq={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='tstate')L.trade=m;
@@ -3825,13 +3825,15 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
-   else if(m.t==='w'){L.chat.push({from:m.from,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
-   else if(m.t==='wsent'){L.chat.push({from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
-   else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({from:m.from,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
+   else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
+   else if(m.t==='wsent'){L.chat.push({ts:Date.now(),from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
+   else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
+   else if(m.t==='achat'){L.chat.push({ts:Date.now(),from:m.from,text:m.text,all:true});if(L.chat.length>80)L.chat.shift();if(L.ctab!=='all')L.unread.all=(L.unread.all||0)+1}
+   else if(m.t==='spy'){m.ts=m.ts||Date.now();(L.spyLog=L.spyLog||[]).push(m);if(L.spyLog.length>120)L.spyLog.shift()}
    else if(m.t==='whois'){if(m.tag==='g')L.gon=m.list||[];else L.buds=m.list||[]}
    else if(m.t==='ginv'){L.ginv={guild:m.guild,from:m.from,until:Date.now()+60000}}
    else if(m.t==='gupd'){if(m.note)log(m.note,'','guild');gFetch()}
-   else if(m.t==='gchat'){if(L.guild&&m.guild===L.guild.name){L.chat.push({from:m.from,text:m.text,guild:true});if(L.chat.length>60)L.chat.shift();if(L.ctab!=='guild')L.unread.guild++}}
+   else if(m.t==='gchat'){if(L.guild&&m.guild===L.guild.name){L.chat.push({ts:Date.now(),from:m.from,text:m.text,guild:true});if(L.chat.length>60)L.chat.shift();if(L.ctab!=='guild')L.unread.guild++}}
    else if(m.t==='breq')L.breq={from:m.from,until:Date.now()+60000};
    else if(m.t==='badd'){if(P){P.buddies=P.buddies||[];if(!P.buddies.some(n=>n.toLowerCase()===m.name.toLowerCase())){P.buddies.push(m.name);log(m.name+' is now your buddy.','good','social');save()}askWho()}}
    else if(m.t==='shops')L.shops=m.shops||[];
@@ -3859,6 +3861,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   if(L.ctab==='friends'&&!party){const sel=document.getElementById('live-wto');const to=(sel&&sel.value)||L.wTo;if(!to){L.err='Pick who to whisper (add buddies first).';paint();return false}L.wTo=to;return out({t:'w',to,text})}
   if(L.ctab==='guild'&&!party){if(!L.guild)return false;return out({t:'gchat',text,guild:L.guild.name,to:L.guild.members.map(m=>m.n)})}
   if(L.ctab==='log')return false;
+  if(L.ctab==='all'&&!party){if(!(L.me&&L.me.staff))return false;return out({t:'achat',text})}
   if(L.ctab==='party'&&!party)party=true;return out({t:(party||L.chatTo==='party')&&L.party?'pchat':'chat',text})};
 /* receiving an item (trade or shop): equipment keeps its own stats */
  function recvItem(o){if(o.inst&&o.inst.b&&ITEMS[o.inst.b]){P.inst=P.inst||{};const id=o.inst.b+'#'+(P.ic=(P.ic|0)+1);P.inst[id]={b:o.inst.b,sl:o.inst.sl|0,ok:o.inst.ok|0,lost:o.inst.lost|0,st:o.inst.st||{}};instBuild(id);P.inv[id]=1}
@@ -3951,7 +3954,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  setInterval(()=>{if(!want()){if(L.ws||L.state!=='off')close();return}
   if(L.emoAt&&Date.now()-L.emoAt<16000)paint();/* emote cooldown countdown */
   if(!L.ws&&L.state==='off'&&!L.timer)connect();else if(L.slot!==SLOT)connect();else if(P.map!==L.map)sendMap();
-  if(Date.now()-(L.lastCount||0)>30000){L.lastCount=Date.now();askWho();gWho();fetch('/api/live/counts').then(r=>r.json()).then(j=>{if(j&&j.counts){L.counts=j.counts;paint()}}).catch(()=>{})}
+  if(Date.now()-(L.lastCount||0)>30000){L.lastCount=Date.now();askWho();gWho();if(L.me&&L.me.staff&&(L.spyOn.map||L.spyOn.friends||L.spyOn.guild))out({t:'spyset',spy:L.spyOn});fetch('/api/live/counts').then(r=>r.json()).then(j=>{if(j&&j.counts){L.counts=j.counts;paint()}}).catch(()=>{})}
   if(L.ws&&L.ws.readyState===1&&Date.now()-(L.lastPing||0)>25000){L.lastPing=Date.now();try{L.ws.send('{"t":"ping"}')}catch(e){}}},1000);
  /* the Players here panel, drawn after the Play screen */
  function panelHtml(){const st=L.state==='on'?'🟢 Channel '+L.ch:L.state==='connecting'?'🟡 Connecting…':'⚪ Offline';
@@ -3970,16 +3973,22 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    +(others.length?others.map(x=>'<div class="mrow"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><div style="flex:1"><b>'+esc(x.name)+'</b><div class="mute">Lv '+(x.lvl|0)+(x.job?' · '+esc(x.job):'')+'</div></div>'+(L.members.some(y=>y.id===x.id)?'<span class="mute">Party</span>':'<button data-lp="invite:'+esc(x.id)+'">Invite</button>')+((P.buddies||[]).some(n=>n.toLowerCase()===String(x.name).toLowerCase())?'':'<button data-lb="addn:'+esc(x.name)+'">Buddy</button>')+'<button data-lt="ask:'+esc(x.id)+'">Trade</button></div>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')+'</div>'}
  /* the chat panel: tabs Map / Friends (whispers) / Party / Guild / Activity log (read-only game log) */
- L.ctab=L.ctab||'map';L.unread={map:0,friends:0,party:0,guild:0};
- const tabOf=m=>m.w?'friends':m.party?'party':m.guild?'guild':'map';
+ L.ctab=L.ctab||'map';L.unread={all:0,map:0,friends:0,party:0,guild:0};L.spyOn={map:false,friends:false,guild:false};
+ const tabOf=m=>m.all?'all':m.w?'friends':m.party?'party':m.guild?'guild':'map';
  function chatLine(m){return m.emote?'<div><b>'+esc(m.from)+'</b> <span style="font-size:20px">'+m.emote+'</span></div>':m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):esc(m.from)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':m.guild?' style="color:#a0661c"':'')+'><b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'}
- function chatHtml(){const T=[['map','Map'],['friends','Friends'],['party','Party'],['guild','Guild'],['log','Activity log']];const t=L.ctab;
+ function chatHtml(){const T=[['all','All'],['map','Map'],['friends','Friends'],['party','Party'],['guild','Guild'],['log','Log']];const t=L.ctab;
   let body;
-  if(t==='log'){const v=(typeof logs!=='undefined'?logs:[]).slice(-60);body=v.length?v.map(l=>'<div class="'+l[1]+'">'+esc(l[0])+'</div>').join(''):'<div class="mute">Nothing here yet.</div>'}
+  if(t==='all'){const staff=L.me&&L.me.staff;const col={map:'#2b6cb0',friends:'#7a3fb5',guild:'#a0661c'};
+   const mine=L.chat.filter(m=>!m.party).map(m=>({ts:m.ts||0,h:m.all?'<div style="color:#c2410c;font-weight:bold">📢 '+esc(m.from)+': '+esc(m.text)+'</div>':chatLine(m)}));
+   const spies=staff?(L.spyLog||[]).filter(m=>L.spyOn[m.kind]).map(m=>({ts:m.ts||0,h:'<div style="color:'+col[m.kind]+';opacity:.9;font-size:.92em">['+(m.kind==='map'?'Ch'+m.ch+' '+esc((typeof MAPS!=='undefined'&&MAPS[m.map]&&MAPS[m.map].n)||m.map):m.kind==='friends'?esc(m.from)+' → '+esc(m.to):'Guild '+esc(m.guild))+'] <b>'+esc(m.from)+':</b> '+esc(m.text)+'</div>'})):[];
+   const v=mine.concat(spies).sort((a,b)=>a.ts-b.ts);body=v.length?v.map(x=>x.h).join(''):'<div class="mute">All: announcements from the staff, plus your map, whispers and guild chat in one place.</div>'}
+  else if(t==='log'){const v=(typeof logs!=='undefined'?logs:[]).slice(-60);body=v.length?v.map(l=>'<div class="'+l[1]+'">'+esc(l[0])+'</div>').join(''):'<div class="mute">Nothing here yet.</div>'}
   else{const v=L.chat.filter(m=>tabOf(m)===t);body=v.length?v.map(chatLine).join(''):'<div class="mute">'+({map:'Map chat: say hi to players on this map.',friends:'Whispers with your buddies and other players show here.',party:L.party?'Party chat: only your party sees this.':'You are not in a party. Invite players from Players here.',guild:L.guild?'Guild chat: only '+esc(L.guild.name)+' members see this.':'You are not in a guild.'}[t])+'</div>'}
   const B=(P&&P.buddies)||[],rec=[...new Set(L.chat.filter(m=>m.w).map(m=>m.from).reverse())],targets=[...new Set((L.wTo?[L.wTo]:[]).concat(rec,B))];
   let input='';
   if(t==='log')input='<div class="mute" style="font-size:12px;margin-top:4px">The activity log is read-only.</div>';
+  else if(t==='all'&&!(L.me&&L.me.staff))input='<div class="mute" style="font-size:12px;margin-top:4px">Only admins and GMs can talk in All.</div>';
+  else if(t==='all')input='<div style="display:flex;gap:4px;margin-top:6px;flex-wrap:wrap"><span class="mute" style="font-size:12px;align-self:center">Watch:</span>'+[['map','All maps'],['friends','All friends'],['guild','All guilds']].map(x=>'<button data-spy="'+x[0]+'" class="'+(L.spyOn[x[0]]?'on main':'')+'" style="min-height:26px;padding:2px 8px;font-size:12px">'+x[1]+'</button>').join('')+'</div><div style="display:flex;gap:6px;margin-top:6px"><input id="live-in" maxlength="120" placeholder="Announce to every map" style="flex:1;min-width:0"><button id="live-say">Send</button></div>';
   else if(t==='guild'&&!L.guild)input='<div class="mute" style="font-size:12px;margin-top:4px">Join or create a guild (Social tab) to use guild chat.</div>';
   else if(t==='party'&&!L.party)input='';
   else input='<div style="display:flex;gap:6px;margin-top:6px">'+(t==='friends'?'<select id="live-wto" style="max-width:38%;min-width:0">'+(targets.length?targets.map(n=>'<option'+(n===L.wTo?' selected':'')+'>'+esc(n)+'</option>').join(''):'<option value="">No one yet</option>')+'</select>':'')+'<input id="live-in" maxlength="120" placeholder="'+(t==='friends'?'Whisper…':t==='party'?'Say to your party':t==='guild'?'Say to your guild':'Say something (/w Name to whisper)')+'" style="flex:1;min-width:0"><button id="live-say">Send</button></div>';
@@ -4006,6 +4015,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    if(a==='create')liveGuild.create(v('lg-name'));else if(a==='invite')liveGuild.invite(v('lg-inv'));else if(a==='notice')liveGuild.notice(v('lg-notice'));
    else if(a==='kick'){if(confirm('Remove '+x1+' from the guild?'))liveGuild.kick(x1)}else if(a==='rank'){if(+x2!==1||confirm('Make '+x1+' the guild Master? You become Jr. Master.'))liveGuild.rank(x1,+x2)}
    else if(a==='disband'){if(confirm('Disband the guild? This cannot be undone.'))liveGuild.disband()}else if(a==='leave'){if(confirm('Leave the guild?'))liveGuild.leave()}else liveGuild[a]();return}
+  const sp=t.closest&&t.closest('[data-spy]');if(sp){const k=sp.dataset.spy;L.spyOn[k]=!L.spyOn[k];out({t:'spyset',spy:L.spyOn});paint();return}
   const ct=t.closest&&t.closest('[data-ct]');if(ct){L.ctab=ct.dataset.ct;L.err='';paint();return}
   const le=t.closest&&t.closest('[data-le]');if(le){liveEmote(+le.dataset.le);return}
   const lb=t.closest&&t.closest('[data-lb]');if(lb){const [a,...r]=lb.dataset.lb.split(':');const arg=r.join(':');
