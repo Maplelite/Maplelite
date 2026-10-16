@@ -1,4 +1,4 @@
-window.__BUILD='3.5-1918f9c3d0';
+window.__BUILD='3.5-6d635afd89';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -2169,7 +2169,7 @@ function gmPanel(role){
   +sec('self','Edit a character',
    row(inp('so_gm_target','Character name (blank = me)'))
    +row(inp('so_gm_lvl','Level (1-'+MAXL+')'),inp('so_gm_exp','EXP'))+row(inp('so_gm_str','STR'),inp('so_gm_dex','DEX'),inp('so_gm_int','INT'),inp('so_gm_luk','LUK'))
-   +row(inp('so_gm_ap','Ability pts'),inp('so_gm_sp','Skill pts'),inp('so_gm_mesos','Mesos'))+row(inp('so_gm_hp','Max HP'),inp('so_gm_mp','Max MP'))
+   +row(inp('so_gm_ap','Ability pts'),inp('so_gm_sp','Skill pts'),inp('so_gm_mesos','Mesos'))+row(inp('so_gm_hp','Max HP'),inp('so_gm_mp','Max MP'),inp('so_gm_nx','NX'))
    +row('<select id="so_gm_job" style="flex:1"><option value="">Class (keep)</option>'+[['','Beginner'],['swordsman','Swordsman'],['archer','Archer'],['rogue','Rogue'],['magician','Magician'],['pirate','Pirate']].map(j=>'<option value="'+(j[0]||'none')+'">'+j[1]+'</option>').join('')+'</select>',btn('apply','Apply'))
    +row(btn('heal','Full heal'),btn('revive','Revive'),btn('clearmap','Open this map\'s exits')))
   +sec('items','Grant items',
@@ -2208,10 +2208,10 @@ function gmDo(a,arg){const v=id=>(((document.getElementById(id)||{}).value)||soD
  if(['mute','unmute','kick','warn','delmsg','clearchat'].includes(a)&&needMod())return render();
  if(a==='apply'){const tn=v('so_gm_target'),sl=tn&&tn.toLowerCase()!==P.name.toLowerCase()?slotByName(tn):null;if(tn&&tn.toLowerCase()!==P.name.toLowerCase()&&!sl){gmMsg='No saved character named '+tn+'.';return render()}const T=sl?sl[1]:P;const n=k=>{const x=v('so_gm_'+k);return x===''||isNaN(+x)?null:Math.floor(+x)},ch=[];
   const lv=n('lvl');if(lv!==null){const to=Math.max(1,Math.min(MAXL,lv)),d=to-T.lvl;T.lvl=to;T.exp=0;if(d>0){T.ap+=5*d;if(T.job)T.sp+=3*d;T.maxHp+=14*d;T.maxMp+=11*d}else if(d<0){T.maxHp=Math.max(50,T.maxHp+14*d);T.maxMp=Math.max(5,T.maxMp+11*d)}T.hp=T.maxHp;T.mp=T.maxMp;ch.push('level '+to)}
-  [['exp','exp'],['str','str'],['dex','dex'],['int','int'],['luk','luk'],['ap','ap'],['sp','sp'],['mesos','mesos']].forEach(([f,k])=>{const x=n(f);if(x!==null){T[k]=Math.max(0,x);ch.push(f+' '+T[k])}});
+  [['exp','exp'],['str','str'],['dex','dex'],['int','int'],['luk','luk'],['ap','ap'],['sp','sp'],['mesos','mesos'],['nx','nx']].forEach(([f,k])=>{const x=n(f);if(x!==null){T[k]=Math.max(0,x);ch.push(f+' '+T[k])}});
   const hp=n('hp');if(hp!==null){T.maxHp=Math.max(1,hp);T.hp=T.maxHp;ch.push('max HP '+T.maxHp)}const mp=n('mp');if(mp!==null){T.maxMp=Math.max(0,mp);T.mp=T.maxMp;ch.push('max MP '+T.maxMp)}
   const j=v('so_gm_job');if(j){T.job=j==='none'?null:j;ch.push('class '+(T.job||'beginner'))}
-  ['lvl','exp','str','dex','int','luk','ap','sp','mesos','hp','mp'].forEach(k=>clr('so_gm_'+k));clr('so_gm_job');
+  ['lvl','exp','str','dex','int','luk','ap','sp','mesos','nx','hp','mp'].forEach(k=>clr('so_gm_'+k));clr('so_gm_job');
   clr('so_gm_target');if(sl&&ch.length)slotSave(sl[0],T);gmMsg=ch.length?'Updated '+(sl?T.name:'you')+': '+ch.join(', ')+'.':'Nothing to change.';if(ch.length)audit('edited '+(sl?T.name:'self')+': '+ch.join(', '))}
  else if(a==='rate'||a==='rate1'){const r=a==='rate1'?1:Math.floor(+v('so_gm_rate'));if(!(r>=1&&r<=1000))gmMsg='The EXP rate must be a whole number from 1 to 1000.';else{try{LS.setItem('mapleish_rates',JSON.stringify(Object.assign(worldCfg(),{exp:r,by:MYID(),t:Date.now()})))}catch(e){}clr('so_gm_rate');gmMsg='EXP rate is now x'+r+'.';audit('set EXP rate to x'+r)}}
  else if(a==='drate'||a==='drate1'){const r=a==='drate1'?1:Math.floor(+v('so_gm_drate'));if(!(r>=1&&r<=1000))gmMsg='The drop rate must be a whole number from 1 to 1000.';else{const c=worldCfg();c.drop=r;c.by=MYID();c.t=Date.now();try{LS.setItem('mapleish_rates',JSON.stringify(c))}catch(e){}clr('so_gm_drate');gmMsg='Drop rate is now x'+r+'.';audit('set drop rate to x'+r)}}
@@ -4759,9 +4759,9 @@ body.chatfull{overflow:hidden}
   if(/^taxi:/.test(k)&&P.map===k.slice(5)){G.map=P.map;send({a:'taxi',to:P.map})}
   if(/^ans:/.test(k)&&(P.qp.rain|0)>(rain|0))send({a:'quiz'},null,true);
   if(k==='ev:prize'&&!got&&P.evt&&P.evt.got)send({a:'prize',ev:String(P.evt.id)},null,true);return r});
- wrap('gmDo',f=>function(a){const inv0=P&&JSON.stringify(P.inv),m0=P&&P.mesos,l0=P&&P.lvl;const r=f.apply(this,arguments);if(!G.on||!P)return r;
+ wrap('gmDo',f=>function(a){const inv0=P&&JSON.stringify(P.inv),m0=P&&P.mesos,l0=P&&P.lvl,nx0=P&&(P.nx|0);const r=f.apply(this,arguments);if(!G.on||!P)return r;
   if(a==='give'&&JSON.stringify(P.inv)!==inv0){const o=JSON.parse(inv0);for(const k in P.inv)if((P.inv[k]|0)>(o[k]|0))send({a:'admin',item:k,n:(P.inv[k]|0)-(o[k]|0)})}
-  if(P.mesos!==m0)send({a:'admin',mesos:P.mesos-m0});if(P.lvl!==l0)send({a:'admin',lvl:P.lvl});return r});
+  if(P.mesos!==m0)send({a:'admin',mesos:P.mesos-m0});if((P.nx|0)!==nx0)send({a:'admin',nx:(P.nx|0)-nx0});if(P.lvl!==l0)send({a:'admin',lvl:P.lvl});return r});
  /* ---- server combat (milestone 2): while connected to the live world, monsters are registered with the channel
     server, every attack is reported there, and the server's HP is the real HP. Rewards come with the server's kill. ---- */
  const M2=()=>G.on&&window.__liveOn&&window.__liveOn()&&!(window.__m3on&&window.__m3on());/* milestone 3 (server-run fights) replaces the reporting path */window.__authM2=M2;
