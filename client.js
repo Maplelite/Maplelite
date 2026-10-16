@@ -1,4 +1,4 @@
-window.__BUILD='3.5-b615ee256a';
+window.__BUILD='3.5-eb63dde8b5';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -964,7 +964,7 @@ const lsGet=k=>{try{return LS.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{tr
 async function sha(t){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent(t)))}}
 let notice='',noticeBad=false,vUser='';const goTo=n=>{scr=n;render()},msg=(t,b)=>{notice=t;noticeBad=!!b},newCode=()=>String(Math.floor(100000+Math.random()*900000)),enter=(ids,btn)=>ids.forEach(i=>{const e=$(i);if(e)e.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();$(btn).click()}}}),noteHtml=(n,b)=>n?`<div class='note${b?' bad':''}'>${n}</div>`:'';
 function loginScreen(){const n=notice,nb=noticeBad;notice='';const id=(lsGet('mapleish_id')||'').replace(/[^A-Za-z0-9]/g,''),spw=lsGet('mapleish_spw'),spu=lsGet('mapleish_spwu');
- app.innerHTML=`<div class='scr c'><div class='logo'><span>${leafIcon()}</span>Maplelite<small>An offline Maple adventure</small></div><div class='panel lg'><h2>Log in</h2>${noteHtml(n,nb)}<label>ID<input id='aid' maxlength='12' autocomplete='username' placeholder='Enter your ID' value='${id}'></label><label>Password<input id='apw' type='password' autocomplete='current-password' placeholder='Enter your password'></label><div class='chk'><label><input type='checkbox' id='sid'${id?' checked':''}> Save ID</label><label><input type='checkbox' id='spwc'${spw&&spu===id?' checked':''}> Save password</label></div><div class='mute' id='lgmsg'></div><button class='wide gbtn' id='goog'><i>G</i> Sign in with Google</button><div class='links'><button class='lnk' id='forgot'>Forgot password?</button></div></div><div class='foot'><button id='reg'>Create account</button><button class='main' id='login'>Log in</button></div></div>`;
+ app.innerHTML=`<div class='scr c'><div class='logo'>Maplelite<small>An offline Maple adventure</small></div><div class='panel lg'><h2>Log in</h2>${noteHtml(n,nb)}<label>ID<input id='aid' maxlength='12' autocomplete='username' placeholder='Enter your ID' value='${id}'></label><label>Password<input id='apw' type='password' autocomplete='current-password' placeholder='Enter your password'></label><div class='chk'><label><input type='checkbox' id='sid'${id?' checked':''}> Save ID</label><label><input type='checkbox' id='spwc'${spw&&spu===id?' checked':''}> Save password</label></div><div class='mute' id='lgmsg'></div><button class='wide gbtn' id='goog'><i>G</i> Sign in with Google</button><div class='links'><button class='lnk' id='forgot'>Forgot password?</button></div></div><div class='foot'><button id='reg'>Create account</button><button class='main' id='login'>Log in</button></div></div>`;
  const pw=$('apw'),m=t=>{const e=$('lgmsg');e.textContent=t;e.style.color='#d4443f'};
  if(spw&&id&&spu===id){pw.value='••••••••';pw.dataset.saved='1'}
  pw.oninput=()=>{delete pw.dataset.saved};enter(['aid','apw'],'login');
@@ -1194,8 +1194,6 @@ function avatarSvg(p,wd){const lk=p.look||{g:LK.g[0],face:LK.face[0],hair:LK.hai
  return s+'</svg>'}
 /* a small real-time head icon (face, hair, skin, hat, eyewear) cut from the full avatar */
 function headIcon(p,px){try{return avatarSvg(p,px).replace(/<text x="62" y="68"[^>]*>[^<]*<\/text>/,'').replace(/viewBox="[^"]*"/,'viewBox="17 6 48 46"').replace(/style="[^"]*"/,'style="width:'+px+'px;height:'+px+'px;display:inline-block;vertical-align:middle;border-radius:4px"')}catch(e){return '🧍'}}
-/* a pixel maple leaf that takes the theme's heading colour */
-function leafIcon(){const t=(typeof THEMES!=='undefined'&&THEMES.find(x=>x[0]===thCur))||null;const col=t&&t[0]!=='classic'?t[7]:'#d9443a';try{return '<img alt="" src="'+icoSvg('leaf',col)+'" style="width:1em;height:1em;image-rendering:pixelated;vertical-align:middle">'}catch(e){return '🍁'}}
 function safeAv(p){try{return avatarSvg(p,110)}catch(e){return '🧙'}}
 function eqOffN(){return [P.weapon].concat(Object.values(P.eq||{})).filter(x=>x&&!eqOk(x)).length}
 function charPanel(){const n=Object.keys(P.eq||{}).length+(P.weapon?1:0);
@@ -3894,7 +3892,6 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +(t[0]==='aqua'?'#site .ws-sun,#site .ws-cl{display:none!important}#site .ws-lf{display:none!important}':'')
  +'#site .ws-logo{-webkit-text-stroke-color:'+bd+'!important;color:'+bd+'!important}'
  +'#site .ws-logo:before{background:linear-gradient(105deg,transparent 38%,'+ton+'ee 50%,transparent 62%) 160% 0/250% 100% no-repeat,linear-gradient(180deg,#fff 0,#fff 38%,'+b2+' 70%,'+ton+' 100%)!important;-webkit-background-clip:text!important;background-clip:text!important}'
- +(typeof icoSvg==='function'?'#site .ws-logo:after{content:""!important;width:.45em;height:.45em;background:url("'+icoSvg(TH_DECOR[t[0]]||'leaf',ton)+'") center/contain no-repeat;image-rendering:pixelated}':'')
  +'#site .ws-logo .lg-sp{color:'+ton+'!important}'
  +'#site .ws-card h2{background:linear-gradient('+s1+','+s2+')!important;border-color:'+bd+'!important;color:#fff!important}'
  +'#site .ws-card{color:'+tx+'!important}#site .ws-card b,#site .ws-card strong,#site .ws-card h3,#site .ws-card h4{color:'+hd+'!important}'
@@ -3923,7 +3920,19 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
 /* the falling decoration for each theme: one of the game's own pixel sprites that fits that place */
 const TH_DECOR={henesys:'mushroom',ellinia:'leaf',perion:'boar',kerning:'octopus',lith:'shell',sleepy:'stump',orbis:'star',elnath:'crystal',ludi:'doll',aqua:'slime'};
 const thImg=(tpl,col,px)=>'<img alt="" src="'+icoSvg(tpl,col)+'" style="width:'+(px||20)+'px;height:'+(px||20)+'px;image-rendering:pixelated;display:block">';
-function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t);
+/* each theme's logo effect */
+const TH_LOGOFX={classic:'',henesys:'lgBounce 2.4s ease-in-out infinite',ellinia:'lgGlow 3s ease-in-out infinite',perion:'lgHeat 1.6s ease-in-out infinite',kerning:'lgNeon 4s steps(1) infinite',lith:'lgBob 3.2s ease-in-out infinite',sleepy:'lgDim 5s ease-in-out infinite',orbis:'lgFloat 4s ease-in-out infinite',elnath:'lgFrost 3.5s ease-in-out infinite',ludi:'lgWobble 1.8s ease-in-out infinite',aqua:'lgWave 3s ease-in-out infinite'};
+const TH_LOGOKF='@keyframes lgBounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}'
+ +'@keyframes lgGlow{0%,100%{filter:drop-shadow(0 0 0 #b8f08a)}50%{filter:drop-shadow(0 0 12px #b8f08a)}}'
+ +'@keyframes lgHeat{0%,100%{transform:skewX(0) scaleY(1)}25%{transform:skewX(.8deg) scaleY(1.01)}75%{transform:skewX(-.8deg) scaleY(.99)}}'
+ +'@keyframes lgNeon{0%,18%,22%,60%,64%,100%{filter:drop-shadow(0 0 8px #ff5fd2) drop-shadow(0 0 18px #7fe7ff);opacity:1}20%,62%{filter:none;opacity:.55}}'
+ +'@keyframes lgBob{0%,100%{transform:rotate(-1.2deg) translateY(0)}50%{transform:rotate(1.2deg) translateY(-3px)}}'
+ +'@keyframes lgDim{0%,100%{filter:brightness(1)}50%{filter:brightness(.72) drop-shadow(0 0 10px #c9b46a)}}'
+ +'@keyframes lgFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-10px)}}'
+ +'@keyframes lgFrost{0%,100%{filter:drop-shadow(0 0 2px #fff)}50%{filter:drop-shadow(0 0 14px #bfe9ff) brightness(1.08)}}'
+ +'@keyframes lgWobble{0%,100%{transform:rotate(0)}25%{transform:rotate(-3deg) scale(1.03)}75%{transform:rotate(3deg) scale(1.03)}}'
+ +'@keyframes lgWave{0%,100%{transform:translateY(0) skewY(0)}25%{transform:translateY(-4px) skewY(1deg)}75%{transform:translateY(3px) skewY(-1deg)}}';
+function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t)+TH_LOGOKF+'#site .ws-logo:after{display:none!important}'+(TH_LOGOFX[t[0]]?'#site .ws-logo,#app .logo{animation:'+TH_LOGOFX[t[0]]+'!important;transform-origin:50% 60%}':'');
  /* falling leaves use the game's own leaf sprite, in this theme's accent colour */
  try{const col=t[0]==='classic'?'#e58a2e':t[11];document.querySelectorAll('#site .ws-lf').forEach(e=>{e.innerHTML=thImg(TH_DECOR[t[0]]||'leaf',col,20)});document.querySelectorAll('#site .ws-sp').forEach(e=>{e.innerHTML=thImg('star',col,26)});const MOBS=['snail','mushroom','slime','snail','mushroom','pig'];document.querySelectorAll('#site .ws-mob').forEach((e,i)=>{try{e.innerHTML=thImg(MOBS[i%MOBS.length],col,34)}catch(x){}})}catch(e){}}
 let thCur='classic';try{thCur=LS.getItem('ml_theme')||'classic'}catch(e){}thApply(thCur);setTimeout(()=>thApply(thCur),0);
