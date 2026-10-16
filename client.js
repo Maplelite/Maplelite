@@ -1,4 +1,4 @@
-window.__BUILD='3.5-73be701078';
+window.__BUILD='3.5-e7d6dadd15';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3930,6 +3930,16 @@ function themePanel(){return '<div class="panel" id="themepanel"><h2>🎨 Theme<
   return '<button data-th="'+t[0]+'" class="'+(thCur===t[0]?'main':'')+'" style="min-height:40px;display:flex;align-items:center;gap:6px"><span style="width:22px;height:22px;border-radius:5px;border:1px solid #0006;flex:none;background:'+sw+'"></span>'+t[1]+(t[0]==='classic'?' (default)':'')+'</button>'}).join('')+'</div></div>'}
 {const _fb=featBody;featBody=function(id){const b=_fb.apply(this,arguments);return id==='settings'?themePanel()+b:b}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-th]');if(!b)return;thCur=b.dataset.th;try{LS.setItem('ml_theme',thCur)}catch(_){}thApply(thCur);if(typeof render==='function'&&P)render()});
+
+/* System tab: Exit game saves the character, stops any fight and returns to the website, still logged in */
+function exitPanel(){return '<div class="panel" id="exitpanel"><h2>🚪 Exit game</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Saves your character and goes back to the website. You stay logged in.</div><button id="exitgame" class="main" style="width:100%">Exit game</button></div>'}
+{const _fb=featBody;featBody=function(id){const b=_fb.apply(this,arguments);return id==='settings'?exitPanel()+b:b}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#exitgame');if(!b)return;e.stopPropagation();
+ try{save()}catch(x){}
+ try{if(window.__fight3){window.__fight3.want=false;window.__fight3.on=false}}catch(x){}
+ try{if(window.__liveOut)window.__liveOut({t:'gleave'})}catch(x){}
+ try{enc=null;fld=[];seeking=false;autoSeek=false;inFight=false}catch(x){}
+ try{if(window.__wsHome)window.__wsHome()}catch(x){}},true);
 
 /* ===== v3.5: original pixel-art icons (no emoji) for items and monsters.
    Each icon is a 16x16 pixel template, coloured from the item's or monster's name (red, blue, steel, gold...),
