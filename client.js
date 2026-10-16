@@ -1,4 +1,4 @@
-window.__BUILD='3.5-0685faca3d';
+window.__BUILD='3.5-b615ee256a';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4588,13 +4588,7 @@ body.chatfull{overflow:hidden}
    older or newer build (426), and this screen asks the player to update. The page also checks /api/ping every
    2 minutes, so a client left open notices a new release. Updating clears the installed app's cached files. ===== */
 (function(){let shown=false;
- window.__outdated=function(){if(shown)return;shown=true;try{if(window.__liveClose)window.__liveClose()}catch(e){}
-  const d=document.createElement('div');d.id='ml-outdated';
-  d.innerHTML='<div class="box"><div style="font-size:42px">🍁</div><h2>A new version is out</h2><p>This copy of Maplelite is out of date, so it can\'t connect to the server. Update to keep playing. Your characters are safe on the server.</p><button id="ml-upd" class="main">Update now</button></div>';
-  document.body.appendChild(d);document.getElementById('ml-upd').onclick=async()=>{
-   if(location.protocol==='file:'){location.href='https://maplelite.github.io/Maplelite/';return}
-   const b=document.getElementById('ml-upd'),say=t=>{b.disabled=true;b.textContent=t};
-   /* the website and the server deploy separately; only reload once the website copy matches the server, so the
+ function waitUpdate(say){/* the website and the server deploy separately; only reload once the website copy matches the server, so the
       page never reloads into an older copy. If the server is the one behind, wait for it instead. */
    const tagOf=async()=>{try{const u=new URL(location.href);u.searchParams.set('u',Date.now());const t=await (await fetch(u.toString(),{cache:'no-store'})).text();const m=t.match(/client\.js\?v=([a-z0-9]+)/);return m?m[1]:''}catch(e){return ''}};
    const srv=async()=>{try{const j=await (await fetch('/api/ping',{cache:'no-store'})).json();return (j&&j.build)||''}catch(e){return ''}};
@@ -4606,10 +4600,28 @@ body.chatfull{overflow:hidden}
     if(want&&tag===want)return reload();
     if(want&&want===mine)return reload();
     say(tag&&tag===mine?'The server is updating. Waiting for it...':'The update is still on its way. Checking again...');setTimeout(step,8000)};
-   say('Checking for the update...');step()}};
+   step()}
+ window.__waitUpdate=waitUpdate;
+ window.__outdated=function(){if(shown)return;shown=true;try{if(window.__liveClose)window.__liveClose()}catch(e){}
+  const d=document.createElement('div');d.id='ml-outdated';
+  d.innerHTML='<div class="box"><div style="font-size:42px">🍁</div><h2>A new version is out</h2><p>This copy of Maplelite is out of date, so it can\'t connect to the server. Update to keep playing. Your characters are safe on the server.</p><button id="ml-upd" class="main">Update now</button></div>';
+  document.body.appendChild(d);document.getElementById('ml-upd').onclick=async()=>{
+   if(location.protocol==='file:'){location.href='https://maplelite.github.io/Maplelite/';return}
+   const b=document.getElementById('ml-upd');waitUpdate(t=>{b.disabled=true;b.textContent=t})}};
  const check=()=>fetch('/api/ping').then(r=>r.json()).then(j=>{if(j&&j.build&&window.__BUILD&&j.build!==window.__BUILD)window.__outdated()}).catch(()=>{});
  setTimeout(check,1500);setInterval(check,120000);
  const st=document.createElement('style');st.textContent='#ml-outdated{position:fixed;inset:0;z-index:2147483646;background:rgba(10,15,30,.82);display:flex;align-items:center;justify-content:center;padding:16px}#ml-outdated .box{background:#f7f4ea;color:#243552;max-width:340px;width:100%;border-radius:14px;border:3px solid #18223d;padding:18px;text-align:center}#ml-outdated h2{margin:6px 0}#ml-outdated button{margin-top:10px;min-height:44px;width:100%}';document.head.appendChild(st)})();
+
+/* Play while the server and website are on different versions: a maintenance screen that carries on by itself */
+(function(){const op=window.__wsOpen;if(typeof op!=='function')return;
+ window.__wsOpen=async function(w){const a=arguments,self=this;if(w!=='play'||location.protocol==='file:')return op.apply(self,a);
+  let sb='';try{const j=await (await fetch('/api/ping',{cache:'no-store'})).json();sb=(j&&j.build)||''}catch(e){}
+  if(!sb||sb===window.__BUILD)return op.apply(self,a);
+  if(document.getElementById('ml-maint'))return;const d=document.createElement('div');d.id='ml-maint';
+  d.innerHTML='<div class="box"><div style="font-size:42px">🛠️</div><h2>Maintenance</h2><p>The game is being updated. You can play as soon as it finishes. This screen carries on by itself.</p><p class="mute" id="ml-mt">Checking...</p></div>';
+  document.body.appendChild(d);window.__waitUpdate(t=>{const e=document.getElementById('ml-mt');if(e)e.textContent=t})};
+ try{const pb=document.getElementById('ws-play');if(pb)pb.onclick=()=>window.__wsOpen('play')}catch(e){}
+ const st=document.createElement('style');st.textContent='#ml-maint{position:fixed;inset:0;z-index:2147483646;background:rgba(10,15,30,.82);display:flex;align-items:center;justify-content:center;padding:16px}#ml-maint .box{background:#f7f4ea;color:#243552;max-width:340px;width:100%;border-radius:14px;border:3px solid #18223d;padding:18px;text-align:center}#ml-maint h2{margin:6px 0}';document.head.appendChild(st)})();
 
 /* ===== Server authority (online version): when the server runs in authority mode, the game sends every action that
    changes your numbers to the server (/api/g) and shows what the server answers. The browser still draws the fight
