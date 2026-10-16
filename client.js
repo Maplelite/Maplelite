@@ -1,4 +1,4 @@
-window.__BUILD='3.5-dbdb723942';
+window.__BUILD='3.5-ec74aecee1';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -206,7 +206,7 @@ function stand(dir){if(!enc)return;const now=Date.now(),mc=moveCd();if(now-lastA
  if(dir<0){if(enc.gap<=0)return;lastMv=now;enc.gap--;log('You advance on the '+d.n+'.','','combat');if(enc.gap<=0)enc.next=now+d.iv}
  else{if(enc.gap>=3)return;lastMv=now;if(Math.random()<Math.min(.9,Math.max(.25,.5+(speed()-100)/100))){enc.gap++;enc.mv=now+mc*2+mvT(d);lastMv=now-Math.floor(mc/2);log('You back away from the '+d.n+'.','','combat')}else log('You stumble and fail to back away.','bad','combat')}
  render()}
-function laneHtml(){const d=MON[enc.k];let c='';for(let i=0;i<5;i++){const me=i===0,mo=i===enc.gap+1;c+='<div style="flex:1;text-align:center;font-size:22px;padding:4px 0;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'🧍':mo?d.i:'')+'</div>'}
+function laneHtml(){const d=MON[enc.k];let c='';for(let i=0;i<5;i++){const me=i===0,mo=i===enc.gap+1;c+='<div style="flex:1;text-align:center;font-size:22px;padding:4px 0;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?(typeof headIcon==='function'?headIcon(P,22):'🧍'):mo?d.i:'')+'</div>'}
  return '<div style="margin-top:8px"><div style="display:flex;background:rgba(120,140,180,.12);border-radius:8px">'+c+'</div><div class="mute" style="margin-top:4px">'+(enc.gap<=0?'Face to face':'Distance '+enc.gap)+' · reach '+wReach()+'</div></div>'}
 function win(){const d=MON[enc.k],m=MAPS[P.map];for(const id in QD){const d=QD[id];if(P.q[id]==='active'&&d.type==='kill'&&d.mon===enc.k&&(P.qp[id]||0)<d.cnt)P.qp[id]=(P.qp[id]||0)+1;if(P.q[id]==='active'&&d.type==='kill'&&d.mk){const t=d.mk.find(x=>x[0]===enc.k);if(t){const kk=id+'|'+enc.k;if((P.qp[kk]||0)<t[1])P.qp[kk]=(P.qp[kk]||0)+1}}}const dm=USE_DATA_DROPS&&DROPS[enc.k]&&DROPS[enc.k].m,me=dm?(Math.random()<dm[0]?R(dm[1],dm[2]):0):R(d.m[0],d.m[1]);if(me)addDrop('meso',me);/* v3.5: mesos drop like items */
  log('The '+d.n+' falls. +'+XR(d.exp)+' EXP'+(me?' and drops '+me+' mesos.':'.'),'good','combat');gain(d.exp);
@@ -1814,7 +1814,7 @@ stand=function(dir){if(!enc)return;const now=Date.now(),mc=moveCd();if(now-lastA
 laneHtml=function(){const LH=Math.max(20,Math.min(30,Math.floor(210/NRf())));let h='<div style="margin-top:8px;display:flex;flex-direction:column;gap:3px;min-height:'+(NRf()*(LH+3)-3)+'px">';
   for(let r=0;r<NRf();r++){const ms=fld.filter(m=>m.row===r),on=!!enc&&enc.row===r;let c='';
    for(let i=0;i<COLS;i++){const cell=i?ms.filter(m=>m.gap+1===i):[];
-    c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(i===0&&r===PRf()?'🧍':'')+cell.map(m=>'<span style="position:relative;display:inline-block;'+'">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
+    c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(i===0&&r===PRf()?(typeof headIcon==='function'?headIcon(P,20):'🧍'):'')+cell.map(m=>'<span style="position:relative;display:inline-block;'+'">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
    h+='<div class="lrow" style="display:flex;background:rgba(120,140,180,.12);border-radius:6px;min-height:'+LH+'px">'+c+'</div>'}
   return h+'</div>'};
 app.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-row]');if(!b||!enc)return;const ms=fld.filter(m=>m.row===+b.dataset.row).sort((x,y)=>x.gap-y.gap);if(ms.length&&ms[0]!==enc&&!ms.includes(enc)){enc=ms[0];render()}else if(ms.length>1&&ms.includes(enc)){enc=ms[(ms.indexOf(enc)+1)%ms.length];render()}});
