@@ -132,12 +132,12 @@ const DROPS={"snail":{"m":[0.4,4,6],"i":[["snail_shell",0.6,1,1],["red_potion",0
 const DROP_MS=300000;
 function addDrop(id,q){const g=P.gd||(P.gd=[]);
  P.gu=(P.gu||0)+1;
-g.push({u:P.gu,id,q,map:P.map,exp:Date.now()+DROP_MS});log('Dropped: '+ITEMS[id].n+(q>1?' x'+q:''),'good','items')}
+g.push({u:P.gu,id,q,map:P.map,exp:Date.now()+DROP_MS});if(id!=='meso')log('Dropped: '+ITEMS[id].n+(q>1?' x'+q:''),'good','items')}
 function dropsHere(){const now=Date.now();return(P.gd||[]).filter(g=>!g.r&&g.map===P.map&&g.exp>now)}
 function purgeDrops(){if(!P||!P.gd||!P.gd.length)return;const now=Date.now(),n=P.gd.length;P.gd=P.gd.filter(g=>{if(g.exp>now)return true;log('The '+ITEMS[g.id].n+(g.q>1?' x'+g.q:'')+' on the ground vanished.','','items');return false});if(P.gd.length!==n)save()}
 function collectRun(){const run=P.gd.filter(g=>g.r);if(!run.length)return;P.gd=P.gd.filter(g=>!g.r);run.forEach(lootTake);log('Auto-hunt ended. Looted '+run.length+' drop'+(run.length>1?'s':'')+'.','good','items');save();render()}
 function lootAskHtml(){return'<div class="intro"><div class="mcard"><div class="mh"><span class="mi">🎒</span><div><b>Auto-hunt loot style</b><div class="mute">How should drops be picked up?</div></div></div><p><b>After each kill</b>: every drop goes straight into your inventory.</p><p><b>At the end</b>: drops are held while you grind, then all looted when auto-hunt stops.</p><div class="ex"><button class="main" id="la_kill">After each kill</button><button class="main" id="la_end">At the end</button><button id="la_x">Cancel</button></div></div></div>'}
-function lootTake(g){P.inv[g.id]=(P.inv[g.id]||0)+g.q;log('You pick up '+ITEMS[g.id].n+(g.q>1?' x'+g.q:'')+'.','good','items')}
+function lootTake(g){if(g.id==='meso'){P.mesos+=g.q;log('You pick up '+g.q+' mesos.','good','items');return}P.inv[g.id]=(P.inv[g.id]||0)+g.q;log('You pick up '+ITEMS[g.id].n+(g.q>1?' x'+g.q:'')+'.','good','items')}
 function lootOne(u){purgeDrops();const i=(P.gd||[]).findIndex(g=>g.u===u&&g.map===P.map);if(i>=0){lootTake(P.gd.splice(i,1)[0]);save()}render()}
 function lootAll(){purgeDrops();const mine=dropsHere();P.gd=(P.gd||[]).filter(g=>!mine.includes(g));mine.forEach(lootTake);save();render()}
 function lootPanel(){const d=dropsHere(),now=Date.now();if(!d.length)return'';const t=g=>{const s=Math.max(0,Math.ceil((g.exp-now)/1000));return Math.floor(s/60)+':'+String(s%60).padStart(2,'0')};
@@ -207,8 +207,8 @@ function stand(dir){if(!enc)return;const now=Date.now(),mc=moveCd();if(now-lastA
  render()}
 function laneHtml(){const d=MON[enc.k];let c='';for(let i=0;i<5;i++){const me=i===0,mo=i===enc.gap+1;c+='<div style="flex:1;text-align:center;font-size:22px;padding:4px 0;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'🧍':mo?d.i:'')+'</div>'}
  return '<div style="margin-top:8px"><div style="display:flex;background:rgba(120,140,180,.12);border-radius:8px">'+c+'</div><div class="mute" style="margin-top:4px">'+(enc.gap<=0?'Face to face':'Distance '+enc.gap)+' · reach '+wReach()+'</div></div>'}
-function win(){const d=MON[enc.k],m=MAPS[P.map];for(const id in QD){const d=QD[id];if(P.q[id]==='active'&&d.type==='kill'&&d.mon===enc.k&&(P.qp[id]||0)<d.cnt)P.qp[id]=(P.qp[id]||0)+1;if(P.q[id]==='active'&&d.type==='kill'&&d.mk){const t=d.mk.find(x=>x[0]===enc.k);if(t){const kk=id+'|'+enc.k;if((P.qp[kk]||0)<t[1])P.qp[kk]=(P.qp[kk]||0)+1}}}const dm=USE_DATA_DROPS&&DROPS[enc.k]&&DROPS[enc.k].m,me=dm?(Math.random()<dm[0]?R(dm[1],dm[2]):0):R(d.m[0],d.m[1]);P.mesos+=me;
- log('The '+d.n+' falls. +'+XR(d.exp)+' EXP'+(me?', +'+me+' mesos.':'.'),'good','combat');gain(d.exp);
+function win(){const d=MON[enc.k],m=MAPS[P.map];for(const id in QD){const d=QD[id];if(P.q[id]==='active'&&d.type==='kill'&&d.mon===enc.k&&(P.qp[id]||0)<d.cnt)P.qp[id]=(P.qp[id]||0)+1;if(P.q[id]==='active'&&d.type==='kill'&&d.mk){const t=d.mk.find(x=>x[0]===enc.k);if(t){const kk=id+'|'+enc.k;if((P.qp[kk]||0)<t[1])P.qp[kk]=(P.qp[kk]||0)+1}}}const dm=USE_DATA_DROPS&&DROPS[enc.k]&&DROPS[enc.k].m,me=dm?(Math.random()<dm[0]?R(dm[1],dm[2]):0):R(d.m[0],d.m[1]);if(me)addDrop('meso',me);/* v3.5: mesos drop like items */
+ log('The '+d.n+' falls. +'+XR(d.exp)+' EXP'+(me?' and drops '+me+' mesos.':'.'),'good','combat');gain(d.exp);
  dropLoot(enc.k,d);
  if(!isOpen(P.map)){P.kills++;if(P.kills>=needFor(m)){P.cleared[P.map]=1;P.kills=0;log(m.n+' cleared. The exits are open until you leave.','good','combat')}}
  window._dead=enc;enc=null;onKill();save()}
@@ -3665,19 +3665,20 @@ const EQ_ANY_MAX=0.004;
      Food (Doofus, Henesys Market): +30 fullness, and +1 closeness when it was hungry (fullness 70 or less).
    - Closeness raises the pet's level (v62 table, levels 1-30).
    - Pet skills come from pet equipment, as in v62 (no bigger pickup range):
-       Item Pouch   - picks up every drop after each kill (auto pickup)
+       Meso Magnet  - picks up the mesos monsters drop
+       Item Pouch   - picks up every item drop after each kill (auto pickup)
        Auto HP Pouch / Auto MP Pouch - drink your best HP / MP potion when you fall below the set percentage
      plus a cosmetic accessory slot (pet hats from the data). Pet equipment is bought in the Cash Shop. */
 const PET_TYPES=[['brown_kitty','🐱','Brown Kitty'],['black_kitty','🐈‍⬛','Black Kitty'],['brown_puppy','🐶','Brown Puppy'],['husky','🐺','Husky'],
  ['white_bunny','🐰','White Bunny'],['pink_bunny','🐇','Pink Bunny'],['black_pig','🐷','Black Pig'],['panda','🐼','Panda'],['dino_boy','🦖','Dino Boy'],['dino_girl','🦕','Dino Girl'],['monkey','🐵','Monkey']];
-const PET_EQ={pe_pouch:['👝','Item Pouch','pouch','Your pet picks up every drop after each kill.'],pe_autohp:['❤️','Auto HP Pouch','hp','Your pet makes you drink an HP potion when your HP falls below the set percentage.'],
+const PET_EQ={pe_meso:['🧲','Meso Magnet','meso','Your pet picks up the mesos monsters drop.'],pe_pouch:['👝','Item Pouch','pouch','Your pet picks up every drop after each kill.'],pe_autohp:['❤️','Auto HP Pouch','hp','Your pet makes you drink an HP potion when your HP falls below the set percentage.'],
  pe_automp:['💙','Auto MP Pouch','mp','Your pet makes you drink an MP potion when your MP falls below the set percentage.']};
 const PET_HATS=[['ph_red_ribbon','🎀','Red Ribbon'],['ph_yellow_hat','👒','Yellow Hat'],['ph_red_hat','🧢','Red Hat'],['ph_black_hat','🎩','Black Hat'],['ph_blue_top','🎩','Blue Top Hat'],['ph_mushroom','🍄','Mushroom Suit']];
 const PET_CLOSE=[0,1,3,6,14,31,60,108,181,287,434,632,891,1224,1642,2161,2793,3557,4467,5542,6801,8263,9950,11882,14084,16578,19391,22547,26074,30000];
 const PET_FOOD='i2120000';
 /* Cash Shop entries (6th field: Cash Shop tab) */
 for(const [k,i,n] of PET_TYPES)CASH.push(['pet_'+k,i,n,4000,'A pet that follows you. Feed it Pet Food. Give it pet equipment for auto pickup and auto potions.','pets']);
-for(const k in PET_EQ)CASH.push([k,PET_EQ[k][0],PET_EQ[k][1],k==='pe_pouch'?2000:2500,PET_EQ[k][3]+' Equip it on your pet (Character screen).','peteq']);
+for(const k in PET_EQ)CASH.push([k,PET_EQ[k][0],PET_EQ[k][1],k==='pe_pouch'||k==='pe_meso'?2000:2500,PET_EQ[k][3]+' Equip it on your pet (Character screen).','peteq']);
 for(const [k,i,n] of PET_HATS)CASH.push([k,i,n,800,'A cosmetic accessory for your pet.','peteq']);
 const petType=t=>PET_TYPES.find(x=>x[0]===t)||PET_TYPES[0];
 const pet=()=>P&&Array.isArray(P.pets)&&P.petOn>=0?P.pets[P.petOn]||null:null;
@@ -3703,7 +3704,8 @@ setInterval(()=>{try{if(!P||typeof scr==='undefined'||scr!=='game'||P.dead||P.hp
  if(petSkill('hp')&&P.hp<P.maxHp*((P.petHp||50)/100)){const k=potBest('hp');if(k)useItem(k)}
  else if(petSkill('mp')&&P.mp<P.maxMp*((P.petMp||30)/100)){const k=potBest('mp');if(k)useItem(k)}}catch(e){}},700);
 /* auto pickup after each kill */
-{const _w=win;win=function(){const r=_w.apply(this,arguments);try{if(petSkill('pouch')&&typeof dropsHere==='function'&&dropsHere().length)lootAll()}catch(e){}return r}}
+{const _w=win;win=function(){const r=_w.apply(this,arguments);try{const mz=petSkill('meso'),pz=petSkill('pouch');if((mz||pz)&&typeof dropsHere==='function'){
+  const take=dropsHere().filter(g=>g.id==='meso'?mz:pz);if(take.length){P.gd=P.gd.filter(g=>!take.includes(g));take.forEach(lootTake);save();render()}}}catch(e){}return r}}
 /* the Character screen pet panel */
 function petPanel(){const L=P.pets||[];let h='<div class="panel" id="petpanel"><h2>🐾 Pet</h2>';
  if(!L.length)return h+'<div class="mute">You have no pet yet. Pets are sold in the Cash Shop (💎). With pet equipment they pick up your loot and drink potions for you.</div></div>';
@@ -3713,7 +3715,7 @@ function petPanel(){const L=P.pets||[];let h='<div class="panel" id="petpanel"><
    +'<div class="mute" style="font-size:12px">Closeness '+p.close+(lv<30?' / '+nx:'')+'</div><div class="xpi" style="height:8px;margin:2px 0"><i style="width:'+(lv<30?Math.min(100,(p.close-pv)/(nx-pv)*100):100)+'%"></i></div>'
    +'<div class="mute" style="font-size:12px">Fullness '+p.full+'/100'+(p.full<=0?' · too hungry to help':'')+'</div><div class="xpi" style="height:8px;margin:2px 0"><i style="width:'+p.full+'%;background:'+(p.full>30?'#5aae3e':'#d0451b')+'"></i></div></div>'
    +'<button data-pet="feed">Feed'+(P.inv[PET_FOOD]>0?' ('+P.inv[PET_FOOD]+')':'')+'</button></div>';
-  const slots=[['hat','Accessory'],['pouch','Item Pouch'],['hp','Auto HP'],['mp','Auto MP']];
+  const slots=[['hat','Accessory'],['meso','Meso Magnet'],['pouch','Item Pouch'],['hp','Auto HP'],['mp','Auto MP']];
   const nameOf=k=>{const c=CASH.find(x=>x[0]===k);return c?c[1]+' '+c[2]:k};
   h+='<div class="mute" style="margin-top:6px">Pet equipment</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;align-items:start">'+slots.map(([s,lab])=>{const k=p.eq&&p.eq[s];
    const have=Object.keys(P.cinv||{}).filter(c=>P.cinv[c]>0&&(s==='hat'?PET_HATS.some(x=>x[0]===c):PET_EQ[c]&&PET_EQ[c][2]===s));
@@ -3733,6 +3735,9 @@ document.addEventListener('change',e=>{const s=e.target.closest&&e.target.closes
 try{const d=NPCS.n1012004;if(d&&d.shopList&&!d.shopList.includes(PET_FOOD))d.shopList.unshift(PET_FOOD)}catch(e){}
 /* Pet Food used from the bag feeds the pet */
 {const _u=useItem;useItem=function(id){if(id===PET_FOOD&&pet())return petFeed();return _u.apply(this,arguments)}}
+
+/* mesos lying on the map show like any drop */
+ITEMS.meso=ITEMS.meso||{n:'Mesos',i:'💰'};
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
