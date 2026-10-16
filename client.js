@@ -1,4 +1,4 @@
-window.__BUILD='3.5-ebdc452dc7';
+window.__BUILD='3.5-b793fc6b8d';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -1771,7 +1771,7 @@ function mobsTick(now){if(!enc)return;let ch=trickle(now);
      if(canRow&&Math.random()<.4){m.row=rr;ch=true}
      else if(Math.random()<.8){const mg=maxG(m);let g=m.gap+(m.dir||1);if(g<0||g>mg){m.dir=-(m.dir||1);g=m.gap+m.dir}if(g>=0&&g<=mg&&g!==m.gap&&cellFree(m,m.row,g)){m.gap=g;ch=true;if(g===0)m.next=now+Math.round(d.iv*1.5)}}}}
    if(m.gap<=0&&((hot(m)&&Math.abs(m.row-PRf())<=1)||(d.touch&&!TUT.on&&m.row===PRf()))&&now>=m.next){/* v3.2: only monsters next to you hit you: an angry one from your row or the rows beside it, a wandering one only by bumping into you in your row */m.next=now+d.iv+R(-200,200);ch=true;
-    if(!darkOn()){if(Math.random()<Math.min(.95,Math.max(.5,.95-avoid()/100))){const dv=m.dis>now?(m.disv|0):0,x=Math.max(1,Math.round((R(d.atk[0],d.atk[1])-dv)*(1-defRed())));P.hp-=guardTake(x);log('The '+d.n+' hits you for '+x+'.','bad','combat')}else log('The '+d.n+' misses.','','combat')}
+    if(!darkOn()){if(Math.random()<Math.min(.95,Math.max(.5,.95-avoid()/100))){const dv=m.dis>now?(m.disv|0):0,x=Math.max(1,Math.round((R(d.atk[0],d.atk[1])-dv)*(1-defRed())));{const gx=guardTake(x);P.hp-=gx;if(window.__fdmg)window.__fdmg(m.eid,gx)}log('The '+d.n+' hits you for '+x+'.','bad','combat')}else log('The '+d.n+' misses.','','combat')}
     if(P.hp<=0){die();break}}}
   if(ch)render()}
 function onKill(){const d=window._dead;fld=fld.filter(m=>m!==d);
@@ -4608,6 +4608,8 @@ body.chatfull{overflow:hidden}
  setInterval(()=>{if(!M2()||typeof fld==='undefined')return;regMobs();const b={},hits=[];for(const m of fld)if(m&&m.sreg&&m.eid in G.seen&&m.hp<G.seen[m.eid]){hits.push({eid:String(m.eid),d:G.seen[m.eid]-Math.max(0,m.hp)})}
   for(const m of fld)if(m&&m.sreg)G.seen[m.eid]=m.hp;if(hits.length)lout({t:'fhit',sk:'dot',hits})},1000);
  {const _r=render;render=function(){const o=_r.apply(this,arguments);try{regMobs();if(M2()&&typeof fld!=='undefined'&&!fld.length&&G.inFight){G.inFight=false;lout({t:'fend'})}if(typeof fld!=='undefined'&&fld.length)G.inFight=true}catch(e){}return o}}
+ /* damage you take from monsters is reported too (the server watches for fights where nothing ever hits you) */
+ G.dmg=[];window.__fdmg=(eid,d)=>{if(M2())G.dmg.push({eid:String(eid),d:d|0})};setInterval(()=>{if(G.dmg.length&&M2()){lout({t:'fdmg',list:G.dmg.splice(0,50)})}},1000);
  window.__onFight=function(m){if(!P||typeof fld==='undefined')return;
   if(m.t==='fres'){if(m.nomp){try{log('Not enough MP.','bad','combat')}catch(e){}}for(const s of m.mobs||[]){const x=fld.find(q=>String(q.eid)===String(s.eid));if(x&&s.hp>x.hp){x.hp=s.hp;G.seen[x.eid]=s.hp}}
    for(const k of m.kills||[]){if(k.state){G.last=k.state;if(!G.q.length)apply(k.state)}for(const d of k.drops||[]){window.addDrop(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}}
