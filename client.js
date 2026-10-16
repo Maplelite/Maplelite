@@ -1,4 +1,4 @@
-window.__BUILD='3.5-1d1c774d5c';
+window.__BUILD='3.5-dbdb723942';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -1192,6 +1192,8 @@ function avatarSvg(p,wd){const lk=p.look||{g:LK.g[0],face:LK.face[0],hair:LK.hai
  if(E('Shield'))s+='<text x="1" y="68" font-size="18">'+ITEMS[E('Shield')].i+'</text>';
  {const wid=p===P?publicGear().w:p.weapon;if(wid&&ITEMS[wid])s+='<text x="62" y="68" font-size="18">'+ITEMS[wid].i+'</text>'}
  return s+'</svg>'}
+/* a small real-time head icon (face, hair, skin, hat, eyewear) cut from the full avatar */
+function headIcon(p,px){try{return avatarSvg(p,px).replace(/viewBox="[^"]*"/,'viewBox="17 6 48 46"').replace(/style="[^"]*"/,'style="width:'+px+'px;height:'+px+'px;display:inline-block;vertical-align:middle;border-radius:4px"')}catch(e){return '🧍'}}
 function eqOffN(){return [P.weapon].concat(Object.values(P.eq||{})).filter(x=>x&&!eqOk(x)).length}
 function charPanel(){const n=Object.keys(P.eq||{}).length+(P.weapon?1:0);
  return '<div class="panel win"><div class="title">CHARACTER</div><div class="pad" style="text-align:center">'+avatarSvg(P,150)+'<div style="margin-top:4px"><b>'+selfName()+'</b> <span class="mute">Lv '+P.lvl+' '+jobName()+'</span></div><div class="mute">'+(n?n+' item'+(n>1?'s':'')+' equipped'+(eqOffN()?' ('+eqOffN()+' greyed out)':''):'Nothing equipped')+'</div></div></div>'}
@@ -2339,7 +2341,7 @@ function thumbPad(){const cp=document.getElementById('cpanel');if(!cp||cp.queryS
  if(!grid||!mv)return;
  const g=id=>cp.querySelector('#'+id),mk=(c,kids)=>{const d=document.createElement('div');d.className=c;kids.forEach(k=>k&&d.appendChild(k));return d};
  const fl=g('fl');if(fl)fl.remove();
- const left=mk('tp-l',[g('adv'),g('bk'),g('pq0'),g('pq1')]);
+ const left=mk('tp-l',[g('bk'),g('adv'),g('pq0'),g('pq1')]);
  const right=mk('tp-r',[g('qs0'),g('qs1'),g('qs2'),g('qs3')]);
  const pad=mk('thumbpad',[left,right]);
  const foot=mk('tp-foot',[qrow,ab]);
@@ -2598,7 +2600,7 @@ function searchPage(){const q=(WS.q||'').trim().toLowerCase();if(!q)return home(
 const crumb=(t,tn,n)=>'<div class="wk-crumb"><a href="#wiki">Wiki</a> › <a href="#wiki/'+t+'">'+tn+'</a> › '+esc(n)+'</div>';
 const nf=()=>'<div class="wk-crumb"><a href="#wiki">Wiki</a></div><div class="wk-m">That page does not exist.</div>';
 /* ---------- view + routing ----------
-   Routing is kept in memory, not in location.hash: when the page runs inside a srcdoc iframe (as in the Claude preview),
+   Routing is kept in memory, not in location.hash: when the page runs inside a srcdoc iframe (as in some site previews),
    following a '#...' link navigates the whole frame away. The address bar is updated only where that is safe. */
 const WS={q:''};let CUR='#wiki',STACK=[];
 const canHash=()=>{try{return location.protocol!=='about:'&&location.protocol!=='data:'}catch(e){return false}};
@@ -3419,7 +3421,7 @@ laneHtml=function(){fixPos();const LH=Math.max(20,Math.min(30,Math.floor(210/NRf
  const f=facing();
  for(let r=0;r<NRf();r++){const ms=fld.filter(m=>m.row===r&&m.hp>0);let c='';
   for(let i=0;i<COLS;i++){const cell=ms.filter(m=>colOf(m)===i),me=i===PC&&r===PRf();
-   c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+'🧍'+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
+   c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+(typeof headIcon==='function'?headIcon(P,Math.min(22,LH-2)):'🧍')+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
   h+='<div class="lrow" style="display:flex;background:rgba(120,140,180,.12);border-radius:6px;min-height:'+LH+'px">'+c+'</div>'}
  return h+'</div>'};
 /* keep the target valid on every redraw, and draw the spawn-side button in the fight section (next to Lock) */
@@ -3432,7 +3434,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
  log('Spawn side: '+SPAWN_SIDES[(i+1)%3][2]+'. You will appear there when your next fight starts.','','combat');save();render()},true);
 /* v3.5: the move buttons are just arrows (right and left) */
 {const _r=render;render=function(){const o=_r.apply(this,arguments);try{const a=document.getElementById('adv'),b=document.getElementById('bk');
- if(a&&a.dataset.arw!=='1'){a.textContent='';a.title='Step right';a.dataset.arw='1'}if(b&&b.dataset.arw!=='1'){b.textContent='';b.title='Step left';b.dataset.arw='1'}}catch(e){}return o}}
+ if(a&&a.dataset.arw!=='2'){a.innerHTML='<svg viewBox="0 0 16 16" width="34" height="34" style="image-rendering:pixelated;display:block;margin:auto" shape-rendering="crispEdges"><path d="M3 7h6V3h2v1h1v1h1v1h1v1h1v2h-1v1h-1v1h-1v1h-1v1h-2V9H3z" fill="#2a2340"/><path d="M3 7h6V3h2v1h1v1h1v1h1v1h1v2h-1v1h-1v1h-1v1h-1v1h-2V9H3z" fill="#ffd65a" transform="translate(-1,-1)"/></svg>';a.title='Step right';a.dataset.arw='2'}if(b&&b.dataset.arw!=='2'){b.innerHTML='<svg viewBox="0 0 16 16" width="34" height="34" style="image-rendering:pixelated;display:block;margin:auto" shape-rendering="crispEdges"><path d="M13 7H7V3H5v1H4v1H3v1H2v1H1v2h1v1h1v1h1v1h1v1h2V9h6z" fill="#2a2340"/><path d="M13 7H7V3H5v1H4v1H3v1H2v1H1v2h1v1h1v1h1v1h1v1h2V9h6z" fill="#ffd65a" transform="translate(-1,-1)"/></svg>';b.title='Step left';b.dataset.arw='2'}}catch(e){}return o}}
 /* v3.5: Slash Blast is a melee sweep: your normal reach (no extra column) and only your line and the lines right next
    to it. Before, it reached one column further and hit monsters on every line. */
 {const _sb=skSlash;skSlash=function(){const tf=targetsFor;targetsFor=function(reach,n){const pr=PRf();return tf(Math.max(0,reach-SB_EXTRA),99).filter(m=>Math.abs(m.row-pr)<=1).slice(0,n)};try{return _sb.apply(this,arguments)}finally{targetsFor=tf}}}
@@ -3887,6 +3889,8 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#app .panel>.row:first-child:has(>h2)>h2{color:#fff!important}'
  +'.sbar,.win .title{background:linear-gradient('+s1+','+s2+')!important;border-color:'+bd+'!important}'
  +'#app input,#app select,#app textarea,.cbox,.lgb{background:'+(dark?'#16161f':'#fff')+'!important;color:'+tx+'!important;border-color:'+bd+'!important}'
+ +'#app button.sk,#app button.slot,#app .slot{background:linear-gradient('+b1+','+b2+')!important;border-color:'+bd+'!important;color:'+tx+'!important}#app button.sk *,#app .slot *{color:'+tx+'!important}#app button.sk:disabled{opacity:.55}'
+ +(dark?'#app [style*="background:#fff"],#app [style*="background:#f"],#app [style*="background: #f"]{background:'+pn+'!important;color:'+tx+'!important}#app [style*="color:#3"],#app [style*="color:#4"],#app [style*="color:#5"],#app [style*="color:#222"]{color:'+tx+'!important}':'')
  +(dark?'#app .panel a{color:'+hd+'!important}':'')}
 function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t)}
 let thCur='classic';try{thCur=LS.getItem('ml_theme')||'classic'}catch(e){}thApply(thCur);
@@ -4032,6 +4036,31 @@ Object.assign(ICO_T,{
 {const U={play:icoSvg('map','#5aa8e0'),stats:icoSvg('hero','#e85a3a'),pack:icoSvg('bag','#d9443a'),quests:icoSvg('scroll','#e8c13a'),social:icoSvg('chat','#f6f6f2'),cash:icoSvg('crystal','#5ac8f0'),menu:icoSvg('menu','#f6f6f2')};
  for(const k in U)TABI[k]='<img class="pxi pxt" src="'+U[k]+'" alt="">';
  const st=document.createElement('style');st.textContent='img.pxt{width:30px;height:30px;vertical-align:middle}';document.head.appendChild(st)}
+
+/* ===== v3.5: real v62 items only. Placeholder items made up in early versions (Cloth/Leather/Iron/Steel/Mithril gear,
+   Wooden-Crystal accessories, masks and glasses, custom weapons, event weapons from later versions) are removed from
+   the game: from shops, drops, quests and from saved characters. A few made-up names that stand for real items are
+   renamed to the real item (Pig's Head, Pig's Ribbon, the starter clothes, the Pio medal); Stump Bark becomes Tree Branch. ===== */
+const PH_REMOVE=["pebble_chip", "golem_core", "hat_1", "hat_5", "hat_10", "hat_15", "hat_20", "top_1", "top_5", "top_10", "top_15", "top_20", "bottom_1", "bottom_5", "bottom_10", "bottom_15", "bottom_20", "gloves_1", "gloves_5", "gloves_10", "gloves_15", "gloves_20", "shoes_1", "shoes_5", "shoes_10", "shoes_15", "shoes_20", "cape_1", "cape_5", "cape_10", "cape_15", "cape_20", "shield_1", "shield_5", "shield_10", "shield_20", "face_1", "face_5", "face_10", "face_15", "face_20", "eyes_1", "eyes_5", "eyes_10", "eyes_15", "eyes_20", "earring_1", "earring_5", "earring_10", "earring_20", "ring_1", "ring_5", "ring_10", "ring_15", "ring_20", "knights_blade", "war_axe", "great_axe", "spiked_club", "stump_bark", "long_bow", "steel_crossbow", "dagger", "hardwood_staff", "w_pink_flower_tube_bow", "w_explorer_s_vaulter_2000", "w_pig_herding_stick", "w_one_shot_kill_sword", "w_knock_down_sword", "w_slow_sword", "w_poison_sword", "w_dark_sword", "w_seal_sword", "w_ice_sword", "w_reinforced_attribute_sword_f", "w_boss_kill_sword", "w_recovery_sword", "w_sickly_sword", "w_critical_sword", "w_monster_death_sword", "w_reinforced_attribute_sword_i", "w_reinforced_attribute_sword_s", "w_reinforced_attribute_sword_h", "w_reinforced_attribute_sword_l", "w_pink_flower_tube_one_handed_sword", "w_explorer_s_traus", "w_swordsman_s_two_handed_sword", "w_pink_flower_tube_two_handed_sword", "w_explorer_s_zard", "w_pink_flower_tube_one_handed_axe", "w_explorer_s_blue_counter", "w_5th_anniversary_rolling_pin_weapon", "w_pink_flower_tube_two_handed_axe", "w_pink_flower_tube_two_handed_blunt_weapon", "w_explorer_s_sabretooth", "w_pink_flower_tube_one_handed_blunt_weapon", "w_explorer_s_jacker", "w_explorer_s_titan", "w_pink_flower_tube_crossbow", "w_explorer_s_heckler", "w_rogue_s_bronze_igor", "w_pink_flower_tube_claw", "w_explorer_s_dark_avarice", "w_maku_luk", "w_maku_str", "w_rogue_s_stinger", "w_snowy_heaven_dagger", "w_pink_flower_tube_dagger", "w_explorer_s_bazlud", "w_pink_flower_tube_spear", "w_explorer_s_zeco", "w_explorer_s_crescent_polearm", "w_blizzard_polearm", "w_magician_s_metal_wand", "w_explorer_s_crystal_wand", "w_pink_flower_tube_staff", "w_pirate_s_double_tail_knuckle", "w_pink_flower_tube_knuckle", "w_explorer_s_neozard", "w_pirate_s_negotiator", "w_pink_flower_tube_gun", "w_explorer_s_lunar_shooter"];
+const PH_RENAME={"pig_head": "Pig's Head", "pig_ribbon": "Pig's Ribbon", "top_c2": "Grey T-Shirt", "bottom_c2": "Red Miniskirt", "bottom_c3": "Brown Cotton Shorts", "newbie_medal": "Diligent Explorer Medal"},PH_REMAP={"stump_bark": "tree_branch"};
+(function realItems(){const gone=new Set(PH_REMOVE.concat(Object.keys(PH_REMAP)));
+ for(const k in PH_RENAME)if(ITEMS[k])ITEMS[k].n=PH_RENAME[k];
+ for(const k of gone)delete ITEMS[k];
+ const ok=k=>!gone.has(k)||!!PH_REMAP[k],fix=k=>PH_REMAP[k]||k;
+ for(const m in MAPS){if(Array.isArray(MAPS[m].shopList))MAPS[m].shopList=MAPS[m].shopList.filter(k=>!gone.has(k))}
+ for(const n in NPCS){const N=NPCS[n];if(Array.isArray(N.shopList))N.shopList=N.shopList.filter(k=>!gone.has(k));if(N.shopPrice)for(const k of gone)delete N.shopPrice[k]}
+ for(const k in DROPS){const D=DROPS[k];if(D&&Array.isArray(D.i))D.i=D.i.filter(e=>ok(e[0])).map(e=>[fix(e[0])].concat(e.slice(1)))}
+ for(const k in MON){const m=MON[k];if(m&&m.e&&gone.has(m.e))m.e=PH_REMAP[m.e]||null}
+ for(const id in QD){const q=QD[id];if(!q)continue;const w=q.rw||{};
+  if(w.items){for(const k of Object.keys(w.items))if(gone.has(k)){if(PH_REMAP[k])w.items[PH_REMAP[k]]=w.items[k];delete w.items[k]}}
+  if(Array.isArray(w.rand))w.rand=w.rand.filter(x=>!gone.has(Array.isArray(x)?x[0]:x));
+  if(Array.isArray(q.col))q.col=q.col.map(c=>[fix(c[0]),c[1]]);if(q.give)for(const k of Object.keys(q.give))if(gone.has(k))delete q.give[k]}
+ window.__phGone=gone})();
+/* saved characters: placeholder items are taken out (worn ones too); Stump Bark turns into Tree Branch */
+function phClean(p){if(!p||p._ph)return;const g=window.__phGone,b=k=>String(k||'').replace(/#.*$/,''),inst=p.inst||{};const baseK=k=>(inst[k]&&inst[k].b)||b(k);
+ for(const k of Object.keys(p.inv||{})){const bk=baseK(k);if(g.has(bk)){if(PH_REMAP[bk])p.inv[PH_REMAP[bk]]=(p.inv[PH_REMAP[bk]]||0)+p.inv[k];delete p.inv[k]}}
+ for(const s of Object.keys(p.eq||{}))if(g.has(baseK(p.eq[s])))delete p.eq[s];if(p.weapon&&g.has(baseK(p.weapon)))p.weapon=null;p._ph=1}
+{const _r=render;render=function(){try{if(P)phClean(P)}catch(e){}return _r.apply(this,arguments)}}
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
@@ -4656,14 +4685,16 @@ body.chatfull{overflow:hidden}
   if(isBuf(k)){const r=f.apply(this,arguments);out({t:'gbuff',k});return r}
   return f.apply(this,arguments)});
  wrap('useItem',f=>function(id){if(!(S.on&&live()))return f.apply(this,arguments);const it=ITEMS[id];if(!it||!(it.heal||it.mpheal||it.hpp||it.mpp)||!(P.inv[id]>0))return;out({t:'guse',item:id});P.inv[id]--;if(P.inv[id]<=0)delete P.inv[id];render()});
- wrap('flee',f=>function(){if(!(S.on&&live()))return f.apply(this,arguments);out({t:'gleave'})});
+ wrap('flee',f=>function(){if(!(S.on&&live()))return f.apply(this,arguments);S.want=false;out({t:'gleave'})});
  /* ticks: the server plays the fight forward when it hears from us */
  setInterval(()=>{if(S.on&&live()&&Date.now()-S.last>280)out({t:'gtick'})},300);
  const name=k=>(MON[k]||{}).n||k;
  /* snapshots from the server */
  window.__onGsnap=function(m){if(!P)return;S.last=Date.now();const s=m.snap;
+  /* a fight we already finished: never restart it from a late snapshot */
+  if(s&&!S.want&&!s.over&&!s.dead){out({t:'gleave'});return}
   if(m.err&&m.err!=='wait'){try{log(m.err,'bad','combat')}catch(e){}}
-  if(!s){S.on=false;if(enc&&enc.ghost){enc=null;fld=[]}try{render()}catch(e){}return}
+  if(!s){S.on=false;S.want=false;if(enc&&enc.ghost){enc=null;fld=[]}try{render()}catch(e){}return}
   S.on=true;PC=s.pc;P.hp=s.hp;P.mp=s.mp;
   const old={};for(const o of fld)old[o.eid]=o;
   fld=s.mobs.map(o=>{const x=old[o.eid]||{eid:o.eid,k:o.k,sm:P.map,si:undefined,mv:1e15,next:1e15};return Object.assign(x,{k:o.k,hp:o.hp,max:o.max,row:o.row,side:o.side,gap:o.gap,ag:o.hot,prov:o.hot})});
@@ -4675,8 +4706,10 @@ body.chatfull{overflow:hidden}
   for(const k of m.kills||[]){if(k.state&&window.__authApplyState)window.__authApplyState(k.state);for(const d of k.drops||[]){window.addDrop(d.item,d.qty);const g=P.gd&&P.gd[P.gd.length-1];if(g)g.sid=d.id}}
   if((m.kills||[]).length){try{if(window.__petAutoLoot)window.__petAutoLoot()}catch(e){}}
   enc=fld.length?(typeof closestMob==='function'?closestMob(typeof wReach==='function'?wReach():0):fld[0]):null;
-  if(s.dead){S.on=false;fld=[];enc=null;try{die()}catch(e){}}
-  else if(s.over){S.on=false;fld=[];enc=null;if(!autoSeek){seeking=false}}
+  /* every monster defeated and auto-hunt off: the fight is over (no reinforcements) */
+  if(!s.dead&&!s.over&&!fld.length&&(m.kills||[]).length&&!autoSeek){S.want=false;S.on=false;enc=null;seeking=false;out({t:'gleave'});try{render()}catch(e){}return}
+  if(s.dead){S.on=false;S.want=false;fld=[];enc=null;try{die()}catch(e){}}
+  else if(s.over){S.on=false;S.want=false;fld=[];enc=null;if(!autoSeek){seeking=false}}
   try{render()}catch(e){}};
 })();
 
