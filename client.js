@@ -3833,6 +3833,7 @@ const THEMES=[['classic','Classic'],
  ['orbis','Orbis Sky','linear-gradient(#e9e4ff,#fdfbff 60%,#d6ccf6)','#fbfaff','#ffffff','#e6e0fa','#5a4b94','#6f58c9','#2e2650','#7d75a0','#b3a6e6','#f2a9d0','#7c69c4','#4d3d8f'],
  ['elnath','El Nath Snow','linear-gradient(#dff1fb,#ffffff 60%,#c6deee)','#f8fcff','#ffffff','#deedf7','#3d6a88','#2f86b8','#1d3a4f','#6d8799','#a9cde3','#58c2f0','#4b7fa3','#29506b'],
  ['ludi','Ludibrium Toy','linear-gradient(#ffd6ec,#fff3b8 60%,#bfe6ff)','#fffaf2','#ffffff','#ffe3f1','#8a3d6b','#d6457f','#41203a','#8f6b84','#f2a6cf','#ffcf3a','#d6457f','#8a2c5a'],
+ ['aqua','Aqua Road','linear-gradient(#0e4d6e,#1b8aa6 55%,#062a3d)','#eaf8fb','#ffffff','#c9ecf3','#0c4459','#0f86a3','#0d2f3b','#55818f','#5fb6c9','#ffb547','#126f8a','#06384a'],
  ['sunset','Amherst Sunset','linear-gradient(#ff9a6b,#ffcf8a 55%,#6b4a8a)','#fff5ee','#ffffff','#ffe0cc','#7a3b2a','#d0582a','#3d1f16','#8a6a5c','#e8a184','#8a5ac8','#a1462a','#5c2416']];
 function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,tx,mu,tb,ton,s1,s2,dark]=t;
  return 'html{background:'+sky+' fixed!important}'
