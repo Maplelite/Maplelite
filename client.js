@@ -1,4 +1,4 @@
-window.__BUILD='3.5-b28a93f106';
+window.__BUILD='3.5-73be701078';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3886,7 +3886,7 @@ const TH_GROUND={henesys:['#7fcf5a','#5aae3e','#3f8a30','#3f8a30','#2c6a22'],ell
 function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,tx,mu,tb,ton,s1,s2,dark]=t;
  const deco=TH_DECO[t[0]]||'none',spd=TH_SPEED[t[0]]||'20s';
  return '@keyframes thDrift{to{background-position:200px 160px}}'
- +'body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.8;background:'+deco+';animation:thDrift '+spd+' linear infinite}'
+ +''
  +'#app,#site{position:relative;z-index:1}'
  +'#site{background:'+sky+'!important;color:'+tx+'!important;--d:'+bd+';--wd:'+ton+';--wl:'+s1+';--pp:'+pn+';--o:'+hd+'}'
  +(TH_GROUND[t[0]]?'#site .ws-hills path:nth-child(1){fill:'+TH_GROUND[t[0]][0]+'!important}#site .ws-hills path:nth-child(2){fill:'+TH_GROUND[t[0]][1]+'!important}#site .ws-hills path:nth-child(3){fill:'+TH_GROUND[t[0]][2]+'!important}#site .ws-foot{background:linear-gradient('+TH_GROUND[t[0]][3]+','+TH_GROUND[t[0]][4]+')!important}':'')
@@ -3899,6 +3899,7 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#site .ws-cl{background:'+pn+'!important;opacity:.85!important}'
  +'#site .ws-cl:before,#site .ws-cl:after{background:'+pn+'!important}'
  +'#site .ws-lf{font-size:0!important;width:16px;height:16px;background:'+ton+'}'
+ +'#site .ws-sp svg,#site .ws-mob svg{width:26px;height:26px;display:block}'
  +'#site .ws-lf svg{width:18px;height:18px;display:block;opacity:.9}'
  +'.logo{color:'+hd+'!important;text-shadow:2px 2px 0 '+s2+'!important}.logo small{color:'+mu+'!important}'
  +'html{background:'+sky+' fixed!important}'
@@ -3922,7 +3923,7 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
 const TH_DECOR={henesys:'mushroom',ellinia:'leaf',perion:'boar',kerning:'octopus',lith:'shell',sleepy:'stump',orbis:'star',elnath:'crystal',ludi:'doll',aqua:'slime'};
 function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t);
  /* falling leaves use the game's own leaf sprite, in this theme's accent colour */
- try{const col=t[0]==='classic'?'#e58a2e':t[11];document.querySelectorAll('#site .ws-lf').forEach(e=>{e.innerHTML=icoSvg(TH_DECOR[t[0]]||'leaf',col)})}catch(e){}}
+ try{const col=t[0]==='classic'?'#e58a2e':t[11];document.querySelectorAll('#site .ws-lf').forEach(e=>{e.innerHTML=icoSvg(TH_DECOR[t[0]]||'leaf',col)});document.querySelectorAll('#site .ws-sp').forEach(e=>{e.innerHTML=icoSvg('star',col)});const MOBS=['snail','mushroom','slime','snail','mushroom','pig'];document.querySelectorAll('#site .ws-mob').forEach((e,i)=>{try{e.innerHTML=icoSvg(MOBS[i%MOBS.length],col)}catch(x){}})}catch(e){}}
 let thCur='classic';try{thCur=LS.getItem('ml_theme')||'classic'}catch(e){}thApply(thCur);
 function themePanel(){return '<div class="panel" id="themepanel"><h2>🎨 Theme</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Colors for the game and the website.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
  +THEMES.map(t=>{const sw=t[0]==='classic'?'linear-gradient(90deg,#8fbde3,#eef1f7,#f0a030)':'linear-gradient(90deg,'+t[6]+' 0 25%,'+t[3]+' 25% 60%,'+t[11]+' 60%)';
