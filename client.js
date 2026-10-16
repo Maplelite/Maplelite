@@ -3649,6 +3649,16 @@ simAct=function(){};
    stands in Henesys. Creating and running a guild is on the Social tab (online version). */
 NPCS.heracle={n:'Heracle',i:'🛡️',role:'Guild Headquarters',hi:'Want to start a guild? It costs 1,500,000 mesos and you need to be level 10. Open the Social tab while you are here in Henesys.'};
 if(MAPS.henesys&&!MAPS.henesys.npcs.includes('heracle'))MAPS.henesys.npcs.push('heracle');
+/* v3.5 drop rates: rare drops are rare.
+   - The extra "4% random scroll on every kill" (not a v62 rule) is gone: scrolls drop only from monsters' own tables.
+   - The drop tables come from v83 data, where some monsters list 20-35 different equipment drops. Every item can
+     still drop, but each monster's equipment chances are scaled so that ANY equipment drop happens at most about once
+     in 250 kills (monsters that were already rarer keep their chances). */
+dropLoot=_dl1;
+const EQ_ANY_MAX=0.004;
+(function scaleEquipDrops(){try{for(const k in DROPS){const D=DROPS[k];if(!D||!Array.isArray(D.i))continue;
+ const eq=D.i.filter(e=>ITEMS[e[0]]&&(ITEMS[e[0]].w||ITEMS[e[0]].s));if(!eq.length)continue;
+ const pAny=1-eq.reduce((q,e)=>q*(1-e[1]),1);if(pAny<=EQ_ANY_MAX)continue;const f=EQ_ANY_MAX/pAny;for(const e of eq)e[1]=e[1]*f}}catch(e){}})();
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
