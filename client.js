@@ -1,4 +1,4 @@
-window.__BUILD='3.5-b793fc6b8d';
+window.__BUILD='3.5-e650ebb85f';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4124,8 +4124,9 @@ rkA.addEventListener('click',e=>{e.preventDefault();showRank()});
 /* ---------- players (staff) ---------- */
 const [plA,plV]=mkView('ws-playersview','players','Players');plA.style.display='none';let plMsg='',plQ='',plTab='accounts';
 function navStaff(){plA.style.display=(role()==='admin'||role()==='gm')?'':'none';if(plV.style.display!=='none'&&plA.style.display==='none')closeMine()}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-susclr]');if(!b)return;fetch('/api/admin/suspicious/clear',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:+b.dataset.susclr})}).then(()=>showPlayers())});
 async function showPlayers(){if(!(role()==='admin'||role()==='gm'))return;open(plA,plV);plV.innerHTML='<div class="ws-av"><div class="ws-card"><h2>🧑‍🤝‍🧑 Players</h2><p class="sa-empty">Loading…</p></div></div>';
- const adm=role()==='admin';const T='<div class="ws-tabs" style="margin:6px 0 10px"><button class="ws-tab'+(plTab==='accounts'?' on':'')+'" data-pt="accounts">Accounts</button><button class="ws-tab'+(plTab==='rejects'?' on':'')+'" data-pt="rejects">Refused saves</button></div>';
+ const adm=role()==='admin';const T='<div class="ws-tabs" style="margin:6px 0 10px"><button class="ws-tab'+(plTab==='accounts'?' on':'')+'" data-pt="accounts">Accounts</button><button class="ws-tab'+(plTab==='rejects'?' on':'')+'" data-pt="rejects">Refused saves</button><button class="ws-tab'+(plTab==='sus'?' on':'')+'" data-pt="sus">Suspicious</button></div>';
  let h='';
  if(plTab==='accounts'){const r=await get('/api/admin/accounts');if(r.error)h='<p class="sa-empty">'+esc(r.error)+'</p>';else{
    const L=r.list.filter(a=>!plQ||a.id.toLowerCase().includes(plQ)||(a.chars||[]).some(c=>c.toLowerCase().includes(plQ)));
@@ -4134,6 +4135,7 @@ async function showPlayers(){if(!(role()==='admin'||role()==='gm'))return;open(p
      +'<small>'+esc(a.email)+' · joined '+day(a.created)+' · seen '+ago(a.last_seen)+'<br>'+(a.chars.length?esc(a.chars.join(', ')):'No characters')+'</small></span>'
      +(adm&&a.id.toLowerCase()!==me().id.toLowerCase()?'<span class="sa-btns" style="flex-wrap:wrap"><select data-prole="'+esc(a.id)+'">'+['player','gm','admin'].map(x=>'<option'+(a.role===x?' selected':'')+'>'+x+'</option>').join('')+'</select>'
       +'<button class="ws-b'+(a.banned?'':' d')+'" data-pban="'+esc(a.id)+'" data-v="'+(a.banned?0:1)+'">'+(a.banned?'Unsuspend':'Suspend')+'</button><button class="ws-b" data-preset="'+esc(a.id)+'">Reset password</button></span>':'')+'</div>').join('')}}
+ else if(plTab==='sus'){const r=await get('/api/admin/suspicious');h=r.error?'<p class="sa-empty">'+esc(r.error)+'</p>':!r.list.length?'<p class="sa-empty">Nothing suspicious noted.</p>':'<p class="ws-note">Noted for a look; nothing here was refused or punished.</p>'+r.list.map(x=>'<div class="ws-row"><span><b>'+esc(x.who||x.acct)+'</b> <small>'+esc(x.acct)+' · '+ago(x.at)+'</small><small>'+esc(x.reason)+'</small></span><button data-susclr="'+x.id+'">Dismiss</button></div>').join('')}
  else{const r=await get('/api/admin/rejects');h=r.error?'<p class="sa-empty">'+esc(r.error)+'</p>':!r.list.length?'<p class="sa-empty">No refused saves.</p>':r.list.map(x=>'<div class="ws-row"><span><b>'+esc(x.id)+'</b> <small>'+esc(x.key.replace('mapleish_c','slot '))+' · '+ago(x.at)+'</small><small>'+esc(x.reason)+'</small></span></div>').join('')}
  plV.innerHTML='<div class="ws-av"><div class="ws-card"><h2>🧑‍🤝‍🧑 Players</h2>'+(plMsg?'<p class="sa-msg">'+plMsg+'</p>':'')+T+h+'</div></div>';plMsg='';
  plV.querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{plTab=b.dataset.pt;showPlayers()});
@@ -4596,10 +4598,11 @@ body.chatfull{overflow:hidden}
     server, every attack is reported there, and the server's HP is the real HP. Rewards come with the server's kill. ---- */
  const M2=()=>G.on&&window.__liveOn&&window.__liveOn();window.__authM2=M2;
  const lout=o=>{try{return window.__liveOut&&window.__liveOut(o)}catch(e){return false}};
- function regMobs(){if(!M2()||typeof fld==='undefined')return;const L=[];for(const m of fld)if(m&&m.hp>0&&!m.sreg&&m.eid!=null&&m.k!=='training_snail'){m.sreg=1;L.push({eid:String(m.eid),k:m.k})}if(L.length)lout({t:'fspawn',list:L})}
- const snap=()=>{const o={};if(typeof fld!=='undefined')for(const m of fld)if(m&&m.sreg)o[m.eid]=m.hp;return o};
+ function regMobs(){if(!M2()||typeof fld==='undefined')return;const L=[];for(const m of fld)if(m&&m.hp>0&&!m.sreg&&m.eid!=null&&m.k!=='training_snail'){m.sreg=1;L.push({eid:String(m.eid),k:m.k,g:m.gap})}if(L.length)lout({t:'fspawn',list:L})}
+ const snap=()=>{const o={};G.gap={};if(typeof fld!=='undefined')for(const m of fld)if(m&&m.sreg){o[m.eid]=m.hp;G.gap[m.eid]=m.gap}return o};
  function report(sk,before){const after={};if(typeof fld!=='undefined')for(const m of fld)if(m&&m.sreg)after[m.eid]=m.hp;const hits=[];
-  for(const e in before){const a=e in after?Math.max(0,after[e]):0,d=before[e]-a;if(d>0)hits.push({eid:e,d})}
+  const pos={};if(typeof fld!=='undefined')for(const m of fld)if(m&&m.sreg)pos[m.eid]=m.gap;
+  for(const e in before){const a=e in after?Math.max(0,after[e]):0,d=before[e]-a;if(d>0)hits.push({eid:e,d,g:e in pos?pos[e]:G.gap[e]})}
   if(hits.length)lout({t:'fhit',sk,hits});for(const e in after)G.seen[e]=after[e]}
  G.seen={};
  const atkWrap=(name,skOf)=>wrap(name,f=>function(){if(!M2()||G.depth)return f.apply(this,arguments);regMobs();const b=snap();G.depth=1;let r;try{r=f.apply(this,arguments)}finally{G.depth=0}report(skOf.apply(this,arguments),b);return r});
