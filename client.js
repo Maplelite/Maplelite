@@ -1500,7 +1500,7 @@ function skFocus(){const n=sl('focus');if(!isArc()||!n||P.dead)return;const mp=A
  attack=function(){if(!enc)return;if(W().rng&&ammoN()<1){log('You have no '+ITEMS[ammoId()].n+'.','bad','combat');return render()}
   const la=lastAtk;_atk();if(W().rng&&lastAtk!==la&&ammoN()>0){useAmmo(1);render()}};
  hitVerb=function(){return W().rng==='claw'?'throw a star at':W().rng?'shoot':W().dag?'stab':_hv()};
- equipItem=function(id){const it=ITEMS[id];if(it&&it.rng==='claw'&&P.job!=='rogue'){log('Only Rogues can use claws.','bad','items');return render()}if(it&&(it.rng==='bow'||it.rng==='xbow')&&P.job!=='archer'){log('Only Archers can use bows and crossbows.','bad','items');return render()}_eq(id)};
+ equipItem=function(id){const it=ITEMS[id];const bg=it&&it.beg&&(!P.job||P.job==='beginner');if(it&&!bg&&it.rng==='claw'&&P.job!=='rogue'){log('Only Rogues can use claws.','bad','items');return render()}if(it&&!bg&&(it.rng==='bow'||it.rng==='xbow')&&P.job!=='archer'){log('Only Archers can use bows and crossbows.','bad','items');return render()}_eq(id)};
  qsInfo=function(k,now){const t=v=>(v/1000).toFixed(1)+'s';
   if(k==='basic'&&W().rng){const f=_qi(k,now),n=ammoN();return Object.assign(f,{sub:n<1?'No ammo':(f.sub==='Basic'||f.sub==='Ready')?'x'+n:f.sub,dis:f.dis||n<1})}
   if(k==='arrowblow'||k==='doubleshot'){const ab=k==='arrowblow',n=sl(k)||1,mp=ab?ARC.abMp[n-1]:ARC.dsMp[n-1],am=ab?1:2,
@@ -1705,7 +1705,7 @@ const TYI={oh_sword:'\u{1F5E1}\uFE0F',th_sword:'\u2694\uFE0F',oh_axe:'\u{1FA93}'
 const TYL={oh_sword:'One-handed sword',th_sword:'Two-handed sword',oh_axe:'One-handed axe',th_axe:'Two-handed axe',oh_bw:'One-handed blunt weapon',th_bw:'Two-handed blunt weapon',dagger:'Dagger',spear:'Spear',polearm:'Polearm',wand:'Wand',staff:'Staff',bow:'Bow',crossbow:'Crossbow',claw:'Claw',knuckle:'Knuckle',gun:'Gun'};
 const MULT={oh_sword:4.0,th_sword:4.6,oh_axe:4.4,th_axe:4.8,oh_bw:4.4,th_bw:4.8,dagger:3.6,spear:5.0,polearm:5.0,wand:3.6,staff:3.6,bow:3.4,crossbow:3.6,claw:3.6,knuckle:4.8,gun:3.6};
 const SPD={2:540,3:600,4:660,5:720,6:780,7:840,8:900,9:960};
-const PJ={Warrior:['swordsman'],Thief:['rogue'],Magician:['magician'],Pirate:['pirate'],Beginner:['beginner']};
+const PJ={Warrior:['swordsman'],Bowman:['archer'],Thief:['rogue'],Magician:['magician'],Pirate:['pirate'],Beginner:['beginner']};
 const existing={},made={};Object.keys(ITEMS).forEach(k=>{if(ITEMS[k].n)existing[ITEMS[k].n.toLowerCase()]=k});
 const noTable=k=>({m:[1,MON[k].m[0],MON[k].m[1]],i:[[MON[k].e,.55,1,1],['red_potion',.08,1,1]]});
 WD.forEach(w=>{const key=w.n.toLowerCase();let id=existing[key];
@@ -3581,6 +3581,14 @@ QD.ferry.goal='Pay Shanks 150 mesos for the ride to Victoria Island (from level 
 
 /* v3.5: class symbol on equipment icons (inventory and shop slots).
    Warrior sword, Bowman bow, Magician wand, Thief throwing star, Pirate gun, Beginner snail. Common gear: one maple leaf (all classes). */
+/* v3.5: classes for every equipment item come from the raw data by name (V83.eqjobs), so multi-class gear such as
+   Eloon (Warrior/Thief) is wearable by each of its classes. Before, only the first class was kept. */
+const CLS_PJ={Warrior:'swordsman',Magician:'magician',Bowman:'archer',Thief:'rogue',Pirate:'pirate',Beginner:'beginner'};
+(function fixEqJobs(){try{const J=(typeof V83!=='undefined'&&V83.eqjobs)||{};for(const k in ITEMS){const it=ITEMS[k];if(!it||!it.n)continue;
+ const m=/(1\d{6})$/.exec(k);let r;
+ if(m){r=J['#'+m[1]]||'';if(!r){delete it.pj;it.jb='Common';continue}}   // equipment with a known ID: exact record; none = all jobs
+ else r=J[it.n];if(!r)continue;
+ const L=r.split('/');it.pj=L.map(c=>CLS_PJ[c]).filter(Boolean);it.jb=L.join(', ')}}catch(e){}})();
 const CLS_BADGE=(()=>{const s=(p)=>'<svg viewBox="0 0 16 16" width="100%" height="100%">'+p+'</svg>',k='stroke="#222" stroke-width="1" ';
  return{
   Warrior:s('<path d="M13 2 L6 9 L7 10 L14 3Z" fill="#cfd6dd" '+k+'/><path d="M4 9 L8 13 M5 12 L3 14" '+k+'fill="none" stroke-linecap="round"/>'),
@@ -3604,6 +3612,17 @@ function decorateBadges(){try{document.querySelectorAll('.slot[data-i],.slot[dat
  const h=clsBadge(el.dataset.i||el.dataset.sh);if(h)el.insertAdjacentHTML('beforeend',h)})}catch(e){}}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);decorateBadges();return r}}
 (()=>{const st=document.createElement('style');st.textContent='.clsb{position:absolute;left:2px;top:2px;right:2px;display:flex;gap:1px;flex-wrap:wrap;pointer-events:none;line-height:0;filter:drop-shadow(0 0 1px #fff)}.clsb i{display:block;width:30%;max-width:20px;aspect-ratio:1}';document.head.appendChild(st)})();
+/* v3.5: the level 10 starter bow and claw (War Bow, Garnier) can also be equipped by beginners. */
+const BEG_OK=['wp1452002','garnier'];
+for(const k of BEG_OK){const it=ITEMS[k];if(it){it.pj=[...new Set([...(it.pj||[]),'beginner'])];it.beg=1;if(!/Beginner/.test(it.jb||''))it.jb=(it.jb?it.jb+', ':'')+'Beginner'}}
+{const _e=eqOk;eqOk=function(id){const b=id&&(ITEMS[typeof baseOf==='function'?baseOf(id):id]||ITEMS[id]);
+ if(b&&b.beg&&(!P||!P.job||P.job==='beginner'))return true;return _e.apply(this,arguments)}}
+/* Garnier to its v62 values (was a custom level 15, 24 attack, 7,000 mesos). */
+if(ITEMS.garnier)Object.assign(ITEMS.garnier,{req:10,watk:10,buy:3000});
+if(typeof DESC!=='undefined'){DESC.garnier='A claw for throwing Throwing-Stars. Thieves and beginners can use it.'}
+/* v3.5: hand-made weapons set to their v62 values (level, attack, magic attack, shop price). */
+const V62_WFIX={"broad_sword": {"req": 25, "watk": 45, "buy": 22000}, "iron_axe": {"req": 20, "watk": 42, "buy": 10000}, "iron_mace": {"req": 20, "watk": 39, "buy": 10000}, "war_hammer": {"req": 30, "watk": 49, "buy": 40000}, "fruit_knife": {"req": 8, "watk": 22, "buy": 1000}, "razor": {"req": 5, "watk": 20, "buy": 500}, "battle_bow": {"req": 25, "watk": 40, "buy": 20000}, "crossbow": {"req": 12, "watk": 29, "buy": 4000}, "gladius": {"req": 30, "watk": 47, "buy": 40000}, "steel_titans": {"req": 15, "watk": 12, "buy": 20000}, "wooden_wand": {"req": 8, "watk": 15, "matk": 23, "buy": 2000}, "hardwood_wand": {"req": 13, "watk": 18, "matk": 28, "buy": 5000}, "wooden_staff": {"req": 10, "watk": 20, "matk": 25, "buy": 3000}, "w_astaroth_one_handed_sword": {"req": 25, "watk": 42}, "w_astaroth_two_handed_sword": {"req": 25, "watk": 45}, "w_astaroth_axe": {"req": 25, "watk": 46}, "w_astaroth_crossbow": {"req": 25, "watk": 46}, "w_astaroth_claw": {"req": 25, "watk": 18}, "w_astaroth_short_sword": {"req": 25, "watk": 40}, "w_astaroth_spear": {"req": 25, "watk": 46}, "w_astaroth_knuckles": {"req": 25, "watk": 32}, "w_astaroth_gun": {"req": 25, "watk": 28}};
+for(const k in V62_WFIX)if(ITEMS[k])Object.assign(ITEMS[k],V62_WFIX[k]);
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
