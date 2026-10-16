@@ -1,4 +1,4 @@
-window.__BUILD='3.5-ec74aecee1';
+window.__BUILD='3.5-f3099e32eb';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -1193,7 +1193,7 @@ function avatarSvg(p,wd){const lk=p.look||{g:LK.g[0],face:LK.face[0],hair:LK.hai
  {const wid=p===P?publicGear().w:p.weapon;if(wid&&ITEMS[wid])s+='<text x="62" y="68" font-size="18">'+ITEMS[wid].i+'</text>'}
  return s+'</svg>'}
 /* a small real-time head icon (face, hair, skin, hat, eyewear) cut from the full avatar */
-function headIcon(p,px){try{return avatarSvg(p,px).replace(/viewBox="[^"]*"/,'viewBox="17 6 48 46"').replace(/style="[^"]*"/,'style="width:'+px+'px;height:'+px+'px;display:inline-block;vertical-align:middle;border-radius:4px"')}catch(e){return '🧍'}}
+function headIcon(p,px){try{return avatarSvg(p,px).replace(/<text x="62" y="68"[^>]*>[^<]*<\/text>/,'').replace(/viewBox="[^"]*"/,'viewBox="17 6 48 46"').replace(/style="[^"]*"/,'style="width:'+px+'px;height:'+px+'px;display:inline-block;vertical-align:middle;border-radius:4px"')}catch(e){return '🧍'}}
 function eqOffN(){return [P.weapon].concat(Object.values(P.eq||{})).filter(x=>x&&!eqOk(x)).length}
 function charPanel(){const n=Object.keys(P.eq||{}).length+(P.weapon?1:0);
  return '<div class="panel win"><div class="title">CHARACTER</div><div class="pad" style="text-align:center">'+avatarSvg(P,150)+'<div style="margin-top:4px"><b>'+selfName()+'</b> <span class="mute">Lv '+P.lvl+' '+jobName()+'</span></div><div class="mute">'+(n?n+' item'+(n>1?'s':'')+' equipped'+(eqOffN()?' ('+eqOffN()+' greyed out)':''):'Nothing equipped')+'</div></div></div>'}
