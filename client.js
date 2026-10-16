@@ -3568,7 +3568,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 })();
 /* v3.4: no Free Market menu tile. In v62 the Free Market is a place you walk into from town maps (Free Market
    Entrance); it comes back as a map when player shops are built. */
-for(let i=FEAT.length-1;i>=0;i--)if(FEAT[i][0]==='market')FEAT.splice(i,1);
+for(let i=FEAT.length-1;i>=0;i--)if(FEAT[i][0]==='market'||FEAT[i][0]==='pets')FEAT.splice(i,1);/* pets come back on the Character screen when they are built */
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
