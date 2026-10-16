@@ -1,4 +1,4 @@
-window.__BUILD='3.5-8e896d4683';
+window.__BUILD='3.5-1918f9c3d0';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -2044,7 +2044,7 @@ function applyLock(){const on=!!P&&scr==='game'&&tab==='play'&&combatOn()&&scrol
  /* v3.5: the fight is pinned to the top of the screen when it fits; when it is taller than the screen (for example
     with the loot list open) the page can still scroll, and the bottom of the fight is kept in view */
  const el=on&&document.getElementById('cpanel'),xb=document.querySelector('.xpb'),vh=(xb?xb.getBoundingClientRect().top:innerHeight);
- if(el&&el.getBoundingClientRect().height<=vh-10){h.style.overflow='hidden';b.style.overflow='hidden';h.style.overscrollBehavior='none';const t=el.getBoundingClientRect().top;if(t<8||t>22){el.style.scrollMarginTop='14px';el.scrollIntoView({block:'start',behavior:'instant'})}}
+ /* the news bar at the top of the screen covers that much of the page: pin the fight just below it */const tn=document.getElementById('topnote'),tr=tn&&getComputedStyle(tn).position==='fixed'?tn.getBoundingClientRect():null,top0=tr&&tr.height?Math.max(0,tr.bottom):0;if(el&&el.getBoundingClientRect().height<=vh-10-top0){h.style.overflow='hidden';b.style.overflow='hidden';h.style.overscrollBehavior='none';const t=el.getBoundingClientRect().top-top0;if(t<8||t>22){el.style.scrollMarginTop=(top0+14)+'px';el.scrollIntoView({block:'start',behavior:'instant'})}}
  else{h.style.overflow='';b.style.overflow='';h.style.overscrollBehavior='';if(el){const r=el.getBoundingClientRect();if(r.bottom>vh||r.bottom<vh-40)window.scrollBy({top:r.bottom-vh+8,behavior:'instant'})}}}
 {const _r=render;render=function(){const r=_r.apply(this,arguments);/* after every other redraw step (some restore the old scroll position) */queueMicrotask(()=>{try{applyLock()}catch(e){}});return r}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-act="slk"]');if(!b)return;scrollLockPref=!scrollLockPref;lsSet('mapleish_slock',scrollLockPref?'1':'0');render()});
