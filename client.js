@@ -911,7 +911,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  {const xp=P.lvl>=MAXL?100:Math.min(100,P.exp/need*100);h+='<div class="xpb"><div class="xpi"><i style="width:'+xp+'%"></i><span>Lv '+P.lvl+' &nbsp; EXP '+(P.lvl>=MAXL?'MAX':P.exp+' / '+need+' ['+xp.toFixed(2)+'%]')+'</span></div></div>'}
  if(introOpen)h+=introHtml();
  if(lootAsk)h+=lootAskHtml();
- if(logs.length){if(ltab!=='party')ltab='self';const LT=[['self','Self'],['party','Party']],vis=logs.filter(logTab).slice(-40).reverse();
+ if(logs.length&&tab==='play'){if(ltab!=='party')ltab='self';const LT=[['self','Self'],['party','Party']],vis=logs.filter(logTab).slice(-40).reverse();
   h+='<div class="panel" id="log"><h2>Activity log</h2><div class="seg ltb">'+LT.map(t=>'<button class="'+(ltab===t[0]?'on':'')+'" data-lt="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div class="lgb">'+(vis.length?vis.map(l=>'<div class="'+l[1]+'">'+l[0].replace(/</g,'&lt;')+'</div>').join(''):'<div>Nothing here yet.</div>')+'</div></div>'}
  const _ql=app.querySelector('.qzl'),_qy=_ql?_ql.scrollTop:0;
  app.innerHTML=h;{const e=app.querySelector('.qzl');if(e)e.scrollTop=_qy}$('pn').textContent=P.name;{const sn=$('sn');if(sn)sn.textContent=P.name}
@@ -4243,7 +4243,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   else if(t==='guild'&&!L.guild)input='<div class="mute" style="font-size:12px;margin-top:4px">Join or create a guild (Social tab) to use guild chat.</div>';
   else if(t==='party'&&!L.party)input='';
   else input='<div style="display:flex;gap:6px;margin-top:6px">'+(t==='friends'?'<select id="live-wto" style="max-width:38%;min-width:0">'+(targets.length?targets.map(n=>'<option'+(n===L.wTo?' selected':'')+'>'+esc(n)+'</option>').join(''):'<option value="">No one yet</option>')+'</select>':'')+'<input id="live-in" maxlength="120" placeholder="'+(t==='friends'?'Whisper…':t==='party'?'Say to your party':t==='guild'?'Say to your guild':'Say something (/w Name to whisper)')+'" style="flex:1;min-width:0"><button id="live-say">Send</button></div>';
-  return '<h2>💬 Chat</h2><div class="pad"><div class="seg ltb" style="display:flex;gap:4px;flex-wrap:wrap">'+T.map(x=>'<button data-ct="'+x[0]+'" class="'+(t===x[0]?'on':'')+'" style="flex:1;min-width:0;padding:4px 2px">'+x[1]+(x[0]!=='log'&&L.unread[x[0]]&&t!==x[0]?' <b style="color:#d0451b">•'+L.unread[x[0]]+'</b>':'')+'</button>').join('')+'</div>'
+  return '<h2>💬 Chat</h2><div class="pad"><div class="seg ltb" style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">'+T.map(x=>'<button data-ct="'+x[0]+'" class="'+(t===x[0]?'on':'')+'" style="min-width:0;padding:4px 2px;white-space:nowrap">'+x[1]+(x[0]!=='log'&&L.unread[x[0]]&&t!==x[0]?' <b style="color:#d0451b">•'+L.unread[x[0]]+'</b>':'')+'</button>').join('')+'</div>'
    +'<div class="cbox" id="live-chat" style="max-height:180px;min-height:90px;overflow:auto;margin-top:6px">'+body+'</div>'+input+(t!=='log'?emoRow():'')+'</div>'}
  function paint(){const el=document.getElementById('livebox');if(!el)return;const inp=document.getElementById('live-in'),val=inp?inp.value:'',foc=document.activeElement===inp;
   el.innerHTML=panelHtml();const cx=document.getElementById('livechatbox');if(cx){if(L.unread[L.ctab])L.unread[L.ctab]=0;cx.innerHTML=chatHtml()}const ni=document.getElementById('live-in');if(ni){ni.value=val;if(foc)ni.focus()}const cb=document.getElementById('live-chat');if(cb)cb.scrollTop=cb.scrollHeight}
