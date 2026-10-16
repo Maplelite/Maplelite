@@ -1,4 +1,4 @@
-window.__BUILD='3.5-6ba53f0116';
+window.__BUILD='3.5-b5dd1c1219';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -3946,11 +3946,13 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
  try{if(window.__wsHome)window.__wsHome()}catch(x){}},true);
 
 /* website footer: theme picker (same setting as Menu > System) */
-(function(){const f=document.querySelector('#site .ws-foot');if(!f||document.getElementById('wsth'))return;
+(function(){function addPick(){const f=document.querySelector('#site .ws-foot');if(!f||document.getElementById('wsth'))return;
  const w=document.createElement('div');w.style.cssText='margin:0 auto 10px;display:flex;gap:8px;align-items:center;justify-content:center';
  w.innerHTML='<label for="wsth">🎨 Theme</label><select id="wsth" style="font:inherit;padding:4px 8px;border-radius:8px">'+THEMES.map(t=>'<option value="'+t[0]+'"'+(t[0]===thCur?' selected':'')+'>'+t[1]+'</option>').join('')+'</select>';
  f.insertBefore(w,f.firstChild);
  w.querySelector('select').onchange=e=>{thCur=e.target.value;try{LS.setItem('ml_theme',thCur)}catch(_){}thApply(thCur);if(typeof render==='function'&&typeof P!=='undefined'&&P)render()};
+}
+ addPick();setInterval(addPick,1500);
  document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-th]')){const s=document.getElementById('wsth');if(s)s.value=thCur}})})();
 
 /* ===== v3.5: original pixel-art icons (no emoji) for items and monsters.
