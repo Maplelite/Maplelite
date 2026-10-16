@@ -631,7 +631,7 @@ function featBody(id){if(IRON()&&LOCKED.includes(id))return '<div class="pad">�
  case 'trade':return pad('Safe one-to-one trading with a confirm step.')+'<div class="doll">'+[1,2,3,4,5,6,7,8].map(()=>'<div>➕</div>').join('')+'</div>'+chips(['Mesos','Lock','Confirm','Cancel']);
  case 'events':return mr('🎉','Double EXP weekend','Coming soon','<span class="pill g">Soon</span>')+mr('🎃','Seasonal hunt','Coming soon','<span class="pill g">Soon</span>')+mr('📅','Daily check-in','Coming soon','<span class="pill g">Soon</span>');
  case 'mini':return mr('🃏','Match cards','Play with a friend','')+mr('⭕','Omok','Play with a friend','')+chips(['Create room','Join room']);
- case 'settings':return mr('🔊','Sound','On','')+mr('🌐','Language','English','')+mr('🔔','Notifications','Off','')+mr('🎨','Theme','Classic blue','')+pad('Sound, language, notifications and theme are previews and do not change anything yet.')+'<div class="pad ex"><button id="stchars">Character select</button><button id="stout">Log out</button></div>';
+ case 'settings':return mr('🔊','Sound','On','')+mr('🌐','Language','English','')+mr('🔔','Notifications','Off','')+pad('Sound, language, notifications and theme are previews and do not change anything yet.')+'<div class="pad ex"><button id="stchars">Character select</button><button id="stout">Log out</button></div>';
  }return ''}
 const $=id=>document.getElementById(id),app=$('app');
 function bar(c,v,m){return'<div class="bar"><i style="width:'+Math.max(0,Math.min(100,v/m*100))+'%;background:'+c+'"></i></div>'}
@@ -739,8 +739,8 @@ function revive(here){if(!P||!P.dead)return;
 function tombHtml(){const c=MAPS[MAPS[P.map].ret];
  return '<div class="panel" style="text-align:center"><div style="font-size:64px">🪦</div><h2>You are a tombstone</h2><div class="mute">Rest in peace, '+P.name+'. You will wake in '+c.n+' in <b id="tombT">'+Math.max(0,Math.ceil((P.dead-Date.now())/1000))+'</b>s.</div><div class="ex" style="justify-content:center;margin-top:10px"><button class="main" onclick="revive(0)">Revive in '+c.n+'</button>'+(P.cinv&&P.cinv.wheel>0?'<button class="main" onclick="revive(2)">🎡 Wheel of Destiny ('+P.cinv.wheel+')</button>':'')+'</div></div>'}
 /* ===== Activity log: All / Self / Map / Party / Guild ===== */
-const logTab=l=>l[3]?ltab===l[2]:(ltab==='all'||(ltab==='self'?!['map','party','guild'].includes(l[2]):l[2]===ltab));
-function refreshLog(){const b=document.querySelector('#log .lgb');if(!b)return;const v=logs.filter(logTab).slice(-40).reverse();b.innerHTML=v.length?v.map(l=>'<div class="'+l[1]+'">'+l[0].replace(/</g,'&lt;')+'</div>').join(''):'<div>Nothing here yet.</div>'}
+const logTab=l=>ltab==='party'?(l[2]==='party'||l[2]==='plog'):!['map','party','guild','plog'].includes(l[2]);
+function refreshLog(){const b=document.querySelector('#log .lgb');if(!b)return;if(ltab!=='party')ltab='self';const v=logs.filter(logTab).slice(-40).reverse();b.innerHTML=v.length?v.map(l=>'<div class="'+l[1]+'">'+l[0].replace(/</g,'&lt;')+'</div>').join(''):'<div>Nothing here yet.</div>'}
 let nextSim=0;const GCH=['Anyone up for Snails?','gl everyone!','Free Red Potions in Amherst!','brb, grinding.','Who wants to party later?'];
 function simAct(){const now=Date.now();if(now<nextSim)return;nextSim=now+R(6000,12000);const ps=playersHere(),m=MAPS[P.map];
  if(ps.length&&Math.random()<.75){const p=ps[R(0,ps.length-1)];log(m.town||!m.mons||!m.mons.length?p.n+(Math.random()<.5?' is chatting nearby.':' bought a Red Potion.'):p.n+' defeated a '+MON[m.mons[R(0,m.mons.length-1)]].n+'.','','map')}
@@ -911,7 +911,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  {const xp=P.lvl>=MAXL?100:Math.min(100,P.exp/need*100);h+='<div class="xpb"><div class="xpi"><i style="width:'+xp+'%"></i><span>Lv '+P.lvl+' &nbsp; EXP '+(P.lvl>=MAXL?'MAX':P.exp+' / '+need+' ['+xp.toFixed(2)+'%]')+'</span></div></div>'}
  if(introOpen)h+=introHtml();
  if(lootAsk)h+=lootAskHtml();
- if(logs.length){const LT=[['all','All'],['self','Self'],['map','Map'],['party','Party'],['guild','Guild']],vis=logs.filter(logTab).slice(-40).reverse();
+ if(logs.length){if(ltab!=='party')ltab='self';const LT=[['self','Self'],['party','Party']],vis=logs.filter(logTab).slice(-40).reverse();
   h+='<div class="panel" id="log"><h2>Activity log</h2><div class="seg ltb">'+LT.map(t=>'<button class="'+(ltab===t[0]?'on':'')+'" data-lt="'+t[0]+'">'+t[1]+'</button>').join('')+'</div><div class="lgb">'+(vis.length?vis.map(l=>'<div class="'+l[1]+'">'+l[0].replace(/</g,'&lt;')+'</div>').join(''):'<div>Nothing here yet.</div>')+'</div></div>'}
  const _ql=app.querySelector('.qzl'),_qy=_ql?_ql.scrollTop:0;
  app.innerHTML=h;{const e=app.querySelector('.qzl');if(e)e.scrollTop=_qy}$('pn').textContent=P.name;{const sn=$('sn');if(sn)sn.textContent=P.name}
@@ -3820,6 +3820,43 @@ function fontPanel(){return '<div class="panel" id="fontpanel"><h2>🔤 Game fon
 {const _fb=featBody;featBody=function(id){const b=_fb.apply(this,arguments);return id==='settings'?fontPanel()+b:b}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-gf]');if(!b)return;gfCur=b.dataset.gf;try{LS.setItem('ml_gfont',gfCur)}catch(_){}gfApply(gfCur);if(typeof render==='function'&&P)render()});
 
+/* v3.5: color themes (Menu > System), like the font setting. Classic is the default; the other nine are named after
+   v62 places. A theme recolors the page background, panels, buttons, tabs and text. Remembered in this browser. */
+// [id, name, sky, panel, button-top, button-bottom, border, heading, text, muted, tab, tab-on, bar-top, bar-bottom, dark?]
+const THEMES=[['classic','Classic'],
+ ['henesys','Henesys Meadow','linear-gradient(#bfe7ff,#d9f3c4 70%,#8fd16a)','#f4fbe9','#ffffff','#d6efc0','#3c6b23','#3f7d1f','#25381a','#6c805c','#9cc47c','#f0a030','#4e7d33','#2b4a1b'],
+ ['ellinia','Ellinia Forest','linear-gradient(#1f4d3a,#2f7a55 60%,#173528)','#eaf6ee','#ffffff','#cfe9d9','#1d4733','#1f7a52','#173326','#5d7a6b','#5e9c7f','#a8d84a','#2d6b4c','#123425'],
+ ['perion','Perion Canyon','linear-gradient(#f6c47a,#d98a44 60%,#8a4a22)','#fbf0e1','#fff8ef','#f0d2ae','#6b3a17','#a4521c','#3b2210','#86664a','#c7925e','#e8562a','#7a4420','#46240d'],
+ ['kerning','Kerning Night','linear-gradient(#141428,#2a1f48 60%,#0c0c18)','#232338','#3a3a5c','#2a2a44','#08080f','#ff5fd2','#e8e6ff','#9c98c8','#4a4a74','#ff5fd2','#2b2b4c','#0f0f1e',1],
+ ['lith','Lith Harbor','linear-gradient(#9fd6ff,#4fa3e0 60%,#1d5f9a)','#eef6fd','#ffffff','#cfe4f6','#1b4a75','#1f6fb8','#14304b','#5e7891','#7fb0d8','#f5b02e','#2a5d8c','#123553'],
+ ['sleepy','Sleepywood','linear-gradient(#2d2a22,#4a4232 60%,#1a1813)','#2f2c24','#4a4536','#36322a','#0d0c09','#c9b46a','#ece4cc','#a89d80','#5b5442','#b8923a','#3d382c','#1a1813',1],
+ ['orbis','Orbis Sky','linear-gradient(#e9e4ff,#fdfbff 60%,#d6ccf6)','#fbfaff','#ffffff','#e6e0fa','#5a4b94','#6f58c9','#2e2650','#7d75a0','#b3a6e6','#f2a9d0','#7c69c4','#4d3d8f'],
+ ['elnath','El Nath Snow','linear-gradient(#dff1fb,#ffffff 60%,#c6deee)','#f8fcff','#ffffff','#deedf7','#3d6a88','#2f86b8','#1d3a4f','#6d8799','#a9cde3','#58c2f0','#4b7fa3','#29506b'],
+ ['ludi','Ludibrium Toy','linear-gradient(#ffd6ec,#fff3b8 60%,#bfe6ff)','#fffaf2','#ffffff','#ffe3f1','#8a3d6b','#d6457f','#41203a','#8f6b84','#f2a6cf','#ffcf3a','#d6457f','#8a2c5a'],
+ ['sunset','Amherst Sunset','linear-gradient(#ff9a6b,#ffcf8a 55%,#6b4a8a)','#fff5ee','#ffffff','#ffe0cc','#7a3b2a','#d0582a','#3d1f16','#8a6a5c','#e8a184','#8a5ac8','#a1462a','#5c2416']];
+function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,tx,mu,tb,ton,s1,s2,dark]=t;
+ return 'html{background:'+sky+' fixed!important}'
+ +'#app .panel,#site .panel,#app .win,.ws-card{background:'+pn+'!important;border-color:'+bd+'!important;color:'+tx+'!important}'
+ +'#site .panel h2{color:'+hd+'!important}'
+ +'#app,#app .panel *:not(.afx):not(.gmtag):not(.clsall):not(svg *){color:inherit}'
+ +'#app .mute,#site .mute{color:'+mu+'!important}'
+ +'#app button:not(.tabs button):not(.sk):not(.slot),#site button{background:linear-gradient('+b1+','+b2+')!important;border-color:'+bd+'!important;color:'+tx+'!important}'
+ +'#app button.main,#app button.on,#app button.sel{background:'+ton+'!important;color:#fff!important}'
+ +'#app button.npc{background:'+b2+'!important}'
+ +'.tabs button{background:'+tb+'!important;border-color:'+bd+'!important}.tabs button.on{background:'+ton+'!important}'
+ +'#app .panel>h2:first-child,#app .panel>.row:first-child:has(>h2),#app .mcard>h2:first-child,#app .title{background-color:'+s1+'!important;border-color:'+bd+'!important;color:#fff!important}'
+ +'#app .panel>.row:first-child:has(>h2)>h2{color:#fff!important}'
+ +'.sbar,.win .title{background:linear-gradient('+s1+','+s2+')!important;border-color:'+bd+'!important}'
+ +'#app input,#app select,#app textarea,.cbox,.lgb{background:'+(dark?'#16161f':'#fff')+'!important;color:'+tx+'!important;border-color:'+bd+'!important}'
+ +(dark?'#app .panel a{color:'+hd+'!important}':'')}
+function thApply(id){const t=THEMES.find(x=>x[0]===id)||THEMES[0];let st=document.getElementById('thrule');if(!st){st=document.createElement('style');st.id='thrule';document.head.appendChild(st)}st.textContent=thCss(t)}
+let thCur='classic';try{thCur=LS.getItem('ml_theme')||'classic'}catch(e){}thApply(thCur);
+function themePanel(){return '<div class="panel" id="themepanel"><h2>🎨 Theme</h2><div class="mute" style="font-size:12px;margin-bottom:6px">Colors for the game and the website.</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:6px">'
+ +THEMES.map(t=>{const sw=t[0]==='classic'?'linear-gradient(90deg,#8fbde3,#eef1f7,#f0a030)':'linear-gradient(90deg,'+t[6]+' 0 25%,'+t[3]+' 25% 60%,'+t[11]+' 60%)';
+  return '<button data-th="'+t[0]+'" class="'+(thCur===t[0]?'main':'')+'" style="min-height:40px;display:flex;align-items:center;gap:6px"><span style="width:22px;height:22px;border-radius:5px;border:1px solid #0006;flex:none;background:'+sw+'"></span>'+t[1]+(t[0]==='classic'?' (default)':'')+'</button>'}).join('')+'</div></div>'}
+{const _fb=featBody;featBody=function(id){const b=_fb.apply(this,arguments);return id==='settings'?themePanel()+b:b}}
+document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('[data-th]');if(!b)return;thCur=b.dataset.th;try{LS.setItem('ml_theme',thCur)}catch(_){}thApply(thCur);if(typeof render==='function'&&P)render()});
+
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
    once instead of waiting for a confirmation code. ===== */
@@ -4001,6 +4038,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
    else if(m.t==='w'){L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,fx:m.fx,text:m.text,w:'from'});if(L.chat.length>60)L.chat.shift();if(!L.wTo)L.wTo=m.from;if(L.ctab!=='friends')L.unread.friends++}
    else if(m.t==='wsent'){L.chat.push({ts:Date.now(),from:m.to,text:m.text,w:'to'});if(L.chat.length>30)L.chat.shift()}
+   else if(m.t==='plog'){if(typeof log==='function'&&m.from!==(P&&P.name)){logs.push(['['+m.from+'] '+m.text,'','plog']);if(typeof refreshLog==='function')refreshLog()}}
    else if(m.t==='emote'){L.emo[m.id]={e:m.e,skin:m.skin,until:Date.now()+5000};L.chat.push({ts:Date.now(),from:m.from,gm:m.gm,md:m.md,emote:emoPic(m.e,m.skin)});if(L.chat.length>30)L.chat.shift();setTimeout(paint,5100)}
    else if(m.t==='achat'){L.chat.push({ts:Date.now(),from:m.from,md:m.md,fx:m.fx,text:m.text,all:true});if(L.chat.length>80)L.chat.shift();if(L.ctab!=='all')L.unread.all=(L.unread.all||0)+1}
    else if(m.t==='spy'){m.ts=m.ts||Date.now();(L.spyLog=L.spyLog||[]).push(m);if(L.spyLog.length>120)L.spyLog.shift()}
@@ -4020,6 +4058,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   ws.onclose=()=>{if(L.ws===ws){L.ws=null;L.state='off';L.here=[];paint();retry()}}}
  function retry(){clearTimeout(L.timer);if(!want())return;L.tries++;L.timer=setTimeout(connect,Math.min(30000,3000*L.tries))}
  function sendMap(){if(L.ws&&L.ws.readyState===1&&P){L.map=P.map;L.ws.send(JSON.stringify({t:'map',map:P.map,lvl:P.lvl}));L.chat=L.chat.filter(m=>m.party||m.w||m.guild)}}
+ {const _lg=log;log=function(t,c,k){const r=_lg.apply(this,arguments);try{if(L.party&&L.state==='on'&&!['map','party','guild','plog','chat'].includes(k||'gen')&&(c==='good'||k==='combat'||k==='quest'||k==='items')){out({t:'plog',text:String(t)});logs.push(['['+P.name+'] '+t,c||'','plog'])}}catch(e){}return r}}
  const out=o=>{if(o&&/^(chat|pchat|gchat|w)$/.test(o.t)&&L.me&&L.me.staff){const f=adminFx();if(f!=='none')o.fx=f}if(L.ws&&L.ws.readyState===1){L.ws.send(JSON.stringify(o));return true}return false};
  /* the 7 basic expressions (v62 F1-F7). A skin (later an NX item) maps 1-7 to other pictures. */
  const EMO=[null,['😊','Happy'],['😟','Troubled'],['😢','Cry'],['😠','Angry'],['😵','Bewildered'],['😳','Stunned'],['😍','Love']];
@@ -4181,13 +4220,13 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    +(others.length?others.map(x=>'<button class="npc" data-prof="'+esc(x.name)+'"><span class="av">'+(L.emo[x.id]&&L.emo[x.id].until>Date.now()?emoPic(L.emo[x.id].e,L.emo[x.id].skin):'🧑')+'</span><span style="flex:1;text-align:left">'+nm(x.name,x.staff,x.medal)+' <span class="mute">Lv '+(x.lvl|0)+'</span><br><span class="mute">'+(x.job?esc(x.job):'Beginner')+(L.members.some(y=>y.id===x.id)?' · Party':'')+'</span></span></button>').join(''):'<div class="mute">No other players on this map'+(L.state==='on'?' right now.':'.')+'</div>')
    +(L.err?'<div class="mute" style="color:#b0562f">'+esc(L.err)+'</div>':'')+'</div>'}
  /* the chat panel: tabs Map / Friends (whispers) / Party / Guild / Activity log (read-only game log) */
- L.ctab=L.ctab||'map';L.unread={all:0,map:0,friends:0,party:0,guild:0};L.spyOn={map:false,friends:false,guild:false};
+ L.ctab=(L.ctab&&L.ctab!=='log')?L.ctab:'map';L.unread={all:0,map:0,friends:0,party:0,guild:0};L.spyOn={map:false,friends:false,guild:false};
  const tabOf=m=>m.all?'all':m.w?'friends':m.party?'party':m.guild?'guild':'map';
  function medalIco(md){const it=md&&typeof ITEMS!=='undefined'&&ITEMS[md];return it?'<span class="mdl" title="'+esc(it.n)+'">'+(typeof itemIcon==='function'?itemIcon(md):it.i)+'</span>':''}
  function nm(name,gm,md){return (gm?'<span class="gmtag">[GM]</span> ':'')+medalIco(md)+esc(name)}
  window.liveName=nm;
  function chatLine(m){return m.emote?'<div><b>'+nm(m.from,m.gm,m.md)+'</b> <span style="font-size:20px">'+m.emote+'</span></div>':m.w?'<div style="color:#7a3fb5"><b>'+(m.w==='to'?'To '+esc(m.from):nm(m.from,m.gm,m.md)+' whispers')+':</b> '+esc(m.text)+'</div>':'<div'+(m.party?' style="color:#2e7d5b"':m.guild?' style="color:#a0661c"':'')+'><b>'+nm(m.from,m.gm,m.md)+':</b> '+(m.fx?'<span class="afx afx-'+esc(m.fx)+'">'+esc(m.text)+'</span>':esc(m.text))+'</div>'}
- function chatHtml(){const T=[['all','All'],['map','Map'],['friends','Friends'],['party','Party'],['guild','Guild'],['log','Log']];const t=L.ctab;
+ function chatHtml(){const T=[['all','All'],['map','Map'],['friends','Friends'],['party','Party'],['guild','Guild']];const t=L.ctab;
   let body;
   if(t==='all'){const staff=L.me&&L.me.staff;const col={map:'#2b6cb0',friends:'#7a3fb5',guild:'#a0661c'};
    const mine=L.chat.filter(m=>!m.party).map(m=>({ts:m.ts||0,h:m.all?'<div class="afx afx-'+esc(m.fx||'none')+'">📢 '+nm(m.from,true,m.md)+': '+esc(m.text)+'</div>':chatLine(m)}));
@@ -4210,7 +4249,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(want()&&tab==='play'&&!(MAPS[P.map]||{}).jobtest){const app=document.getElementById('app');
     const people=[...app.querySelectorAll(':scope > .panel')].find(p=>p.querySelector('.npc'))||[...app.querySelectorAll(':scope > .panel')].find(p=>/PEOPLE/i.test((p.querySelector('h2')||{}).textContent||''));
     if(!document.getElementById('livebox')){const d=document.createElement('div');d.id='livebox';d.className='panel';if(people)people.insertAdjacentElement('afterend',d);else{const log=document.getElementById('log');if(log)log.insertAdjacentElement('beforebegin',d);else app.appendChild(d)}const c=document.createElement('div');c.id='livechatbox';c.className='panel';d.insertAdjacentElement('afterend',c);paint()}
-    {const lg=document.getElementById('log');if(lg)lg.style.display='none'}/* the Activity log lives in the chat tabs */}}catch(e){}return out}}
+    {const lg=document.getElementById('log');if(lg&&lg!==app.lastElementChild)app.appendChild(lg)}/* the Activity log sits at the bottom of the Play page */}}catch(e){}return out}}
  /* Menu tab: a button with your channel and how many players are in it; pressing it opens the channel menu */
  function chHtml(){const n=c=>L.counts&&L.counts[c-1]!=null?(c===L.ch&&L.state==='on'?Math.max(1,L.counts[c-1]|0):L.counts[c-1]|0):'?';
   return '<div class="pad"><button data-chm="1" class="main" style="width:100%;display:flex;justify-content:space-between;align-items:center;min-height:44px"><span>📡 Channel '+L.ch+(L.state==='on'?'':L.state==='connecting'?' (connecting…)':' (offline)')+'</span><span>👥 '+n(L.ch)+' '+(n(L.ch)===1?'player':'players')+' ▾</span></button>'
