@@ -1,4 +1,4 @@
-window.__BUILD='3.5-f3099e32eb';
+window.__BUILD='3.5-894e2b6a53';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -2054,7 +2054,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   if(mode==='idle')return h;
   const need=needFor(m),clear=isOpen(P.map)?'':'<div style="font-size:12px;margin-top:4px">Defeat <b>'+need+'</b> monsters to open the way: <b>'+Math.min(P.kills,need)+'/'+need+'</b></div>',
    here=playersHere().length?'<div class="mute" style="font-size:11px">Also here: '+playersHere().map(x=>x.n).join(', ')+'</div>':'';
-  const hd='<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px"><div style="flex:1;font-size:11px"><div style="display:flex;gap:6px;align-items:center"><span style="width:20px">HP</span><span style="flex:1">'+bar('var(--hp)',P.hp,P.maxHp)+'</span><span>'+P.hp+'/'+P.maxHp+'</span></div><div style="display:flex;gap:6px;align-items:center"><span style="width:20px">MP</span><span style="flex:1">'+bar('#3f7fd8',P.mp,P.maxMp)+'</span><span>'+P.mp+'/'+P.maxMp+'</span></div></div><button data-act="slk" id="slk" style="min-height:34px;padding:2px 10px;font-size:12px;white-space:nowrap" title="Stops the page from scrolling during combat">'+(scrollLockPref?'\u{1F512} Lock ON':'\u{1F513} Lock OFF')+'</button></div>'+clear+here;
+  const hd='<div style="display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;margin-bottom:6px"><div style="flex:1;font-size:11px"><div style="display:flex;gap:6px;align-items:center"><span style="width:20px">HP</span><span style="flex:1">'+bar('var(--hp)',P.hp,P.maxHp)+'</span><span>'+P.hp+'/'+P.maxHp+'</span></div><div style="display:flex;gap:6px;align-items:center"><span style="width:20px">MP</span><span style="flex:1">'+bar('#3f7fd8',P.mp,P.maxMp)+'</span><span>'+P.mp+'/'+P.maxMp+'</span></div></div><button data-act="slk" id="slk" style="min-height:34px;padding:2px 8px;font-size:12px;white-space:nowrap;margin-left:auto;flex:0 0 auto" title="Stops the page from scrolling during combat">'+(scrollLockPref?'\u{1F512} ON':'\u{1F513} OFF')+'</button></div>'+clear+here;
   return h.replace('<div class="panel"><div class="stage">','<div class="panel" id="cpanel" style="scroll-margin-top:6px">'+hd+'<div class="stage">')}}
 /* --- auto-hunt: no seeking screen. Monsters keep arriving as long as the map has any free. --- */
 function autoTick(){if(!P||!autoSeek||enc||seeking)return;const m=MAPS[P.map];if(m.town||talk){autoSeek=false;return render()}
@@ -3428,7 +3428,7 @@ laneHtml=function(){fixPos();const LH=Math.max(20,Math.min(30,Math.floor(210/NRf
 {const _r=render;render=function(){if(fld.length){fixPos();keepTarget()}else inFight=false;const out=_r.apply(this,arguments);
   try{if(typeof scr!=='undefined'&&scr==='game'&&P){const lk=document.getElementById('slk'),st=document.getElementById('sk');if((lk||st)&&!document.getElementById('spawnbtn')){const s=SPAWN_SIDES.find(x=>x[0]===(P.spawn||'left'))||SPAWN_SIDES[0];
     const b=document.createElement('button');b.id='spawnbtn';b.type='button';b.title='Where you appear when a fight starts. Tap to change.';b.textContent='Start: '+s[2]+' '+s[1];
-    b.style.cssText='min-height:34px;padding:2px 10px;font-size:12px;white-space:nowrap;margin-right:6px';if(lk)lk.insertAdjacentElement('beforebegin',b);else{b.style.margin='8px auto 0';b.style.display='block';st.insertAdjacentElement('afterend',b)}}}}catch(e){}
+    b.style.cssText='min-height:34px;padding:2px 8px;font-size:12px;white-space:nowrap;margin-right:6px;flex:0 0 auto';if(lk)lk.insertAdjacentElement('beforebegin',b);else{b.style.margin='8px auto 0';b.style.display='block';st.insertAdjacentElement('afterend',b)}}}}catch(e){}
   return out}}
 document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest('#spawnbtn');if(!b||!P)return;e.stopPropagation();const i=SPAWN_SIDES.findIndex(x=>x[0]===(P.spawn||'left'));P.spawn=SPAWN_SIDES[(i+1)%3][0];
  log('Spawn side: '+SPAWN_SIDES[(i+1)%3][2]+'. You will appear there when your next fight starts.','','combat');save();render()},true);
