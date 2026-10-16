@@ -3808,6 +3808,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(m.t==='party'){L.party=m.id;L.members=m.members||[];if(m.note)L.err=m.note;if(!m.id)L.chatTo='map'}
    else if(m.t==='pinvited')L.invite={from:m.from,name:m.name,until:Date.now()+60000};
    else if(m.t==='pgain'){if(P&&typeof gain==='function'){gain(m.exp);log('Party EXP +'+XR(m.exp)+' ('+m.from+' defeated a monster).','good','combat')}}
+   else if(m.t==='chcount'){L.counts=(L.counts||[0,0,0]).slice();L.counts[m.ch-1]=m.n}
    else if(m.t==='shops')L.shops=m.shops||[];
    else if(m.t==='myshop'){L.myShop=m.shop;if(m.note)L.err=m.note;if(P){if(m.shop)P.shopHold=m.shop.items.map(o=>Object.assign({},o));else returnHold();save()}}
    else if(m.t==='ssold'){if(P){P.mesos+=m.mesos|0;log(m.buyer+' bought '+m.name+(m.n>1?' x'+m.n:'')+' from your shop for '+(m.mesos|0).toLocaleString()+' mesos.','good','items');save()}}
@@ -3871,7 +3872,7 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
  function panelHtml(){const st=L.state==='on'?'🟢 Channel '+L.ch:L.state==='connecting'?'🟡 Connecting…':'⚪ Offline';
   const others=L.here.filter(x=>!L.me||x.id!==L.me.id);
   return '<div class="pad"><div class="row"><h2>👥 Players here</h2><span class="mute">'+st+'</span></div>'
-   +'<div style="display:flex;gap:6px;margin:6px 0">'+[1,2,3].map(n=>'<button data-live-ch="'+n+'" class="'+(n===L.ch?'main':'')+'" style="flex:1;min-height:30px">Ch '+n+(L.counts&&L.counts[n-1]!=null?' ('+L.counts[n-1]+')':'')+'</button>').join('')+'</div>'
+   +'<div style="display:flex;gap:6px;margin:6px 0">'+[1,2,3].map(n=>'<button data-live-ch="'+n+'" class="'+(n===L.ch?'main':'')+'" style="flex:1;min-height:30px">Ch '+n+(L.counts&&L.counts[n-1]!=null?' ('+(n===L.ch&&L.state==='on'?Math.max(1,L.counts[n-1]|0):L.counts[n-1])+')':'')+'</button>').join('')+'</div>'
    +(L.invite&&L.invite.until>Date.now()?'<div class="mrow" style="background:rgba(242,193,78,.2);border-radius:8px"><span class="av">🎉</span><div style="flex:1"><b>'+esc(L.invite.name)+'</b> invites you to a party.</div><button data-lp="accept">Join</button><button data-lp="decline">No</button></div>':'')
    +(L.treq&&L.treq.until>Date.now()?'<div class="mrow" style="background:rgba(120,200,255,.2);border-radius:8px"><span class="av">🔁</span><div style="flex:1"><b>'+esc(L.treq.name)+'</b> wants to trade.</div><button data-lt="accept">Trade</button><button data-lt="decline">No</button></div>':'')
    +(L.trade?'<div class="panel" style="margin:8px 0;padding:8px"><b>🔁 Trading with '+esc(L.trade.name)+'</b><div style="display:flex;gap:8px;margin-top:6px"><div style="flex:1"><div class="mute">You give'+(L.trade.ok[0]?' ✅':'')+'</div>'+(L.trade.mine.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+' <button data-lt="rm:'+esc(o.k)+'" style="min-height:0;padding:0 6px">✕</button></div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.mine.mesos|0).toLocaleString()+' mesos</div></div><div style="flex:1"><div class="mute">You get'+(L.trade.ok[1]?' ✅':'')+'</div>'+(L.trade.theirs.items.map(o=>'<div>'+esc(o.name)+' x'+o.n+'</div>').join('')||'<div class="mute">Nothing</div>')+'<div>'+(L.trade.theirs.mesos|0).toLocaleString()+' mesos</div></div></div>'
