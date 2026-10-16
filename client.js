@@ -526,10 +526,11 @@ function shopCard(){const id=shopSel,it=ITEMS[id],bm=shopTab==='buy',pr=bm?buyPr
 const q0=(i,f)=>{const e=document.getElementById(i);if(e)e.onclick=f};
 function shopPanel(){const items=shopTab==='buy'?(MAPS[P.map].shopList||SHOPLIST).map(k=>[k,0]):Object.keys(P.inv).filter(k=>ITEMS[k]&&sellVal(k)>0).map(k=>[k,P.inv[k]]);
  if(shopSel&&!items.some(e=>e[0]===shopSel))shopSel=null;if(!shopSel)shopConfirm=false;let g='';
- for(let i=0,N=Math.max(24,Math.ceil(items.length/4)*4);i<N;i++){const e=items[i];g+=e?'<button class="slot'+(shopSel===e[0]?' sel':'')+'" data-sh="'+e[0]+'" title="'+ITEMS[e[0]].n+'">'+ITEMS[e[0]].i+(e[1]>1?'<b class="qt">'+e[1]+'</b>':'')+'</button>':'<div class="slot empty"></div>'}
- return '<div class="panel"><div class="row"><h2>'+(MAPS[P.map].shopName||'Amherst General Store')+'</h2><span class="mute">'+P.mesos+' mesos</span></div><div class="tabs"><button class="'+(shopTab==='buy'?'on':'')+'" data-st="buy">Buy</button><button class="'+(shopTab==='sell'?'on':'')+'" data-st="sell">Sell</button></div>'+(shopSel?shopCard():'<div class="mute" style="margin-top:8px">'+(items.length?'':'You have nothing to sell.')+'</div>')+'<div class="ex" style="margin:6px 0"><button class="main" onclick="enchOpen()">📜 Enchanting</button></div><div class="inv">'+g+'</div><div class="ex"><button id="lv">Leave the shop</button></div></div>'}
+ /* v3.5: the shop is a 2-column list with each item's name and price */
+ for(const e of items){const it=ITEMS[e[0]],pr=shopTab==='buy'?buyPrice(e[0]):sellVal(e[0]);g+='<button class="shopcard'+(shopSel===e[0]?' sel':'')+'" data-sh="'+e[0]+'"><span class="sci">'+it.i+'</span><span class="scn">'+it.n+(e[1]>1&&shopTab==='sell'?' x'+e[1]:'')+'</span><span class="scp">'+pr.toLocaleString()+' mesos'+(typeof clsBadge==='function'?clsBadge(e[0]).replace('class="clsb"','class="clsb inl"'):'')+'</span></button>'}
+ return '<div class="panel"><div class="row"><h2>'+(MAPS[P.map].shopName||'Amherst General Store')+'</h2><span class="mute">'+P.mesos+' mesos</span></div><div class="tabs"><button class="'+(shopTab==='buy'?'on':'')+'" data-st="buy">Buy</button><button class="'+(shopTab==='sell'?'on':'')+'" data-st="sell">Sell</button></div>'+(shopSel?shopCard():'<div class="mute" style="margin-top:8px">'+(items.length?'':'You have nothing to sell.')+'</div>')+'<div class="ex" style="margin:6px 0"><button class="main" onclick="enchOpen()">📜 Enchanting</button></div><div class="shoplist">'+g+'</div><div class="ex"><button id="lv">Leave the shop</button></div></div>'}
 function shopDo(){const id=shopSel,it=ITEMS[id];if(!id||!inShop)return;const n=Math.max(1,shopQty);
- if(shopTab==='buy'){if(it.req&&P.lvl<it.req)return;const c=buyPrice(id)*n;if(P.mesos<c)return log('You don\'t have enough mesos.','bad','items'),render();P.mesos-=c;P.inv[id]=(P.inv[id]||0)+n;log('Bought '+n+' '+it.n+' for '+c+' mesos.'+((it.w||it.s)?' Equip it from your inventory.':''),'good','items')}
+ if(shopTab==='buy'){const c=buyPrice(id)*n;if(P.mesos<c)return log('You don\'t have enough mesos.','bad','items'),render();P.mesos-=c;P.inv[id]=(P.inv[id]||0)+n;log('Bought '+n+' '+it.n+' for '+c+' mesos.'+((it.w||it.s)?' Equip it from your inventory.':''),'good','items')}
  else{const k=Math.min(n,P.inv[id]||0);if(k<1)return;const gain=sellVal(id)*k;P.inv[id]-=k;if(P.inv[id]<=0)delete P.inv[id];P.mesos+=gain;log('Sold '+k+' '+it.n+' for '+gain+' mesos.','good','items')}
  shopQty=1;save();render()}
 const PLAYERS=[];
@@ -922,7 +923,7 @@ function render(){if(scr!=='game'||!P)return flow();if(P.sk.rev!==undefined){P.s
  app.querySelectorAll('[data-qgy]').forEach(b=>b.onclick=()=>qGiveUp(b.dataset.qgy));
  app.querySelectorAll('[data-qgn]').forEach(b=>b.onclick=()=>{qgive=null;render()});
  app.querySelectorAll('[data-qo]').forEach(b=>b.onclick=()=>{tab='quests';qtab='prog';qsel=b.dataset.qo;qgive=null;feat=null;cview=null;pop=null;render();window.scrollTo(0,0)});
- app.querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{ptab=b.dataset.pt;sel=null;render()});app.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{pop={id:b.dataset.i,eq:b.dataset.e==='1'};render()});app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{if(b.dataset.f==='quests'){tab='quests';feat=null;return render()}feat=b.dataset.f;render()});app.querySelectorAll('[data-k]').forEach(b=>b.onclick=e=>{e.stopPropagation();spendSk(b.dataset.k)});app.querySelectorAll('[data-skt]').forEach(b=>b.onclick=()=>{skTab=+b.dataset.skt;skSel=null;render()});app.querySelectorAll('[data-sks]').forEach(b=>b.onclick=()=>{const k=b.dataset.sks;skSel=(k&&skSel!==k)?k:null;render()});app.querySelectorAll('[data-cv]').forEach(b=>b.onclick=()=>{if(b.dataset.cv==='quests'){tab='quests';cview=null;return render()}cview=b.dataset.cv;render()});app.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{selNpc=null;talk={npc:b.dataset.n,page:'main'};render()});app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>dlgDo(b.dataset.d));app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>go(b.dataset.g));
+ app.querySelectorAll('[data-pt]').forEach(b=>b.onclick=()=>{ptab=b.dataset.pt;sel=null;render()});app.querySelectorAll('[data-i]').forEach(b=>b.onclick=()=>{pop={id:b.dataset.i,eq:b.dataset.e==='1'};render()});app.querySelectorAll('[data-f]').forEach(b=>b.onclick=()=>{if(b.dataset.f==='quests'){tab='quests';feat=null;return render()}feat=b.dataset.f;render()});app.querySelectorAll('[data-k]').forEach(b=>b.onclick=e=>{e.stopPropagation();e.preventDefault();skSel=b.dataset.k;/* v3.5: + keeps (or opens) this skill's detail and closes any other */spendSk(b.dataset.k);render()});app.querySelectorAll('[data-skt]').forEach(b=>b.onclick=()=>{skTab=+b.dataset.skt;skSel=null;render()});app.querySelectorAll('[data-sks]').forEach(b=>b.onclick=()=>{const k=b.dataset.sks;skSel=(k&&skSel!==k)?k:null;render()});app.querySelectorAll('[data-cv]').forEach(b=>b.onclick=()=>{if(b.dataset.cv==='quests'){tab='quests';cview=null;return render()}cview=b.dataset.cv;render()});app.querySelectorAll('[data-n]').forEach(b=>b.onclick=()=>{selNpc=null;talk={npc:b.dataset.n,page:'main'};render()});app.querySelectorAll('[data-d]').forEach(b=>b.onclick=()=>dlgDo(b.dataset.d));app.querySelectorAll('[data-g]').forEach(b=>b.onclick=()=>go(b.dataset.g));
  app.querySelectorAll('[data-s]').forEach(b=>b.onclick=()=>spend(b.dataset.s));
 
  app.querySelectorAll('[data-why]').forEach(b=>{b.addEventListener('click',()=>{const c=$('navcap');if(c&&!b.dataset.g)c.textContent=b.dataset.why})});app.querySelectorAll('[data-sh]').forEach(b=>b.onclick=()=>{shopSel=b.dataset.sh;shopQty=1;shopConfirm=false;render()});
@@ -2442,8 +2443,11 @@ for(const k in V.quests){const d=QD[k];if(!d||(!d.jobs&&!d.pre2))continue;const 
 const LEAF=new Set(Object.keys(V.maps).filter(k=>{const o=V.maps[k];return o.town&&o.ex.length===1&&V.maps[o.ex[0][0]]&&V.maps[o.ex[0][0]].town}));
 {const _n=nearSet;nearSet=function(){const d=_n.apply(this,arguments);for(const k in d)if(LEAF.has(k)&&k!==P.map)delete d[k];return d}}
 {const _pp=peoplePanel;peoplePanel=function(){let h=_pp.apply(this,arguments);const m=MAPS[P.map];if(!m||!m.town)return h;
- const b=m.ex.filter(e=>LEAF.has(e[0]));if(!b.length)return h;
- return h+'<div class="panel"><h2>Buildings</h2><div class="tiles">'+b.map(e=>'<button class="tile" data-bld="'+e[0]+'"><span>'+(MAPS[e[0]].i||'🏠')+'</span>'+esc2(e[1])+'</button>').join('')+'</div></div>'}}
+ /* v3.5: only buildings with someone or something inside; same-named ones merged; buttons auto-fit the row */
+ const full=k=>{const x=MAPS[k];return x&&(((x.npcs||[]).length)||(x.shopList||[]).length||x.shop)};const seen=new Set();
+ const b=m.ex.filter(e=>LEAF.has(e[0])&&full(e[0])&&!seen.has(e[1])&&seen.add(e[1]));if(!b.length)return h;
+ const cols=b.length===1?1:b.length===2||b.length===4?2:3;
+ return h+'<div class="panel"><h2>Buildings</h2><div class="tiles bldgrid" style="display:grid;grid-template-columns:repeat('+cols+',1fr);gap:8px">'+b.map(e=>'<button class="tile" data-bld="'+e[0]+'"><span>'+(MAPS[e[0]].i||'🏠')+'</span>'+esc2(e[1])+'</button>').join('')+'</div></div>'}}
 document.addEventListener('click',e=>{const t=e.target.closest&&e.target.closest('[data-bld]');if(t&&P)go(t.dataset.bld)});
 })();
 
@@ -4067,19 +4071,19 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
     +'<div style="display:flex;gap:6px;margin-top:8px"><button data-lg="leave" style="flex:1">Leave guild</button>'+(r===1?'<button data-lg="disband" style="flex:1">Disband</button>':'')+'</div>'}
   return h+(L.gerr?'<div class="mute" style="color:#b0562f;margin-top:6px">'+esc(L.gerr)+'</div>':'')+'</div>'}
  /* the online version's Social tab is the real guild screen (the old one only lived in this browser) */
- {const _sp=socialPanel;socialPanel=function(){if(!want())return _sp.apply(this,arguments);return guildHtml()+'<div class="panel" id="budpanel"><h2>🤝 Buddies</h2>'+budHtml()+'</div>'}}
+ {const _sp=socialPanel;socialPanel=function(){if(!want())return _sp.apply(this,arguments);if(!L.mview)L.mview={f:L.mail.some(m=>m.kind==='player'&&!m.read)&&!L.mail.some(m=>m.kind==='system'&&!m.read)?'player':'system'};return mailHtml().replace('<button data-lm="close">Close</button>','')+guildHtml()+'<div class="panel" id="budpanel"><h2>🤝 Buddies</h2>'+budHtml()+'</div>'}}
  /* ===== Mailbox: System (from the game and staff only) and Messages (from players only). Kept on the server, so it
     arrives while you are offline. A mailbox button on the Play screen shows how many are unread. ===== */
  L.mail=[];L.unreadMail=0;L.mview=null;/* null closed | {f:'system'|'player', open:id, compose:{to,subject,body}} */
  function mFetch(){if(!window.__KV||!window.__KV.me)return;fetch('/api/mail').then(r=>r.json()).then(j=>{if(j.error)return;L.mail=j.mail||[];L.unreadMail=j.unread|0;drawMailBtn();if(L.mview)render()}).catch(()=>{})}
  function mApi(path,body){return fetch('/api/mail'+path,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(Object.assign({slot:typeof SLOT!=='undefined'?SLOT:0},body||{}))}).then(r=>r.json()).then(j=>{L.merr=j.error||'';mFetch();return j}).catch(()=>{L.merr='Could not reach the server.'})}
- window.liveMail={open:f=>{L.mview={f:f||'system'};mFetch();render()},close:()=>{L.mview=null;render()},
+ window.liveMail={open:f=>{L.mview={f:f||'system'};tab='social';mFetch();render()},close:()=>{L.mview={f:'system'};render()},
   read:id=>{L.mview.open=id;const r=L.mail.find(x=>x.id===id);if(r&&!r.read){r.read=1;L.unreadMail=Math.max(0,L.unreadMail-1);mApi('/read',{id})}render()},
   del:id=>{mApi('/delete',{id}).then(()=>{if(L.mview)L.mview.open=null;render()})},
   compose:(to,subject)=>{L.mview=L.mview||{f:'player'};L.mview.f='player';L.mview.compose={to:to||'',subject:subject||'',body:''};render()},
   send:(to,subject,body)=>mApi('/send',{to,subject,body}).then(j=>{if(j&&j.ok){if(L.mview)L.mview.compose=null;L.merr='Sent to '+to+'.'}render()}),
   system:(to,subject,body)=>mApi('/system',{to,subject,body}).then(j=>{if(j&&j.ok){if(L.mview)L.mview.compose=null;L.merr='System mail sent ('+j.sent+').'}render()})};
- function drawMailBtn(){const b=document.getElementById('mailbtn');if(b)b.innerHTML=mailBtnInner()}
+ function drawMailBtn(){try{if(typeof render==='function'&&window.__KV&&typeof scr!=='undefined'&&scr==='game')render()}catch(e){}}
  const mailBtnInner=()=>'📬 Mail'+(L.unreadMail?' <b class="mbadge">'+L.unreadMail+'</b>':'');
  function mailHtml(){const V=L.mview,f=V.f,list=L.mail.filter(m=>m.kind===f),cnt=k=>L.mail.filter(m=>m.kind===k&&!m.read).length,staff=window.__KV.me&&/admin|gm/.test(window.__KV.me.role||'');
   let h='<div class="panel"><div class="row"><h2>📬 Mailbox</h2><button data-lm="close">Close</button></div>'
@@ -4092,9 +4096,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
   return h+(L.merr?'<div class="mute" style="margin-top:6px;color:#b0562f">'+esc(L.merr)+'</div>':'')+'</div>'}
  /* the mailbox button on the Play screen, and the mailbox screen (replaces the Play screen while open) */
  {const _r3=render;render=function(){const out=_r3.apply(this,arguments);try{if(window.__KV&&window.__KV.me&&typeof scr!=='undefined'&&scr==='game'&&P){const app=document.getElementById('app');
-   if(L.mview&&tab==='play'){[...app.querySelectorAll(':scope > .panel')].forEach(x=>x.style.display='none');const d=document.createElement('div');d.innerHTML=mailHtml();app.insertBefore(d.firstChild,app.firstChild.nextSibling)}
-   else if(tab==='play'&&!document.getElementById('mailbtn')){const first=[...app.querySelectorAll(':scope > .panel')][0];if(first){const b=document.createElement('button');b.id='mailbtn';b.className='mailbtn';b.dataset.lm='openbox';b.innerHTML=mailBtnInner();first.style.position='relative';first.appendChild(b)}}}}catch(e){}return out}}
- (()=>{const st=document.createElement('style');st.textContent='.mailbtn{position:absolute;top:8px;right:8px;z-index:3;min-height:30px;padding:2px 10px;font-size:13px}.mbadge{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#d0451b;color:#fff;font-size:11px;line-height:16px;text-align:center}';document.head.appendChild(st)})();
+   /* Social tab badge: red = unread player mail, flashing yellow = unread system mail */
+   const sb=app.querySelector('.tabs [data-t="social"]');if(sb){sb.style.position='relative';let bd=sb.querySelector('.mailbadge');const sys=L.mail.filter(m=>m.kind==='system'&&!m.read).length,pl=L.mail.filter(m=>m.kind==='player'&&!m.read).length;
+    if(!bd&&(sys||pl)){bd=document.createElement('b');bd.className='mailbadge';sb.appendChild(bd)}if(bd){if(!(sys||pl))bd.remove();else{bd.className='mailbadge'+(pl?'':' sys');bd.textContent=pl?String(pl):'!'}}}}}catch(e){}return out}}
+ (()=>{const st=document.createElement('style');st.textContent='.mailbadge{position:absolute;top:-6px;right:-4px;min-width:18px;padding:0 5px;border-radius:9px;background:#d0451b;color:#fff;font-size:11px;line-height:18px;text-align:center;border:2px solid #fff;pointer-events:none}.mailbadge.sys{background:#f2c14e;color:#3a2a00;animation:mailflash 1s steps(2) infinite}@keyframes mailflash{50%{opacity:.25}}.mbadge{display:inline-block;min-width:16px;padding:0 4px;border-radius:8px;background:#d0451b;color:#fff;font-size:11px;line-height:16px;text-align:center}';document.head.appendChild(st)})();
  setInterval(()=>{if(window.__KV&&window.__KV.me&&!L.ws)mFetch()},120000);
  function budHtml(){const B=(P&&P.buddies)||[];const on=n=>L.buds.find(x=>x.name.toLowerCase()===n.toLowerCase());
   return '<div class="mute" style="margin:8px 0 2px"><b>Buddies</b> ('+B.length+'/50)</div>'
@@ -4200,10 +4205,10 @@ if(location.hash==='#rankings')setTimeout(showRank,50);
    else if(a==='kick'){if(confirm('Remove '+x1+' from the guild?'))liveGuild.kick(x1)}else if(a==='rank'){if(+x2!==1||confirm('Make '+x1+' the guild Master? You become Jr. Master.'))liveGuild.rank(x1,+x2)}
    else if(a==='disband'){if(confirm('Disband the guild? This cannot be undone.'))liveGuild.disband()}else if(a==='leave'){if(confirm('Leave the guild?'))liveGuild.leave()}else liveGuild[a]();return}
   const lm=t.closest&&t.closest('[data-lm]');if(lm){const [a,...r]=lm.dataset.lm.split(':');const arg=r.join(':');const v=id=>(document.getElementById(id)||{}).value||'';
-   if(a==='openbox'){tab='play';liveMail.open(L.mail.some(m=>m.kind==='player'&&!m.read)&&!L.mail.some(m=>m.kind==='system'&&!m.read)?'player':'system')}
+   if(a==='openbox'){tab='social';liveMail.open(L.mail.some(m=>m.kind==='player'&&!m.read)&&!L.mail.some(m=>m.kind==='system'&&!m.read)?'player':'system')}
    else if(a==='close')liveMail.close();else if(a==='f'){L.mview={f:arg};L.merr='';render()}else if(a==='open')liveMail.read(+arg);else if(a==='back'){L.mview.open=null;render()}
    else if(a==='del'){if(confirm('Delete this mail?'))liveMail.del(+arg)}else if(a==='reply')liveMail.compose(arg,'Re: '+((L.mail.find(m=>m.id===L.mview.open)||{}).subject||'').replace(/^(Re: )+/,''));
-   else if(a==='new')liveMail.compose('','');else if(a==='mailto'){tab='play';L.mview={f:'player'};liveMail.compose(arg,'')}else if(a==='newsys'){L.mview.compose={to:'all',subject:'',body:''};render()}
+   else if(a==='new')liveMail.compose('','');else if(a==='mailto'){tab='social';L.mview={f:'player'};liveMail.compose(arg,'')}else if(a==='newsys'){L.mview.compose={to:'all',subject:'',body:''};render()}
    else if(a==='cancel'){L.mview.compose=null;render()}else if(a==='send')liveMail.send(v('lm-to'),v('lm-subj'),v('lm-body'));else if(a==='sendsys')liveMail.system(v('lm-to'),v('lm-subj'),v('lm-body'));return}
   const sp=t.closest&&t.closest('[data-spy]');if(sp){const k=sp.dataset.spy;L.spyOn[k]=!L.spyOn[k];out({t:'spyset',spy:L.spyOn});paint();return}
   const ct=t.closest&&t.closest('[data-ct]');if(ct){L.ctab=ct.dataset.ct;L.err='';paint();return}
