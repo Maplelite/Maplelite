@@ -1,6 +1,6 @@
 {
-  "name": "Maplelite",
-  "short_name": "Maplelite",
+  "name": "PocketMS",
+  "short_name": "PocketMS",
   "description": "A v62-style Maple adventure in your browser.",
   "start_url": "./",
   "scope": "./",

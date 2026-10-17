@@ -1,4 +1,4 @@
-window.__BUILD='3.5-71b6fdf9ea';
+window.__BUILD='3.6-a20b9db743';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -693,7 +693,7 @@ SM('southperry',{npcs:['biggs','vasily','maplelite_admin'],ret:AM,ex:[['field_we
 SM('atc_entrance',{ret:AM,npcs:['mai'],mons:['shroom','blue_snail','orange_mushroom'],ex:[[AM,'Back to Amherst'],['atc_1','Training Center 1'],['atc_2','Training Center 2'],['atc_3','Training Center 3'],['atc_4','Training Center 4']]});
 Object.assign(NAV,{mushroom_west:[8,10,'West Gate'],mushroom_town:[25,10,'Town'],training_camp:[42,10,'Town 2'],mushroom_east:[59,10,'East Gate'],snail_hunting_ground_1:[76,10,'Sm. Forest'],snail_hunting_ground_2:[93,10,'Snails II'],snail_hunting_ground_3:[93,27,'Snails III'],inside_dangerous_forest:[76,27,'In. Dang.'],field_west_of_amherst:[59,27,'West Field'],mushroom_garden:[42,27,'Garden 2'],dangerous_forest:[25,27,'Dang. Forest'],amherst:[59,44,'Amherst'],snail_garden:[42,44,'Snail Garden'],tomato_field:[25,44,'Tomatoes'],middle_forest_1:[42,61,'Forest I'],middle_forest_2:[25,61,'Forest II'],snail_field:[76,44,'Flowers'],field_east_of_amherst:[76,61,'East Field'],inside_small_forest_2:[93,61,'Sm. For. 2'],field_west_of_southperry:[93,78,'SP Field'],southperry:[76,78,'Southperry'],atc_entrance:[59,61,'Training Ctr'],atc_1:[42,78,'ATC 1'],atc_2:[25,78,'ATC 2'],atc_3:[8,78,'ATC 3'],atc_4:[8,61,'ATC 4']});
 const _t2=townArt;townArt=function(id){if(id==='mushroom_west'||id==='mushroom_east')id=TN;return _t2(id)||''};
-Object.assign(NPCS,{jr_sentinel:{n:'Jr. Sentinel',i:'💂',role:'Gate guard',hi:'Halt! ...Oh, a new explorer. Mind the Snails out there.'},pio:{n:'Pio',i:'🧑‍🔧',role:'Recycler',hi:'Nothing goes to waste around here!'},mai:{n:'Mai',i:'🥋',role:'Training Center instructor',hi:'Welcome to the Adventurer Training Center. Four rooms, four challenges.'},maplelite_admin:{n:'Maplelite Administrator',i:'🛡️',role:'Administrator',hi:'Welcome to Southperry. Enjoy your stay on Maple Island!'}});
+Object.assign(NPCS,{jr_sentinel:{n:'Jr. Sentinel',i:'💂',role:'Gate guard',hi:'Halt! ...Oh, a new explorer. Mind the Snails out there.'},pio:{n:'Pio',i:'🧑‍🔧',role:'Recycler',hi:'Nothing goes to waste around here!'},mai:{n:'Mai',i:'🥋',role:'Training Center instructor',hi:'Welcome to the Adventurer Training Center. Four rooms, four challenges.'},maplelite_admin:{n:'PocketMS Administrator',i:'🛡️',role:'Administrator',hi:'Welcome to Southperry. Enjoy your stay on Maple Island!'}});
 
 /* ===== v62 Maple Island: Mai, Pio, Sen, Peter, hats, boxes ===== */
 Object.assign(ITEMS,{jr_sentinel_shellpiece:{n:'Jr. Sentinel Shellpiece',i:'\uD83D\uDEE1\uFE0F',sell:1},rusty_screw:{n:'Rusty Screw',i:'\uD83D\uDD29',sell:1},old_wooden_board:{n:'Old Wooden Board',i:'\uD83E\uDEB5',sell:1},green_relaxer:{n:'The Relaxer',i:'\uD83E\uDE91',sell:1},
@@ -964,7 +964,7 @@ const lsGet=k=>{try{return LS.getItem(k)}catch(e){return null}},lsSet=(k,v)=>{tr
 async function sha(t){try{const b=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(t));return[...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,'0')).join('')}catch(e){return btoa(unescape(encodeURIComponent(t)))}}
 let notice='',noticeBad=false,vUser='';const goTo=n=>{scr=n;render()},msg=(t,b)=>{notice=t;noticeBad=!!b},newCode=()=>String(Math.floor(100000+Math.random()*900000)),enter=(ids,btn)=>ids.forEach(i=>{const e=$(i);if(e)e.onkeydown=ev=>{if(ev.key==='Enter'){ev.preventDefault();$(btn).click()}}}),noteHtml=(n,b)=>n?`<div class='note${b?' bad':''}'>${n}</div>`:'';
 function loginScreen(){const n=notice,nb=noticeBad;notice='';const id=(lsGet('mapleish_id')||'').replace(/[^A-Za-z0-9]/g,''),spw=lsGet('mapleish_spw'),spu=lsGet('mapleish_spwu');
- app.innerHTML=`<div class='scr c'><div class='logo'>Maplelite<small>An offline Maple adventure</small></div><div class='panel lg'><h2>Log in</h2>${noteHtml(n,nb)}<label>ID<input id='aid' maxlength='12' autocomplete='username' placeholder='Enter your ID' value='${id}'></label><label>Password<input id='apw' type='password' autocomplete='current-password' placeholder='Enter your password'></label><div class='chk'><label><input type='checkbox' id='sid'${id?' checked':''}> Save ID</label><label><input type='checkbox' id='spwc'${spw&&spu===id?' checked':''}> Save password</label></div><div class='mute' id='lgmsg'></div><button class='wide gbtn' id='goog'><i>G</i> Sign in with Google</button><div class='links'><button class='lnk' id='forgot'>Forgot password?</button></div></div><div class='foot'><button id='reg'>Create account</button><button class='main' id='login'>Log in</button></div></div>`;
+ app.innerHTML=`<div class='scr c'><div class='logo'>PocketMS<small>An offline Maple adventure</small></div><div class='panel lg'><h2>Log in</h2>${noteHtml(n,nb)}<label>ID<input id='aid' maxlength='12' autocomplete='username' placeholder='Enter your ID' value='${id}'></label><label>Password<input id='apw' type='password' autocomplete='current-password' placeholder='Enter your password'></label><div class='chk'><label><input type='checkbox' id='sid'${id?' checked':''}> Save ID</label><label><input type='checkbox' id='spwc'${spw&&spu===id?' checked':''}> Save password</label></div><div class='mute' id='lgmsg'></div><button class='wide gbtn' id='goog'><i>G</i> Sign in with Google</button><div class='links'><button class='lnk' id='forgot'>Forgot password?</button></div></div><div class='foot'><button id='reg'>Create account</button><button class='main' id='login'>Log in</button></div></div>`;
  const pw=$('apw'),m=t=>{const e=$('lgmsg');e.textContent=t;e.style.color='#d4443f'};
  if(spw&&id&&spu===id){pw.value='••••••••';pw.dataset.saved='1'}
  pw.oninput=()=>{delete pw.dataset.saved};enter(['aid','apw'],'login');
@@ -2618,7 +2618,7 @@ function render(){const r=route()||[];if(!IX)IX=build();let body;
  if(!a)body=home();else if(a==='search'){WS.q=b||'';body=searchPage()}
  else if(['monsters','items','maps','npcs','quests'].includes(a))body=listPage(a);
  else body=({mon:monPage,item:itemPage,map:mapPage,npc:npcPage,quest:questPage}[a]||nf)(b);
- view.innerHTML='<div class="ws-av wk"><div class="ws-card"><div class="wk-top"><h2>📖 Maplelite Wiki</h2>'+(STACK.length?'<button class="ws-b" id="wk-back">‹ Back</button>':'')+'<form id="wk-sf"><input id="wk-s" placeholder="Search monsters, items, maps, NPCs, quests" value="'+(a==='search'?esc(WS.q):'')+'"><button class="ws-b p">Search</button></form></div>'+body+'<div class="wk-foot">Every page is read live from the game\'s own data.</div></div></div>';
+ view.innerHTML='<div class="ws-av wk"><div class="ws-card"><div class="wk-top"><h2>📖 PocketMS Wiki</h2>'+(STACK.length?'<button class="ws-b" id="wk-back">‹ Back</button>':'')+'<form id="wk-sf"><input id="wk-s" placeholder="Search monsters, items, maps, NPCs, quests" value="'+(a==='search'?esc(WS.q):'')+'"><button class="ws-b p">Search</button></form></div>'+body+'<div class="wk-foot">Every page is read live from the game\'s own data.</div></div></div>';
  const sf=$('wk-sf');sf.onsubmit=e=>{e.preventDefault();const v=$('wk-s').value.trim();go(v?'#wiki/search/'+encodeURIComponent(v):'#wiki')};
  const bk=$('wk-back');if(bk)bk.onclick=back;
  const fq=$('wk-q');if(fq){fq.oninput=()=>{WS.q=fq.value;const pos=fq.selectionStart;render();const n=$('wk-q');if(n){n.focus();n.setSelectionRange(pos,pos)}}}
@@ -3329,7 +3329,7 @@ stand=function(dir){if(!enc&&!fld.some(m=>m.hp>0))return;const now=Date.now(),mc
  const $=c=>bar.querySelector(c),sep='<span class="tn-sep">✦</span>';let last='';
  const timeText=()=>'Time '+fmt(Date.now());
  function fill(){const c=worldCfg(),hot=hotNow(),er=expRate(),dr=dropRate();
-  $('.tn-w').textContent='Welcome to Maplelite'+(VER()?' v'+VER():'')+'!';$('.tn-t').textContent=timeText();
+  $('.tn-w').textContent='Welcome to PocketMS'+(VER()?' v'+VER():'')+'!';$('.tn-t').textContent=timeText();
   let x=hot.map(h=>sep+'<span class="tn-hot">🔥 Hot-time: '+esc2(h.name)+'</span> EXP x'+clampR(h.exp)+(clampR(h.drop)>1?', Drop x'+clampR(h.drop):'')+' until '+fmt(Date.now()+(hotState(h).ends-hotState(h).wall))).join('');
   if(er!==1||dr!==1)x+=sep+'Rates now: EXP x'+er+', Drop x'+dr;
   const ev=typeof evTickerText==='function'?evTickerText():'';if(ev)x+=sep+'<span class="tn-hot">'+esc2(ev)+'</span>';
@@ -3422,7 +3422,7 @@ laneHtml=function(){fixPos();const LH=Math.max(20,Math.min(30,Math.floor(210/NRf
  const f=facing();
  for(let r=0;r<NRf();r++){const ms=fld.filter(m=>m.row===r&&m.hp>0);let c='';
   for(let i=0;i<COLS;i++){const cell=ms.filter(m=>colOf(m)===i),me=i===PC&&r===PRf();
-   c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+(typeof headIcon==='function'?headIcon(P,Math.min(22,LH-2)):'🧍')+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
+   c+='<div style="flex:1;display:flex;justify-content:center;align-items:center;font-size:'+(cell.length>2?12:Math.min(18,LH-6))+'px;line-height:'+(LH-2)+'px;border-left:'+(i?'1px dashed #b9c4d6':'0')+'">'+(me?'<span title="You" style="white-space:nowrap">'+(typeof headIcon==='function'?headIcon(P,Math.min(22,LH-2)):'🧍')+skFxHtml()+'</span>':'')+cell.map(m=>'<span style="position:relative;display:inline-block">'+MON[m.k].i+'<span style="position:absolute;left:8%;right:8%;bottom:0;height:3px;background:#4a463c;border-radius:2px"><i style="display:block;height:100%;width:'+Math.max(0,m.hp/m.max*100)+'%;background:#d9534f;border-radius:2px"></i></span></span>').join('')+'</div>'}
   h+='<div class="lrow" style="display:flex;background:rgba(120,140,180,.12);border-radius:6px;min-height:'+LH+'px">'+c+'</div>'}
  return h+'</div>'};
 /* keep the target valid on every redraw, and draw the spawn-side button in the fight section (next to Lock) */
@@ -3440,11 +3440,18 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
    to it. Before, it reached one column further and hit monsters on every line. */
 {const _sb=skSlash;skSlash=function(){const tf=targetsFor;targetsFor=function(reach,n){const pr=PRf();return tf(Math.max(0,reach-SB_EXTRA),99).filter(m=>Math.abs(m.row-pr)<=1).slice(0,n)};try{return _sb.apply(this,arguments)}finally{targetsFor=tf}}}
 
+/* using a skill shows its icon over your head icon for a moment */
+let SKFX=null;
+function skFxHtml(){if(!SKFX)return '';const el=Date.now()-SKFX.t;if(el>700){SKFX=null;return ''}
+ return '<span class="skfx" style="animation-delay:-'+el+'ms">'+SKFX.ic+'</span>'}
+(function(){const st=document.createElement('style');st.textContent='@keyframes skfx{0%{opacity:0;transform:translate(-50%,6px) scale(.6)}25%{opacity:1;transform:translate(-50%,-2px) scale(1.2)}100%{opacity:0;transform:translate(-50%,-12px) scale(1)}}span[title="You"]{position:relative;display:inline-block}.skfx{position:absolute;left:50%;top:-6px;font-size:14px;line-height:1;pointer-events:none;animation:skfx .7s ease-out forwards}';document.head.appendChild(st)})();
+setTimeout(()=>{const q=qsUse;qsUse=function(k){try{if(k&&k!=='basic'&&enc){const f=qsInfo(k,Date.now());if(f&&f.ic&&!f.dis)SKFX={ic:f.ic,t:Date.now()}}}catch(e){}return q.apply(this,arguments)}},0);
+
 /* ===== v3.3: the Maze event (a scheduled event, separate from hot-time and from the website's Events page)
    - When: every 4 hours on the hour, California time (12 AM, 4 AM, 8 AM, 12 PM, 4 PM, 8 PM), plus any extra start an
      admin schedules (Admin menu -> Maze event). An admin can turn the 4-hour schedule off.
    - How: at the start time entries open and a 5-minute countdown runs; then the maze starts and runs for 10 minutes.
-     Entries stay open the whole 15 minutes: talk to the Maplelite Administrator in any town to join (once per event).
+     Entries stay open the whole 15 minutes: talk to the PocketMS Administrator in any town to join (once per event).
      Before the start you wait in the Event Waiting Room; after it you go straight into the maze.
    - The maze: the same grid as combat, no skills, no monsters. Move Up, Down, Back and Forward (one step per your
      movement time, from Speed) and reach the flag at the far end. Everyone in one event gets the same maze.
@@ -3452,7 +3459,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
      Trophy, and takes everyone back to the town they joined from.
    - No trading in event maps (trading only ever works between players on the same map).
    - While an event is open, a timer block at the top of the Play screen shows the time left and the nearest town with
-     an Maplelite Administrator; the notice bar announces it too. ===== */
+     an PocketMS Administrator; the notice bar announces it too. ===== */
 (function(){
  const EV_WAIT=5*60e3,EV_RUN=10*60e3,EV_LEN=EV_WAIT+EV_RUN,SLOT=4*3600e3;
  const EVNPC='maplelite_admin',EVTOWNS=['amherst','southperry','lith_harbor','henesys','ellinia','perion','kerning_city'];
@@ -3472,8 +3479,8 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   evt_maze:{n:'The Maze',i:'🌀',d:'Find the way to the flag before time runs out.',town:1,hidden:1,noTrade:1,ret:'henesys',mons:[],npcs:[],ex:[],art:['#9fd27a','#5fa84a']},
   evt_prize:{n:'Event Prize Room',i:'🏆',d:'Where every contestant ends up. Collect your prize, then head home.',town:1,hidden:1,noTrade:1,ret:'henesys',mons:[],npcs:['evt_prize'],ex:[],art:['#f2d27a','#d9a640']}});
  for(const k of EVMAPS){delete NAV[k];if(typeof WPOS!=='undefined')delete WPOS[k]}
- NPCS[EVNPC]=Object.assign(NPCS[EVNPC]||{},{n:'Maplelite Administrator',i:'🛡️',role:'Events',hi:NPCS[EVNPC]&&NPCS[EVNPC].hi||'Welcome! Events are held here every 4 hours.'});
- NPCS.evt_prize={n:'Maplelite Administrator',i:'🏆',role:'Event prizes',hi:'Well done, everyone! Talk to me for your prize and a ride home.'};
+ NPCS[EVNPC]=Object.assign(NPCS[EVNPC]||{},{n:'PocketMS Administrator',i:'🛡️',role:'Events',hi:NPCS[EVNPC]&&NPCS[EVNPC].hi||'Welcome! Events are held here every 4 hours.'});
+ NPCS.evt_prize={n:'PocketMS Administrator',i:'🏆',role:'Event prizes',hi:'Well done, everyone! Talk to me for your prize and a ride home.'};
  for(const t of EVTOWNS)if(MAPS[t]&&!(MAPS[t].npcs||[]).includes(EVNPC))(MAPS[t].npcs=MAPS[t].npcs||[]).push(EVNPC);
  if(!ITEMS.i4000038)ITEMS.i4000038={n:'Event Trophy',i:'🏆',sell:30000,d:'A souvenir for entering the event. Made out of gold, so you can sell it for a high price.'};
  /* the maze: 5 rows x 21 columns of tiles, carved from 3 x 11 rooms; the same for everyone in one event */
@@ -3494,7 +3501,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   else{P.map='evt_maze';mz=null;mzFor(s.id);log('You enter the maze. Find the flag!','good','quest')}
   tab='play';save();render()}
  function toPrize(won){if(!P.evt)P.evt={id:0,from:'henesys'};P.evt.done=!!won;P.map='evt_prize';mz=null;
-  log(won?'You reached the flag! Collect your Event Trophy from the Maplelite Administrator.':'Time is up. The Maplelite Administrator will take you home.',won?'good':'','quest');save();render()}
+  log(won?'You reached the flag! Collect your Event Trophy from the PocketMS Administrator.':'Time is up. The PocketMS Administrator will take you home.',won?'good':'','quest');save();render()}
  function goHome(){const to=P.evt&&MAPS[P.evt.from]&&!inEventMap(P.evt.from)?P.evt.from:'henesys';P.map=to;talk=null;log('You are back in '+MAPS[to].n+'.','','quest');save();render()}
  const fmtLeft=ms=>{ms=Math.max(0,ms);const m=Math.floor(ms/60e3),s=Math.floor(ms%60e3/1000);return m+':'+String(s).padStart(2,'0')};
  /* talking */
@@ -3525,12 +3532,12 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
   return h+'</div><div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:10px">'+'<div></div>'+b('mzU','▲','Up')+'<div></div>'+b('mzB','◀','Back')+b('mzD','▼','Down')+b('mzF','▶','Forward')+'</div><div class="mute" style="margin-top:6px">No skills or items here, just your feet. Arrow keys work too.</div></div>'}
  document.addEventListener('pointerdown',e=>{const t=e.target.closest&&e.target.closest('#mzU,#mzD,#mzB,#mzF');if(!t)return;e.preventDefault();({mzU:()=>mazeMove(-1,0),mzD:()=>mazeMove(1,0),mzB:()=>mazeMove(0,-1),mzF:()=>mazeMove(0,1)})[t.id]()},true);
  document.addEventListener('keydown',e=>{if(!P||P.map!=='evt_maze'||/INPUT|TEXTAREA|SELECT/.test((e.target||{}).tagName||''))return;const k={ArrowUp:[-1,0],ArrowDown:[1,0],ArrowLeft:[0,-1],ArrowRight:[0,1]}[e.key];if(k){e.preventDefault();mazeMove(k[0],k[1])}});
- /* nearest town with an Maplelite Administrator, by walking distance */
+ /* nearest town with an PocketMS Administrator, by walking distance */
  function nearestEvTown(){const start=P.map,seen=new Set([start]),q=[start];while(q.length){const k=q.shift();if(EVTOWNS.includes(k)&&MAPS[k])return k;for(const e of (MAPS[k]&&MAPS[k].ex)||[])if(MAPS[e[0]]&&!seen.has(e[0])){seen.add(e[0]);q.push(e[0])}}return 'henesys'}
  /* the timer block, maze panel and event map clean-up on every redraw */
  {const _r=render;render=function(){const out=_r.apply(this,arguments);try{if(typeof scr!=='undefined'&&scr==='game'&&P&&tab==='play'){const app=document.getElementById('app'),tabs=app&&app.querySelector('.tabs');const s=evState();
    if(s.phase&&tabs&&!document.getElementById('evtimer')){const inEv=inEventMap(),joined=P.evt&&P.evt.id===s.id;const d=document.createElement('div');d.id='evtimer';d.className='panel';
-    const near=nearestEvTown();d.innerHTML='<div class="pad" style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🎉</span><div style="flex:1"><b>Maze event '+(s.phase==='wait'?'starts in':'ends in')+' <span id="ev-left">'+fmtLeft((s.phase==='wait'?s.runAt:s.end)-Date.now())+'</span></b><div class="mute">'+(inEv?(P.map==='evt_lobby'?'Waiting for the maze to open.':P.map==='evt_maze'?'Find the flag!':'Collect your prize from the Maplelite Administrator.'):joined?'You already took part in this one.':'Join at the Maplelite Administrator. Nearest: '+MAPS[near].n+'.')+'</div></div></div>';
+    const near=nearestEvTown();d.innerHTML='<div class="pad" style="display:flex;align-items:center;gap:10px"><span style="font-size:24px">🎉</span><div style="flex:1"><b>Maze event '+(s.phase==='wait'?'starts in':'ends in')+' <span id="ev-left">'+fmtLeft((s.phase==='wait'?s.runAt:s.end)-Date.now())+'</span></b><div class="mute">'+(inEv?(P.map==='evt_lobby'?'Waiting for the maze to open.':P.map==='evt_maze'?'Find the flag!':'Collect your prize from the PocketMS Administrator.'):joined?'You already took part in this one.':'Join at the PocketMS Administrator. Nearest: '+MAPS[near].n+'.')+'</div></div></div>';
     tabs.insertAdjacentElement('afterend',d)}
    if(P.map==='evt_maze'&&s.phase==='run'){const first=app.querySelector(':scope > .panel:not(#evtimer)');if(first)first.innerHTML=mazeHtml();
     app.querySelectorAll(':scope > .panel').forEach(p=>{if(p.querySelector('.qgrid,.tiles,.wm'))p.style.display='none'})}}}catch(e){}return out}}
@@ -3542,7 +3549,7 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
    if(P.map==='evt_lobby'&&s.phase==='run'){P.map='evt_maze';mz=null;mzFor(s.id);log('The maze is open. Go!','good','quest');save();return render()}}
   if(ph!==lastPhase){lastPhase=ph;render()}},1000);
  /* for the notice bar */
- window.evTickerText=()=>{const s=evState();return s.phase?(s.phase==='wait'?'🎉 Maze event: entries are open, it starts in '+fmtLeft(s.runAt-Date.now()).replace(/:\d\d$/,' min')+'. Talk to the Maplelite Administrator in any town.':'🎉 Maze event running now. Join at the Maplelite Administrator in any town.'):''};
+ window.evTickerText=()=>{const s=evState();return s.phase?(s.phase==='wait'?'🎉 Maze event: entries are open, it starts in '+fmtLeft(s.runAt-Date.now()).replace(/:\d\d$/,' min')+'. Talk to the PocketMS Administrator in any town.':'🎉 Maze event running now. Join at the PocketMS Administrator in any town.'):''};
  /* admin: Maze event schedule */
  {const _gp=gmPanel;gmPanel=function(role){let h=_gp(role);if(role!=='admin')return h;const c=evCfg(),s=evState(),ex=(Array.isArray(c.extra)?c.extra:[]).filter(t=>t+EV_LEN>Date.now()).sort((a,b)=>a-b);
    const lt=t=>new Date(t).toLocaleString([],{month:'short',day:'numeric',hour:'numeric',minute:'2-digit',timeZoneName:'short'});
@@ -3908,6 +3915,7 @@ function thCss(t){if(!t||t[0]==='classic')return '';const [,,sky,pn,b1,b2,bd,hd,
  +'#app button:not(.tabs button):not(.sk):not(.slot),#site button{background:linear-gradient('+b1+','+b2+')!important;border-color:'+bd+'!important;color:'+tx+'!important}'
  +'#app button.main,#app button.on,#app button.sel{background:'+ton+'!important;color:#fff!important}'
  +'#app button.npc{background:'+b2+'!important}'
+ +(dark?'#app .hit{color:#ffb86b!important}#app .bad{color:#ff7a7a!important}#app .good{color:#8dea7a!important}':'#app .hit{color:'+hd+'!important}#app .bad{color:#c0392b!important}#app .good{color:#2f8a2a!important}')
  +'#app .abtn b{background:'+s1+'!important;color:#fff!important}#app #ab.abtn.on{background:linear-gradient('+ton+'cc,'+ton+')!important;border-color:'+bd+'!important;color:#fff!important;text-shadow:0 2px 0 '+bd+'!important}#app .abtn.on b{background:'+s2+'!important}#app .abtn .kn{border-color:'+bd+'!important}'
  +'.tabs button{background:'+tb+'!important;border-color:'+bd+'!important}.tabs button.on{background:'+ton+'!important}'
  +'#app .panel>h2:first-child,#app .panel>.row:first-child:has(>h2),#app .mcard>h2:first-child,#app .title{background-color:'+s1+'!important;border-color:'+bd+'!important;color:#fff!important}'
@@ -3958,9 +3966,10 @@ document.addEventListener('click',e=>{const b=e.target.closest&&e.target.closest
 /* website footer: theme picker (same setting as Menu > System) */
 (function(){function addPick(){const f=document.querySelector('#site .ws-foot');if(!f||document.getElementById('wsth'))return;
  const w=document.createElement('div');w.style.cssText='margin:0 auto 10px;display:flex;gap:8px;align-items:center;justify-content:center';
- w.innerHTML='<label for="wsth">🎨 Theme</label><select id="wsth" style="font:inherit;padding:4px 8px;border-radius:8px">'+THEMES.map(t=>'<option value="'+t[0]+'"'+(t[0]===thCur?' selected':'')+'>'+t[1]+'</option>').join('')+'</select>';
+ w.innerHTML='<label for="wsth">🎨 Theme</label><span id="wsthsw" style="display:inline-block;width:54px;height:18px;border-radius:6px;border:2px solid #0006"></span><select id="wsth" style="font:inherit;padding:4px 8px;border-radius:8px">'+THEMES.map(t=>'<option value="'+t[0]+'"'+(t[0]===thCur?' selected':'')+'>'+t[1]+'</option>').join('')+'</select>';
  f.insertBefore(w,f.firstChild);
- w.querySelector('select').onchange=e=>{thCur=e.target.value;try{LS.setItem('ml_theme',thCur)}catch(_){}thApply(thCur);if(typeof render==='function'&&typeof P!=='undefined'&&P)render()};
+ const sw=()=>{const t=THEMES.find(x=>x[0]===thCur)||THEMES[0],e=document.getElementById('wsthsw');if(e)e.style.background=t[0]==='classic'?'linear-gradient(90deg,#8fbde3,#eef1f7,#f0a030)':'linear-gradient(90deg,'+t[6]+' 0 25%,'+t[3]+' 25% 60%,'+t[11]+' 60%)'};sw();
+ w.querySelector('select').onchange=e=>{thCur=e.target.value;setTimeout(sw,0);try{LS.setItem('ml_theme',thCur)}catch(_){}thApply(thCur);if(typeof render==='function'&&typeof P!=='undefined'&&P)render()};
 }
  addPick();setInterval(addPick,1500);
  document.addEventListener('click',e=>{if(e.target.closest&&e.target.closest('[data-th]')){const s=document.getElementById('wsth');if(s)s.value=thCur}})})();
@@ -4782,9 +4791,9 @@ body.chatfull{overflow:hidden}
  window.__waitUpdate=waitUpdate;
  window.__outdated=function(){if(shown)return;shown=true;try{if(window.__liveClose)window.__liveClose()}catch(e){}
   const d=document.createElement('div');d.id='ml-outdated';
-  d.innerHTML='<div class="box"><div style="font-size:42px">🍁</div><h2>A new version is out</h2><p>This copy of Maplelite is out of date, so it can\'t connect to the server. Update to keep playing. Your characters are safe on the server.</p><button id="ml-upd" class="main">Update now</button></div>';
+  d.innerHTML='<div class="box"><div style="font-size:42px">🍁</div><h2>A new version is out</h2><p>This copy of PocketMS is out of date, so it can\'t connect to the server. Update to keep playing. Your characters are safe on the server.</p><button id="ml-upd" class="main">Update now</button></div>';
   document.body.appendChild(d);document.getElementById('ml-upd').onclick=async()=>{
-   if(location.protocol==='file:'){location.href='https://maplelite.github.io/Maplelite/';return}
+   if(location.protocol==='file:'){location.href='https://pocketms.com/';return}
    const b=document.getElementById('ml-upd');waitUpdate(t=>{b.disabled=true;b.textContent=t})}};
  const check=()=>fetch('/api/ping').then(r=>r.json()).then(j=>{if(j&&j.build&&window.__BUILD&&j.build!==window.__BUILD)window.__outdated()}).catch(()=>{});
  setTimeout(check,1500);setInterval(check,120000);

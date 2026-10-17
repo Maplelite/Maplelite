@@ -1,4 +1,4 @@
-/* Maplelite service worker: lets the installed app start even on a bad connection. The page and the game script are
+/* PocketMS service worker: lets the installed app start even on a bad connection. The page and the game script are
    fetched fresh from the network every time (so updates show at once) and kept as a fallback; /api/ calls (game data,
    saves, the live world) always go to the server and are never cached. */
 const C='maplelite-v1';
