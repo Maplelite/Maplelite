@@ -1,4 +1,4 @@
-window.__BUILD='3.5-0ace8ba73f';
+window.__BUILD='3.5-71b6fdf9ea';
 /* ===== Server client: storage. Only in the server build (server/public/client.js), prepended before the game code.
    The game was written against localStorage. In the server build every "localStorage" in the game code is renamed to
    LS at build time, and LS sends account, character and shared data to the server instead:
@@ -4175,6 +4175,125 @@ const skImg=(t,c,bt,bc)=>{const main='<img alt="" src="'+icoSvg(t,c)+'" style="w
 function skIconize(){try{for(const k in SKL){const v=SKL[k];if(!v||String(v[0]).startsWith('<span class="ski"'))continue;const [t,c,bt,bc]=skIcoFor(k,v[1]);v[0]=skImg(t,c,bt,bc)}
  if(typeof SKJ==='object')for(const k in SKJ){const d=SKJ[k];if(d&&d.ic&&!String(d.ic).startsWith('<span class="ski"')){const nm=(SKL[k]||[])[1]||d.n;const [t,c,bt,bc]=skIcoFor(k,nm);d.ic=skImg(t,c,bt,bc)}}}catch(e){}}
 skIconize();setTimeout(skIconize,0);setTimeout(skIconize,1500);
+
+/* v3.6: every emoji in the game and on the website becomes a pixel sprite. New UI sprites (scroll, book, gear,
+   lock, mail, clock, house, crown, weather, tools and more) join the item, monster and skill sprites, and one
+   converter swaps emoji for sprites wherever text is drawn (menus, settings, character select, chat, logs, the
+   website). Plain text symbols (✦ ★ ☆ ☰ ➜ ➴ ➶) stay as text. ===== */
+Object.assign(ICO_T,{
+ ui_scroll:`................|..kkkkkkkkkkk...|.kwttttttttttk..|.kxkkkkkkkkkwk..|..kttttttttttk..|..ktbbbbbbbttk..|..kttttttttttk..|..ktbbbbbbttk...|..kttttttttttk..|..ktbbbbbbbttk..|..kttttttttttk..|.kkkkkkkkkkkwk..|kwttttttttttxk..|.kkkkkkkkkkkk...|................|................`,
+ ui_book:`................|..kkkkkkkkkkk...|..kaaaaaaaaakk..|..kacccccccakk..|..kaaaaaaaaakk..|..kaahhhhhaakk..|..kaaaaaaaaakk..|..kaaaaaaaaakk..|..kaaaaaaaaakk..|..kaaaaaaaaakk..|..kaaaaaaaaakk..|..kbbbbbbbbbkk..|..kttttttttttk..|..kkkkkkkkkkkk..|................|................`,
+ ui_person:`................|.....kkkkkk.....|....kxxxxxxk....|...kxxxxxxxxk...|...kssssssssk...|...ksesssessk...|...kssssssssk...|....kssrrssk....|.....kkkkkk.....|...kkaaaaaakk...|..kaaaaaaaaaak..|..kaccaaaaaaak..|..kaaaaaaaaaak..|..kkkkkkkkkkkk..|................|................`,
+ ui_people:`................|..kkkk....kkkk..|.kxxxxk..kwwwwk.|.ksssskkksssssk.|.ksesek.kssesek.|.kssssk.ksssssk.|..kkkk...kkkkk..|.kaaaak.kbbbbbk.|kaaaaaakbbbbbbbk|kaccaaakbccbbbbk|kaaaaaakbbbbbbbk|kkkkkkkkkkkkkkkk|................|................|................|................`,
+ ui_chat:`................|..kkkkkkkkkkkk..|.kttttttttttttk.|.kthhhttttttttk.|.kttttttttttttk.|.ktbbbbbbbbbbtk.|.kttttttttttttk.|.ktbbbbbbbttttk.|.kttttttttttttk.|..kkkkttkkkkkk..|.....ktk........|.....kk.........|................|................|................|................`,
+ ui_gear:`................|......kkkk......|..kk.kmmmmk.kk..|.kmmkmmmmmmkmmk.|.kmmmmmnnmmmmmk.|..kmmnkkkknmmk..|.kmmnk....knmmk.|.kmmk......kmmk.|.kmmk......kmmk.|.kmmnk....knmmk.|..kmmnkkkknmmk..|.kmmmmmnnmmmmmk.|.kmmkmmmmmmkmmk.|..kk.kmmmmk.kk..|......kkkk......|................`,
+ ui_lock:`................|.....kkkkkk.....|....kmmmmmmk....|...kmk....kmk...|...kmk....kmk...|...kmk....kmk...|..kkkkkkkkkkkk..|..kggggggggggk..|..kgcccggggggk..|..kggggkkggggk..|..kggggkkggggk..|..kgggggkggggk..|..kggggggggggk..|..kkkkkkkkkkkk..|................|................`,
+ ui_trophy:`................|..kkkkkkkkkkkk..|.kkggggggggggkk.|kgkgcgggggggkgk.|kgkgcgggggggkgk.|.kkggggggggggkk.|..kggggggggggk..|...kggggggggk...|....kggggggk....|......kggk......|......kggk......|....kkggggkk....|...kggggggggk...|...kkkkkkkkkk...|................|................`,
+ ui_crown:`................|................|.k....kk....k...|kgk..kggk..kgk..|kggk.kggk.kggk..|kgggkkggkkgggk..|kgrgggggggrggk..|kggggggggggggk..|kgcggggggggggk..|kggggggggggggk..|kkkkkkkkkkkkkk..|................|................|................|................|................`,
+ ui_gift:`................|....kk...kk.....|...kak.kak......|....kakak.......|.kkkkkkkkkkkkk..|.kaaaaakaaaaak..|.kcaaaakaaaaak..|.kkkkkkkkkkkkk..|..kbbbbkbbbbk...|..kbbbbkbbbbk...|..kbbbbkbbbbk...|..kbbbbkbbbbk...|..kkkkkkkkkkk...|................|................|................`,
+ ui_house:`................|.......kk.......|......kaak......|.....kaaaak.....|....kaaaaaak....|...kaaaaaaaak...|..kkkkkkkkkkkk..|...kttttttttk...|...ktkktkkttk...|...ktkktkkttk...|...kttttwwttk...|...kttttwwttk...|...kttttwwttk...|...kkkkkkkkkk...|................|................`,
+ ui_map:`................|.kkkkkkkkkkkkk..|.kttttbbtttttk..|.ktllttbtttltk..|.ktllltbbtlllk..|.kttltttbtlltk..|.kttttrrtbbttk..|.ktttrrrrtbttk..|.kttttrrttbbtk..|.ktllttttttbtk..|.ktllltttlllbk..|.kttltttttlltk..|.kkkkkkkkkkkkk..|................|................|................`,
+ ui_mail:`................|................|.kkkkkkkkkkkkkk.|.kktttttttttkkk.|.ktkkttttttkktk.|.kttkkttttkkttk.|.ktttkkkkkktttk.|.kttttttttttttk.|.kttttttttttttk.|.kttttttttttttk.|.kkkkkkkkkkkkkk.|................|................|................|................|................`,
+ ui_clock:`................|.....kkkkkk.....|...kkttttttkk...|..ktttttktttk...|.kttttttkttttk..|.kttttttkttttk..|.kttttttkttttk..|.ktttttkkkkttk..|.kttttttttttttk.|.kttttttttttttk.|..ktttttttttk...|...kkttttttkk...|.....kkkkkk.....|................|................|................`,
+ ui_check:`................|................|.............kk.|............klk.|...........kllk.|..kk......kllk..|.kllk....kllk...|.kllk...kllk....|..kllk.kllk.....|...kllkllk......|....kllllk......|.....kllk.......|......kk........|................|................|................`,
+ ui_cross:`................|................|..kk.......kk...|.krrk.....krrk..|..krrk...krrk...|...krrk.krrk....|....krrkrrk.....|.....krrrk......|....krrkrrk.....|...krrk.krrk....|..krrk...krrk...|.krrk.....krrk..|..kk.......kk...|................|................|................`,
+ ui_warn:`................|.......kk.......|......kggk......|......kggk......|.....kggggk.....|.....kgkkgk.....|....kggkkggk....|....kggkkggk....|...kgggkkgggk...|...kgggggggggk..|..kggggkkggggk..|..kggggkkggggk..|.kggggggggggggk.|.kkkkkkkkkkkkkk.|................|................`,
+ ui_horn:`................|............kk..|..........kkak..|........kkaaak..|..kkkkkkaaaaak..|..kmmkaaaaaaak..|..kmmkaaaaaaak..|..kmmkaaaaaaak..|..kkkkkkaaaaak..|....kk..kkaaak..|....kk....kkak..|....kk......kk..|................|................|................|................`,
+ ui_bell:`................|.......kk.......|......kggk......|.....kggggk.....|....kgcggggk....|....kgcggggk....|....kgcggggk....|....kggggggk....|...kggggggggk...|..kggggggggggk..|..kkkkkkkkkkkk..|......kggk......|.......kk.......|................|................|................`,
+ ui_globe:`................|.....kkkkkk.....|...kkaallaakk...|..kaallllaaaak..|.kaaallllaalllk.|.kaaaallaaallak.|.kaaaaaaaallaak.|.kllaaaaaaaaaak.|.klllaaaalllaak.|.kalllaaallllak.|..kaallaaaalak..|...kkaaaaaakk...|.....kkkkkk.....|................|................|................`,
+ ui_flag:`................|..kkkkkkkkkk....|..kkaaaaaaaak...|..kkaaaaaaaaak..|..kkaaaaaaaak...|..kkaaaaaaaaak..|..kkaaaaaaaak...|..kkkkkkkkkk....|..kk............|..kk............|..kk............|..kk............|..kk............|.kkkk...........|................|................`,
+ ui_search:`................|...kkkkk........|..kccttbk.......|.kcttttbbk......|.kctttttbk......|.kttttttbk......|.kbttttbbk......|..kbbbbbkk......|...kkkkkkmk.....|.........kmk....|..........kmk...|...........kmk..|............kk..|................|................|................`,
+ ui_tool:`................|.kkkkk..........|kmmmmmk.........|kmnnnmk.........|.kkkmmk.........|...kmmkk........|....kmmwk.......|.....kwwwk......|......kwwwk.....|.......kwwwk....|........kwwwk...|.........kwwwk..|..........kwxk..|...........kk...|................|................`,
+ ui_coin:`................|.....kkkkkk.....|...kkggggggkk...|..kgcggggggggk..|..kgcgkkkkggbk..|.kgcggkggggggbk.|.kgcggkggggggbk.|.kggggkkkkgggbk.|.kggggggggkggbk.|.kggggggggkggbk.|..kgggkkkkggbk..|..kgggggggggbk..|...kkbbbbbbkk...|.....kkkkkk.....|................|................`,
+ ui_tree:`................|......kkkk......|....kkllllkk....|...kllcllllk....|..kllcllllllk...|..klllllllllk...|.kllllllllllllk.|.kllllllllllllk.|..kllllllllllk..|...kkkkwwkkkk...|.......ww.......|.......ww.......|......kwwk......|.....kkkkkk.....|................|................`,
+ ui_flower:`................|.....kk.kk......|....kaakaak.....|....kaakaak.....|..kkkaagaakkk...|.kaaaaggaaaaak..|..kkkaagaakkk...|....kaakaak.....|....kaakaak.....|.....kk.kk......|.......kl.......|......kllk......|.......kl.......|.......kl.......|................|................`,
+ ui_cloud:`................|................|................|......kkkk......|.....kttttk.....|..kkkttttttkk...|.ktttttttttttk..|kttttttttttttk..|kthtttttttttttk.|ktttttttttttttk.|.kbbbbbbbbbbbk..|..kkkkkkkkkkk...|................|................|................|................`,
+ ui_snow:`................|.......kk.......|...kk..kk..kk...|....kk.kk.kk....|.....kkkkkk.....|..kk.kccck.kk...|.kkkkkcckkkkkk..|..kk.kccck.kk...|.....kkkkkk.....|....kk.kk.kk....|...kk..kk..kk...|.......kk.......|................|................|................|................`,
+ ui_sun:`................|.......kk.......|..k....kk....k..|...k..kggk..k...|.....kggggk.....|....kggcgggk....|.kkkkggcggggkkk.|....kgggggggk...|.....kggggk.....|...k..kggk..k...|..k....kk....k..|.......kk.......|................|................|................|................`,
+ ui_mountain:`................|................|.......kk.......|......ktck......|.....kttcck.....|....kaaccaak....|...kaaaaaaaak...|..kaaaabaaaaak..|.kaaaabbaaaaaak.|kaaaabbbbaaaaaak|kkkkkkkkkkkkkkkk|................|................|................|................|................`,
+ ui_boat:`................|.......k........|.......kk.......|.......ktk......|.......kttk.....|.......ktttk....|.......kttttk...|.......kkkkkk...|.kkkkkkkkkkkkkk.|.kwwwwwwwwwwwwk.|..kwwwwwwwwwwk..|...kkkkkkkkkk...|.kbbkbbkbbkbbk..|................|................|................`,
+ ui_skull:`................|....kkkkkkk.....|...kttttttttk...|..kttttttttttk..|..ktkkkttkkktk..|..ktkkkttkkktk..|..kttttkktttk...|...kttttttttk...|....kktktkkk....|.....ktktk......|.....kkkkk......|................|................|................|................|................`,
+ ui_drop:`................|.......kk.......|......kaak......|......kaak......|.....kaaaak.....|.....kaaaak.....|....kcaaaaak....|....kcaaaaak....|....kcaaaaak....|....kaaaaaak....|.....kaaaak.....|......kkkk......|................|................|................|................`,
+ ui_fire:`................|.......k........|......kak.......|......kaak......|.....kaaak..k...|..k..kaagak.kk..|..kk.kaggak.kak.|..kakaagggakaak.|..kaaagggggaak..|..kaaggcccggak..|..kaagcccccgak..|...kaagcccgak...|....kkaaaakk....|......kkkk......|................|................`,
+ ui_box:`................|................|...kkkkkkkkkk...|..kwwwwwwwwwwk..|.kkkkkkkkkkkkkk.|.kwwwwwkkwwwwwk.|.kwwwwwkkwwwwwk.|.kxxxxxkkxxxxxk.|.kwwwwwwwwwwwwk.|.kwwwwwwwwwwwwk.|.kxxxxxxxxxxxxk.|.kkkkkkkkkkkkkk.|................|................|................|................`,
+ ui_chart:`................|.kkkkkkkkkkkkk..|.kttttttttttk...|.ktttttttkkktk..|.kttttttttkatk..|.kttttkkktkatk..|.ktttttkatkatk..|.ktkkktkatkatk..|.ktkatkkatkatk..|.ktkatkkatkatk..|.kttttttttttttk.|.kkkkkkkkkkkkkk.|................|................|................|................`,
+ ui_dice:`................|.kkkkkkkkkkkk...|.kttttttttttk...|.ktkktttttttk...|.ktkktttttttk...|.kttttkkttttk...|.kttttkkttttk...|.kttttttttkkk...|.ktttttttkkk....|.kttttttttttk...|.kkkkkkkkkkkk...|................|................|................|................|................`,
+ ui_door:`................|...kkkkkkkkkk...|...kwwwwwwwwk...|...kwxxxxxxwk...|...kwxwwwwxwk...|...kwxwwwwxwk...|...kwxxxxxxwk...|...kwwwwwwgwk...|...kwxxxxxxwk...|...kwxwwwwxwk...|...kwxwwwwxwk...|...kwxxxxxxwk...|...kwwwwwwwwk...|..kkkkkkkkkkkk..|................|................`,
+ ui_bulb:`................|.....kkkkkk.....|....kgggcggk....|...kggggcgggk...|...kggggggggk...|...kggggggggk...|....kggggggk....|.....kggggk.....|.....kmmmmk.....|.....knnnnk.....|.....kmmmmk.....|......kkkk......|................|................|................|................`,
+ ui_wheel:`................|.....kkkkkk.....|...kkakkkkakk...|..kakk.kk.kkak..|..kkkk.kk.kkkk..|.kak.kkkkkk.kak.|.kkkkkkggkkkkkk.|.kkkkkkggkkkkkk.|.kak.kkkkkk.kak.|..kkkk.kk.kkkk..|..kakk.kk.kkak..|...kkakkkkakk...|.....kk..kk.....|....kk....kk....|...kkkkkkkkkk...|................`,
+ ui_dot:`................|................|................|................|......kkkk......|.....kccaak.....|....kcaaaaak....|....kaaaaaak....|....kaaaaaak....|....kaaaaabk....|.....kaabbk.....|......kkkk......|................|................|................|................`,
+ ui_plus:`................|................|......kkkk......|......klck......|......kllk......|..kkkkkllkkkkk..|..kllllllllllk..|..kllllllllllk..|..kkkkkllkkkkk..|......kllk......|......kllk......|......kkkk......|................|................|................|................`,
+ ui_cycle:`................|................|.....kkkkkk.....|...kkaaaaaakk.k.|..kaakkkkkkaakak|.kak......kaaaak|.kak.......kaaak|.kk.......kkkkkk|kkkkkk.......kk.|kaaak.......kak.|kaaaak......kak.|kakaakkkkkkaak..|.k.kkaaaaaakk...|.....kkkkkk.....|................|................`,
+ ui_zzz:`................|.kkkkkk.........|.kaaaak.........|....kak.........|...kak..kkkk....|..kak...kaak....|.kaaaak...kak...|.kkkkkk..kak....|........kaak....|........kkkk.kk.|.............kk.|................|................|................|................|................`
+});
+const PX_EMO={'📜':['ui_scroll','#e8d9b0'],'📖':['ui_book','#3f86d9'],'📘':['ui_book','#3f86d9'],'📗':['ui_book','#58b04a'],'📙':['ui_book','#e58a2e'],'📕':['ui_book','#d9443a'],'🔤':['ui_book','#8fa6c8'],
+'📰':['ui_chart','#9aa6b2'],'📋':['ui_chart','#c9925a'],'📊':['ui_chart','#3f86d9'],'📅':['ui_chart','#d9443a'],'📍':['ui_dot','#d9443a'],
+'🧑':['ui_person','#3f86d9'],'🧍':['ui_person','#58b04a'],'👤':['ui_person','#8fa6c8'],'👩':['ui_person','#e85a8a'],'🧒':['ui_person','#f0a030'],'🧔':['ui_person','#6b3f1f'],
+'👧':['ui_person','#e58bb5'],'🧓':['ui_person','#9aa6b2'],'💂':['ui_person','#d9443a'],'🥷':['ui_person','#333333'],'🧝':['ui_person','#58b04a'],'🧙':['ui_person','#6a5acd'],
+'👥':['ui_people','#3f86d9'],'🤝':['ui_people','#f0a030'],'🙏':['sk_heart','#f0a030'],
+'💬':['ui_chat','#ffffff'],'✉':['ui_mail','#ffffff'],'📬':['ui_mail','#ffffff'],'📭':['ui_mail','#ffffff'],'📩':['ui_mail','#ffffff'],'💌':['ui_mail','#ffffff'],
+'📣':['ui_horn','#e8503a'],'📢':['ui_horn','#e8503a'],'🔊':['ui_horn','#3f86d9'],'📡':['ui_horn','#9aa6b2'],'🔔':['ui_bell','#e8b830'],
+'⚙':['ui_gear','#9aa6b2'],'🛠':['ui_tool','#9aa6b2'],'🔧':['ui_tool','#9aa6b2'],'🔨':['mace','#9aa6b2'],'⛏':['axe','#9aa6b2'],'🪓':['axe','#9aa6b2'],'🔩':['ore','#9aa6b2'],'🧲':['ore','#d9443a'],
+'🔒':['ui_lock','#e8b830'],'🏆':['ui_trophy','#e8b830'],'👑':['ui_crown','#e8b830'],'🎁':['ui_gift','#d9443a'],'🎀':['ui_gift','#e85a8a'],'🎉':['sk_burst','#f0a030'],'🎊':['sk_burst','#e85a8a'],
+'🎃':['food','#e58a2e'],'🏅':['medal','#e8b830'],'🥇':['medal','#e8b830'],'🥈':['medal','#c0c6cc'],'🥉':['medal','#c9925a'],'🔰':['shield','#58b04a'],
+'🏠':['ui_house','#d9443a'],'🏡':['ui_house','#d9443a'],'🏘':['ui_house','#e58a2e'],'🏪':['ui_house','#3f86d9'],'🏫':['ui_house','#8a5ad0'],'⛺':['ui_house','#58b04a'],
+'🗺':['ui_map','#c9925a'],'🌍':['ui_globe','#3f86d9'],'🌐':['ui_globe','#3f86d9'],'🏁':['ui_flag','#333333'],'🏴':['ui_flag','#222222'],'🪧':['ui_flag','#c9925a'],'🚪':['ui_door','#8a5a2c'],
+'🛤':['ui_map','#9aa6b2'],'🛣':['ui_map','#9aa6b2'],
+'⏳':['ui_clock','#e8b830'],'⏱':['ui_clock','#e8b830'],'⏰':['ui_clock','#d9443a'],'✅':['ui_check','#58b04a'],'✔':['ui_check','#58b04a'],'✕':['ui_cross','#d9443a'],'⛔':['ui_cross','#d9443a'],'❌':['ui_cross','#d9443a'],
+'⚠':['ui_warn','#e8b830'],'❓':['ui_warn','#3f86d9'],'🔍':['ui_search','#3f86d9'],'💡':['ui_bulb','#f0d030'],'💤':['ui_zzz','#3f86d9'],'🔁':['ui_cycle','#58b04a'],'🔄':['ui_cycle','#58b04a'],
+'➕':['ui_plus','#58b04a'],'⭕':['ui_dot','#d9443a'],'🎡':['ui_wheel','#e8503a'],'🎲':['ui_dice','#ffffff'],'🃏':['ui_dice','#ffffff'],
+'🪙':['ui_coin','#e8b830'],'💰':['bag','#e8b830'],'💎':['crystal','#58c2f0'],'💠':['crystal','#3f86d9'],'🔷':['crystal','#3f86d9'],'🔹':['crystal','#58b0ff'],
+'🌳':['ui_tree','#58b04a'],'🌲':['ui_tree','#2f7a55'],'🌿':['leaf','#58b04a'],'🌱':['leaf','#7fcf5a'],'🌾':['leaf','#d9b84a'],'🪵':['stump','#9a6a3c'],'🍁':['leaf','#e8502a'],
+'🌼':['ui_flower','#f0d030'],'🌻':['ui_flower','#f0d030'],'🌷':['ui_flower','#e85a8a'],'🌸':['ui_flower','#f2a6cf'],
+'☁':['ui_cloud','#ffffff'],'🌫':['ui_cloud','#c9d3dc'],'❄':['ui_snow','#7fd0f0'],'🌅':['ui_sun','#f0a030'],'⛰':['ui_mountain','#8a7a6a'],'🏔':['ui_mountain','#a9b8c8'],'🏜':['ui_mountain','#d9a06a'],
+'🏝':['ui_tree','#58b04a'],'🏖':['ui_sun','#f0d030'],'⛴':['ui_boat','#ffffff'],'⚓':['ui_boat','#ffffff'],'🛟':['ui_boat','#ffffff'],
+'💀':['ui_skull','#ffffff'],'☠':['ui_skull','#ffffff'],'🪦':['ui_skull','#9aa6b2'],'💧':['ui_drop','#3f86d9'],'🩸':['ui_drop','#d9443a'],'🔥':['ui_fire','#e8503a'],'🛢':['potion','#555555'],
+'📦':['ui_box','#b07a48'],'🧺':['bag','#c9925a'],'🛍':['bag','#e85a8a'],'🛒':['bag','#9aa6b2'],'🚕':['ui_box','#f0d030'],
+'🔴':['ui_dot','#d9443a'],'🟢':['slime','#58b04a'],'🔵':['ui_dot','#3f86d9'],'🟡':['ui_dot','#f0d030'],'⚪':['ui_dot','#e8e8e8'],'⚫':['ui_dot','#333333'],'⬛':['ui_dot','#222222'],
+'⭐':['star','#e8b830'],'✨':['star','#fff2a0'],'💫':['star','#fff2a0'],'✴':['star','#f0a030'],'💥':['sk_burst','#e8503a'],'💢':['sk_burst','#d9443a'],'⚡':['sk_bolt','#f0d030'],'💨':['sk_wind','#9ad0e8'],
+'🌀':['sk_spiral','#58b0ff'],'🌑':['sk_moon','#6a5acd'],'🔮':['sk_orb','#8a5ad0'],'🧿':['sk_orb','#3f86d9'],'🧪':['potion','#58b04a'],'⚗':['potion','#8a5ad0'],
+'❤':['sk_heart','#e85a8a'],'💖':['sk_heart','#e85a8a'],'💚':['sk_heart','#58b04a'],'💙':['sk_heart','#3f86d9'],'🩹':['sk_heart','#f2c9a0'],
+'🛡':['shield','#9aa6b2'],'⚔':['sword','#b8c4d0'],'🗡':['dagger','#b8c4d0'],'🔪':['dagger','#b8c4d0'],'🏹':['bow','#c9925a'],'🪄':['wand','#8a5ad0'],'🦯':['staff','#c9925a'],
+'👊':['knuckle','#e58a2e'],'🥋':['knuckle','#ffffff'],'🔫':['gun','#9aa6b2'],'💪':['knuckle','#f2c9a0'],'🫳':['knuckle','#f2c9a0'],'🎯':['ui_dot','#d9443a'],'💣':['sk_orb','#333333'],'🧘':['sk_aura','#8a5ad0'],
+'👟':['shoes','#3f86d9'],'🦶':['shoes','#f2c9a0'],'🥾':['shoes','#8a5a2c'],'👕':['top','#3f86d9'],'🎽':['top','#58b04a'],'🩳':['bottom','#3f86d9'],'🎩':['hat','#333333'],'👒':['hat','#e8d9b0'],'🧢':['hat','#d9443a'],
+'🎒':['bag','#b07a48'],'👝':['bag','#e85a8a'],'🪨':['ore','#9aa6b2'],'🧱':['ore','#c0583a'],'🧽':['ore','#f0d030'],'🪞':['crystal','#c0e0f0'],
+'🐾':['pet','#8a5a2c'],'🐶':['pet','#c9925a'],'🐱':['pet','#e58a2e'],'🐈':['pet','#e58a2e'],'🐰':['pet','#f6f6f2'],'🐇':['pet','#f6f6f2'],'🐼':['pet','#ffffff'],'🐵':['monkey','#8a5a2c'],'🐺':['pet','#9aa6b2'],
+'🐷':['pig','#f2a6c0'],'🐖':['pig','#f2a6c0'],'🐽':['pig','#f2a6c0'],'🐌':['snail','#d9443a'],'🍄':['mushroom','#e58a2e'],'🐙':['octopus','#e85a8a'],'🦑':['octopus','#e85a8a'],'🦇':['bat','#6a5acd'],
+'👻':['ghost','#f6f6f2'],'🐲':['drake','#58b04a'],'🦖':['drake','#58b04a'],'🦕':['drake','#3f9a54'],'👁':['eye','#3f86d9'],'👀':['eye','#3f86d9'],'🐢':['croc','#58b04a'],'🦅':['wing','#8a5a2c'],'🪽':['wing','#f6f6f2'],
+'🧸':['doll','#c9925a'],'🍎':['food','#d9443a'],'🍅':['food','#d9443a'],'🥚':['food','#f6f6f2'],'🥤':['potion','#3f86d9'],'🍼':['potion','#f6f6f2'],'👾':['slime','#8a5ad0'],
+'😊':['face','#f0d030'],'😍':['face','#e85a8a'],'😟':['face','#3f86d9'],'😢':['face','#3f86d9'],'😳':['face','#e85a8a'],'😵':['sk_spiral','#8a5ad0'],'😠':['face','#d9443a'],'😤':['face','#d9443a'],
+'🎨':['ui_flower','#8a5ad0'],'🏘':['ui_house','#e58a2e'],'🐉':['drake','#d9443a'],'☀':['ui_sun','#f0d030'],'🌟':['star','#f0d030'],'🎖':['medal','#d9443a'],'🐚':['shell','#f2c9a0']};
+const PX_KEEP=new Set(['✦','★','☆','☰','➜','➴','➶','↻','✓','·']);
+const PX_RE=/(?:[\u{1F000}-\u{1FAFF}]|[\u2600-\u27BF]|[\u2B00-\u2BFF]|[\u2300-\u23FF])\uFE0F?(?:\u200D(?:[\u{1F000}-\u{1FAFF}]|[\u2600-\u27BF])\uFE0F?)*/gu;
+const PX_TEST=/[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF\u2300-\u23FF]/u;
+const PX_C={};
+function pxHas(v){if(typeof v!=='string'||!PX_TEST.test(v))return false;for(const m of v.matchAll(PX_RE)){const k=m[0].replace(/\uFE0F/g,'').replace(/\u200D.*/,'');if(!PX_KEEP.has(k))return true}return false}
+function pxEmoImg(ch){const k=ch.replace(/\uFE0F/g,'').replace(/\u200D.*/,'');if(PX_KEEP.has(k))return ch;if(PX_C[k])return PX_C[k];
+ const m=PX_EMO[k]||['ui_dot','#8fa6c8'];let u='';try{u=icoSvg(m[0],m[1])}catch(e){return ch}
+ return PX_C[k]='<img class="emo-px" alt="" src="'+u+'" style="width:1.2em;height:1.2em;vertical-align:-0.25em;image-rendering:pixelated">'}
+/* swap emoji in an HTML string, never inside tags, attributes or <option>/<textarea>/<script>/<style>/<title>/<svg> */
+function pxEmoHtml(h){if(!pxHas(h))return h;let out='',skip=null;
+ for(const part of h.split(/(<[^>]*>)/)){if(!part)continue;if(part[0]==='<'){const m=part.match(/^<\/?\s*([a-zA-Z0-9-]+)/),tg=m?m[1].toLowerCase():'';
+   if(!skip&&/^<[^/]/.test(part)&&['option','textarea','script','style','title','svg'].includes(tg))skip=tg;else if(skip&&part.startsWith('</')&&tg===skip)skip=null;out+=part;continue}
+  out+=skip?part:part.replace(PX_RE,pxEmoImg)}return out}
+(function(){const SKIP={SCRIPT:1,STYLE:1,TEXTAREA:1,OPTION:1,SELECT:1,TITLE:1,INPUT:1};const isSvg=e=>typeof SVGElement!=='undefined'&&e instanceof SVGElement;
+ const d=Object.getOwnPropertyDescriptor(Element.prototype,'innerHTML');
+ Object.defineProperty(Element.prototype,'innerHTML',{configurable:true,enumerable:d.enumerable,get:d.get,set(v){if(typeof v==='string'&&!SKIP[this.tagName]&&!isSvg(this))v=pxEmoHtml(v);d.set.call(this,v)}});
+ const ia=Element.prototype.insertAdjacentHTML;Element.prototype.insertAdjacentHTML=function(p,v){return ia.call(this,p,isSvg(this)?v:pxEmoHtml(v))};
+ const t=Object.getOwnPropertyDescriptor(Node.prototype,'textContent');
+ Object.defineProperty(Node.prototype,'textContent',{configurable:true,enumerable:t.enumerable,get:t.get,set(v){if(this.nodeType===1&&typeof v==='string'&&!SKIP[this.tagName]&&!isSvg(this)&&pxHas(v)){d.set.call(this,pxEmoHtml(v.replace(/&/g,'&amp;').replace(/</g,'&lt;')));return}t.set.call(this,v)}});
+ /* text added any other way (static page text, createTextNode) */
+ const fix=n=>{if(n.nodeType===3){const p=n.parentNode;if(!p||SKIP[p.nodeName]||isSvg(p)||!pxHas(n.data))return;const s=document.createElement('span');d.set.call(s,pxEmoHtml(n.data.replace(/&/g,'&amp;').replace(/</g,'&lt;')));p.replaceChild(s,n)}
+  else if(n.nodeType===1&&!SKIP[n.nodeName]&&!isSvg(n)){const w=document.createTreeWalker(n,NodeFilter.SHOW_TEXT);const L=[];while(w.nextNode())if(pxHas(w.currentNode.data))L.push(w.currentNode);L.forEach(fix)}};
+ const start=()=>{fix(document.body);new MutationObserver(ms=>{for(const m of ms){if(m.type==='characterData')fix(m.target);else m.addedNodes.forEach(fix)}}).observe(document.body,{subtree:true,childList:true,characterData:true})};
+ if(document.body)start();else document.addEventListener('DOMContentLoaded',start);
+ /* quick slots compare their HTML every tick: give them sprites up front so nothing redraws needlessly */
+ for(const f of ['qsInner','pqInner']){const o=window[f];if(typeof o==='function')window[f]=function(){return pxEmoHtml(o.apply(this,arguments))}}
+ /* the game's ground row (drawn in CSS) uses sprites too */
+ try{const ids=[['leaf','#7fcf5a'],['mushroom','#e58a2e'],['ui_flower','#f0d030'],['leaf','#7fcf5a'],['snail','#d9443a']];
+  const svg='<svg xmlns="http://www.w3.org/2000/svg" width="300" height="20">'+ids.map((x,i)=>'<image href="'+icoSvg(x[0],x[1])+'" x="'+(i*60+20)+'" y="0" width="20" height="20"/>').join('')+'</svg>';
+  const st=document.createElement('style');st.textContent='body::after{content:""!important;background:url("data:image/svg+xml;base64,'+btoa(svg)+'") 0 0/300px 20px repeat-x;image-rendering:pixelated}';document.head.appendChild(st)}catch(e){}
+})();
 
 /* ===== Server client: accounts. Only in the server build. Log in and Create account talk to the server; passwords
    never stay in the browser ("Save password" is gone). There is no email service yet, so new accounts are active at
